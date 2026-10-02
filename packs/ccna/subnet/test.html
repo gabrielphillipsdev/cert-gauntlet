@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Subnet Trainer Tests</title>
+  <style>
+    body { font: 14px/1.5 ui-monospace, Menlo, monospace; margin: 16px; background: #f4f6f8; color: #16242e; }
+    h1 { font-size: 16px; }
+    pre { white-space: pre-wrap; word-break: break-all; background: #fff; border: 1px solid #c9d3dc; padding: 12px; border-radius: 8px; }
+    .ok { color: #178a5a; } .fail { color: #c8372d; }
+    label { margin-right: 12px; }
+    button { font: inherit; padding: 6px 12px; }
+  </style>
+</head>
+<body>
+  <h1>Subnet trainer — generator ↔ independent checker</h1>
+  <p>Runs <code>/dev/tests/subnet-check.mjs</code> in the browser. Full 10,000-per-type run: <code>node dev/tests/subnet-check.mjs</code>.</p>
+  <p>
+    <label>Per type <input id="n" type="number" value="500" min="1" max="10000" style="width:7em"></label>
+    <label>Seed <input id="seed" type="number" value="1" style="width:9em"></label>
+    <button id="run">Run</button>
+    <a href="./" style="margin-left:12px">← trainer</a>
+  </p>
+  <pre id="out">…</pre>
+  <h1>Sample problem per type (seed above)</h1>
+  <pre id="samples"></pre>
+  <script type="module">
+    import { runChecks } from '../../../dev/tests/subnet-check.mjs';
+    import { TYPES, generate } from './generators.js';
+    import { makeRng } from './rng.js';
+    const out = document.getElementById('out');
+    const samples = document.getElementById('samples');
+    function run() {
+      const n = Number(document.getElementById('n').value);
+      const seed = Number(document.getElementById('seed').value);
+      out.textContent = '';
+      const lines = [];
+      const { ok } = runChecks({ n, seed, log: (s) => lines.push(s) });
+      out.innerHTML = lines.map((l) => `<span class="${l.startsWith('FAIL') || /DISAGREEMENTS/.test(l) ? 'fail' : l.startsWith('ok') || /ALL GREEN/.test(l) ? 'ok' : ''}">${l.replace(/</g, '&lt;')}</span>`).join('\n');
+      document.title = (ok ? '✓ ' : '✗ ') + 'Subnet Trainer Tests';
+      const rng = makeRng(seed);
+      samples.textContent = TYPES.map((t) => {
+        const p = generate(t.id, rng);
+        return `${t.id}\n  ${p.prompt || ''}\n  ${p.given.map((g) => `${g.label}: ${g.value}`).join(' | ')}\n  → ${JSON.stringify(p.answer)}`;
+      }).join('\n\n');
+    }
+    document.getElementById('run').addEventListener('click', run);
+    run();
+  </script>
+</body>
+</html>
