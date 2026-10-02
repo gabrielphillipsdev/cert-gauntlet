@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#e6ebf0" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#121a21" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Subnet Trainer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="../../../" title="Cert Gauntlet">Cert Gauntlet</a>
+    <h1>Subnet trainer</h1>
+    <button class="ghost" id="statsBtn" type="button" aria-controls="statsPanel" aria-expanded="false">Stats</button>
+  </header>
+
+  <nav class="types" id="types" aria-label="Problem type"></nav>
+
+  <main class="layout">
+    <section class="work" aria-live="polite">
+      <div class="timerbar">
+        <div class="timer" id="timer"><span id="timerText">0.0</span><span class="unit">s</span></div>
+        <div class="meter" aria-hidden="true"><div class="meter-fill" id="meterFill"></div><div class="meter-target"></div></div>
+        <div class="timer-goal" id="timerGoal">target 20s</div>
+      </div>
+
+      <form class="problem" id="problem" autocomplete="off" novalidate>
+        <h2 class="title" id="title"></h2>
+        <p class="prompt" id="prompt"></p>
+        <dl class="given" id="given"></dl>
+        <div class="fields" id="fields"></div>
+        <div class="actions">
+          <button class="primary" id="check" type="submit">Check</button>
+          <button class="ghost" id="skip" type="button">Skip</button>
+        </div>
+        <div class="result" id="result" hidden></div>
+      </form>
+    </section>
+
+    <aside class="stats" id="statsPanel" hidden>
+      <div class="goal" id="goal"></div>
+      <table class="stat-table" id="statTable">
+        <thead><tr><th>Type</th><th>Avg</th><th>Best</th><th>Acc</th><th>n</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="recent" id="recent"></div>
+      <div class="stat-actions">
+        <button class="ghost" id="exportBtn" type="button">Copy stats JSON</button>
+        <button class="ghost danger" id="resetBtn" type="button">Reset stats</button>
+      </div>
+      <p class="fine">Averages use your last 20 correct solves per type. Stats live on this device until the engine sync lands.</p>
+    </aside>
+  </main>
+
+  <div class="keyrow" id="keyrow" aria-label="Quick keys"></div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
