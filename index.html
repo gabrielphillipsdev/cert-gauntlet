@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cert Gauntlet</title>
+<meta name="description" content="One study app for Security+, SC-200 and CCNA: cards, twins, speed rounds, simulations and full-length exams that match the real test.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gauntlet">
+<meta name="theme-color" content="#0B1220">
+<link rel="stylesheet" href="core/styles.css">
+</head>
+<body data-view="picker">
+<header class="hdr">
+  <button id="back-to-picker" class="hdr-btn" hidden aria-label="All certs">‹</button>
+  <div class="brand"><img src="assets/icon-192.png" alt="" class="brand-icon"><div><h1>CERT <span>GAUNTLET</span></h1><div id="brand-sub" class="brand-sub">pick your exam</div></div></div>
+  <div class="hdr-meta"><span id="hdr-meta"></span><span id="sync" class="sync unlinked">not linked</span><button id="settings-btn" class="hdr-btn" aria-label="Settings">⚙</button></div>
+</header>
+<main id="view" class="view view-picker"></main>
+<div id="toast" role="status"></div>
+<noscript>Cert Gauntlet needs JavaScript.</noscript>
+<script type="module" src="core/app.js"></script>
+</body>
+</html>
