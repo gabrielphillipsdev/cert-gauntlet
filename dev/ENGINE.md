@@ -72,6 +72,7 @@ In-progress exams: `getInprog/setInprog/clearInprog(packId)`; synced as their ow
 ```js
 {
   id, name, short, code, color, status: "ready" | "soon", tagline, examDateDefault: "YYYY-MM-DD", blurb, objectivesDoc,
+  labBlurb?,   /* one line under "Open PBQ Lab" on the pack home; default = the labels of the sim types in content.lab. The exam tile's line is built from exam.{minutes,pbqFirst,backtrack,pbqCount,pass}; the lab tile is hidden when the pack has no lab items */
   cats:      { key: {name, color} },                       // deck categories
   sections:  [{ d, name, weight, decks: [keys] }],         // exam domains with blueprint weights (must sum ~100)
   domName:   { d: "short name" },

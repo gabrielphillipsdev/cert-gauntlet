@@ -15,8 +15,9 @@ export function renderHome(A) {
   html += nudgeHtml();
   html += deck("weak", "Weak spots", weakN ? `${weakN} cards not yet mastered` : "All mastered — run any deck to stay sharp", weakN || c.cards.length, "var(--green)", true);
   html += deck("all", "Everything, shuffled", "20 random from the full stack", c.cards.length, "var(--amber)", false);
-  html += `<div class="dh">Full exam (timed, scored like the real thing)</div>` + deck("exam", `Take a full ${m.exam.count}-question exam`, last ? `Last: ${last.scaled} · ${last.raw}% · ${H.length} attempt${H.length > 1 ? "s" : ""}` : `${m.exam.minutes} minutes, PBQs first, confidence tracking, ${m.exam.pass} to pass`, last ? (last.pass ? "PASS" : "retry") : "new", "var(--amber)", true);
-  html += `<div class="dh">PBQ Lab (hands-on, exam-style)</div>` + deck("lab", "Open PBQ Lab", "Matching, ordering, hash ID, firewall rules, risk math, exhibits", labCount(A), "var(--green)", true);
+  html += `<div class="dh">Full exam (timed, scored like the real thing)</div>` + deck("exam", `Take a full ${m.exam.count}-question exam`, last ? `Last: ${last.scaled} · ${last.raw}% · ${H.length} attempt${H.length > 1 ? "s" : ""}` : examRules(m), last ? (last.pass ? "PASS" : "retry") : "new", "var(--amber)", true);
+  const nLab = labItems(A).length;
+  if (nLab) html += `<div class="dh">PBQ Lab (hands-on, exam-style)</div>` + deck("lab", "Open PBQ Lab", labBlurb(A), labCount(A), "var(--green)", true);
   for (const sec of m.sections) {
     html += `<div class="dh">Domain ${sec.d}: ${esc(sec.name)} (${sec.weight}%)</div>`;
     for (const k of sec.decks) { const pool = c.cards.filter(x => x.c === k); const mk = pool.filter(x => mastered(packId, x)).length; html += deck(k, m.cats[k].name, m.subtitles?.[k] || "", `${mk}/${pool.length}`, m.cats[k].color, false); }
@@ -29,6 +30,18 @@ export function renderHome(A) {
 }
 function deck(k, t, s, n, color, special) {
   return `<button class="deck ${special ? "special" : ""}" data-k="${k}"><span class="jack" style="background:${color}"></span><span><span class="t">${esc(t)}</span><span class="s">${esc(s)}</span></span><span class="n">${n}</span></button>`;
+}
+/* exam tile subtitle from the pack's own rules (manifest.exam), so no pack inherits another exam's format */
+function examRules(m) {
+  const e = m.exam; const n = e.pbqCount || 0;
+  return [`${e.minutes} minutes`, e.pbqFirst && n ? "PBQs first" : null, e.backtrack === false ? "no going back" : null,
+    n && !e.pbqFirst ? `${n} hands-on item${n > 1 ? "s" : ""} mixed in` : null, "confidence tracking", `${e.pass} to pass`].filter(Boolean).join(", ");
+}
+/* lab tile subtitle: the pack's labBlurb, else the names of the sim types it actually contains */
+function labBlurb(A) {
+  if (A.manifest.labBlurb) return A.manifest.labBlurb;
+  const names = [...new Set(labItems(A).map(x => { try { return sim(x.type).label; } catch (e) { return null; } }).filter(Boolean))];
+  return names.slice(0, 5).join(", ");
 }
 export function labItems(A) {
   const c = A.content;

@@ -7,6 +7,7 @@ import { SPRINTS } from "./sprints.js";
 
 export default {
   id: "ccna", name: "Cisco CCNA", short: "CCNA", code: "200-301 v1.1", color: "#FF8093", status: "ready",
+  labBlurb: "IOS CLI labs with tabbed terminals, show-output reader, config order, topology labeling",
   tagline: "Subnetting, IOS labs, no-backtrack exam — Dec 19 → sit by Jan 25, 2027",
   examDateDefault: "2027-01-25",
   blurb: "CCNA 200-301 v1.1 the way Cisco tests it: no going back, multi-response graded all-or-nothing, drag-and-drop, and IOS lab items. Cards and twins across all six domains, three 100-question exams weighted to the blueprint, show-output exhibits everywhere, plus speed rounds for masks, administrative distance and ports. The subnetting trainer lives at packs/ccna/subnet/.",

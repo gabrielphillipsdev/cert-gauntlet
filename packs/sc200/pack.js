@@ -3,6 +3,7 @@
    Objective ids are three-level (domain.group.bullet, e.g. 1.4.3) from dev/specs/skills-sc200.json. */
 export default {
   id: "sc200", name: "Security Operations Analyst", short: "SC-200", code: "SC-200", color: "#B48CFF", status: "ready",
+  labBlurb: "KQL drills (write, fix, predict) on seeded tables, Defender XDR and Sentinel portal hot-areas",
   tagline: "Sentinel, Defender XDR, KQL — Nov 9 → sit by Dec 18",
   examDateDefault: "2026-12-18",
   blurb: "SC-200 as Microsoft tests it: Defender XDR, Defender for Endpoint, Sentinel SIEM and data lake, Purview, Entra ID Protection and KQL everywhere. Cards, twins, three Microsoft-format exams (case study first, solution series last, drag-drop, build list, hot area, open-book Learn timer), a KQL Lab with a real interpreter, and the portal-navigation deck.",
