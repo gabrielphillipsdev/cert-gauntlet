@@ -1,7 +1,12 @@
 /* Cert Gauntlet — generated PBQs: a fresh problem every attempt. hashid · fwrule (read a rule table) · risk (SLE/ALE).
+   Items may carry task:[...] for the sticky task pane (ui.js); the pane also holds the exam-style calculator.
    The generator output lives in state.g so an in-progress exam can be resumed on another device with the same problem. */
 import { registerSim } from "./registry.js";
 import { esc, shuffle, pick } from "../util.js";
+import { ensureCss, taskPane } from "./ui.js";
+ensureCss();
+/* Every generator mounts the sticky task pane (instructions + calculator) above its body. */
+function pane(el, item, ctx) { const b = taskPane(el, item, ctx); if (b) el.prepend(b); }
 
 /* ---------- hash identification ---------- */
 const HASHALG = [{ n: "MD5", bits: 128 }, { n: "SHA-1", bits: 160 }, { n: "SHA-256", bits: 256 }, { n: "SHA-512", bits: 512 }];
@@ -27,6 +32,7 @@ registerSim("hashid", {
   render(el, item, st, ctx) {
     const g = st.g;
     el.innerHTML = `<p class="pbqp">${esc(item.prompt || "Read the digest, name the algorithm, give its bit length.")}</p><div class="given mono">${esc(g.str)}</div><p class="pbqp">Seen as ${esc(g.ctx)}. It is ${g.enc === "hex" ? g.str.length + " hex characters" : "Base64, " + g.str.length + " characters"}.</p><p class="pbqp strong">Which algorithm produced it?</p><div class="optcol hx">${g.order.map(n => `<button class="opt ${st.alg === n ? "sel" : ""} ${ctx.reveal ? (n === g.alg ? "right" : st.alg === n ? "wrong" : "") : ""}" data-alg="${n}">${n}</button>`).join("")}</div><label class="fl">Digest length in bits<input class="fi ${ctx.reveal ? (parseInt(st.bits, 10) === g.bits ? "ok" : "bad") : ""}" inputmode="numeric" placeholder="e.g. 256" autocomplete="off" value="${esc(st.bits)}" ${ctx.locked ? "disabled" : ""}></label>`;
+    pane(el, item, ctx);
     el.querySelectorAll(".hx .opt").forEach(b => b.onclick = () => { if (ctx.locked) return; st.alg = b.dataset.alg; el.querySelectorAll(".hx .opt").forEach(x => x.classList.toggle("sel", x.dataset.alg === st.alg)); ctx.onChange(); });
     el.querySelector(".fi").oninput = e => { st.bits = e.target.value; ctx.onChange(); };
   },
@@ -71,6 +77,7 @@ registerSim("fwrule", {
     const g = st.g; const want = g.match === null ? "imp" : String(g.match);
     const rv = (sel, key, mine) => ctx.reveal ? (mine === key ? "right" : sel === mine ? "wrong" : "") : "";
     el.innerHTML = `<p class="pbqp">${esc(item.prompt || "Walk the rule table top-down for the packet shown.")}</p><pre class="out"># ACTION  SOURCE            DESTINATION       PORT\n${g.rules.map((r, i) => `${i + 1} ${r.act.padEnd(6)}  ${r.src.padEnd(17)} ${r.dst.padEnd(17)} ${r.port}`).join("\n")}\n${g.rules.length + 1} DENY    any               any               any   (implicit)</pre><div class="given">Packet: <b>${g.pkt.src} → ${g.pkt.dst}</b><br>TCP ${g.pkt.port} (${g.svc}). Networks: 10.0.10.0/24 users · 10.0.20.0/24 servers · 203.0.113.0/24 internet</div><p class="pbqp strong">What happens to it?</p><div class="optrow fw-act">${["ALLOW", "DENY"].map(a => `<button class="opt ${st.act === a ? "sel" : ""} ${rv(st.act, g.act, a)}" data-act="${a}">${a}</button>`).join("")}</div><p class="pbqp strong">Which rule decides it?</p><div class="optrow wrap fw-rule">${g.rules.map((_, i) => `<button class="opt ${st.rule === String(i) ? "sel" : ""} ${rv(st.rule, want, String(i))}" data-rule="${i}">${i + 1}</button>`).join("")}<button class="opt grow ${st.rule === "imp" ? "sel" : ""} ${rv(st.rule, want, "imp")}" data-rule="imp">Implicit deny</button></div>`;
+    pane(el, item, ctx);
     el.querySelectorAll(".fw-act .opt").forEach(b => b.onclick = () => { if (ctx.locked) return; st.act = b.dataset.act; el.querySelectorAll(".fw-act .opt").forEach(x => x.classList.toggle("sel", x.dataset.act === st.act)); ctx.onChange(); });
     el.querySelectorAll(".fw-rule .opt").forEach(b => b.onclick = () => { if (ctx.locked) return; st.rule = b.dataset.rule; el.querySelectorAll(".fw-rule .opt").forEach(x => x.classList.toggle("sel", x.dataset.rule === st.rule)); ctx.onChange(); });
   },
@@ -102,6 +109,7 @@ registerSim("risk", {
     const g = st.g; const num = s => parseInt(String(s || "").replace(/[^0-9]/g, ""), 10);
     const fi = (k, want) => `fi ${ctx.reveal ? (num(st[k]) === Math.round(want) ? "ok" : "bad") : ""}`;
     el.innerHTML = `<p class="pbqp">${esc(item.prompt || "Compute the loss figures and decide whether the control is worth buying.")}</p><div class="given">${esc(g.asset)} is valued at <b>$${g.av.toLocaleString()}</b>. A ransomware event would destroy <b>${g.ef}%</b> of its value and is expected <b>${g.aroTxt}</b>.<br><br>A proposed control costs <b>$${g.ctrlCost.toLocaleString()}</b> per year and would cut the loss to ${g.newEf}% of value.</div><label class="fl">SLE, single loss expectancy ($)<input class="${fi("sle", g.sle)}" data-k="sle" inputmode="numeric" placeholder="AV × EF" value="${esc(st.sle)}" ${ctx.locked ? "disabled" : ""}></label><label class="fl">ALE, annualized loss expectancy ($)<input class="${fi("ale", g.ale)}" data-k="ale" inputmode="numeric" placeholder="SLE × ARO" value="${esc(st.ale)}" ${ctx.locked ? "disabled" : ""}></label><p class="pbqp strong">Is the control cost-justified?</p><div class="optrow rk">${["Yes", "No"].map(a => `<button class="opt ${st.worth === a ? "sel" : ""} ${ctx.reveal ? (a === (g.worth ? "Yes" : "No") ? "right" : st.worth === a ? "wrong" : "") : ""}" data-w="${a}">${a}</button>`).join("")}</div>`;
+    pane(el, item, ctx);
     el.querySelectorAll(".fi").forEach(i => i.oninput = e => { st[e.target.dataset.k] = e.target.value; ctx.onChange(); });
     el.querySelectorAll(".rk .opt").forEach(b => b.onclick = () => { if (ctx.locked) return; st.worth = b.dataset.w; el.querySelectorAll(".rk .opt").forEach(x => x.classList.toggle("sel", x.dataset.w === st.worth)); ctx.onChange(); });
   },
