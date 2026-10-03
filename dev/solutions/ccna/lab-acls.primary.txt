@@ -1,0 +1,14 @@
+! device R1
+enable
+configure terminal
+access-list 10 deny host 10.1.10.12
+access-list 10 permit any
+ip access-list extended GUEST-IN
+deny tcp 10.1.20.0 0.0.0.255 host 10.1.99.10 eq 80
+permit ip any any
+exit
+interface gigabitethernet 0/2
+ip access-group 10 out
+interface gigabitethernet 0/1
+ip access-group GUEST-IN in
+end

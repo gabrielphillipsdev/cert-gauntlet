@@ -167,4 +167,133 @@ export const LABS = [
     ],
     why: "`network` statements with wildcard masks (or `ip ospf 1 area 0` on each interface) decide which interfaces join area 0; the router ID is set with `router-id` and only takes effect with `clear ip ospf process` on a running process — here the process is new so it applies immediately. `passive-interface` keeps advertising the LAN prefix but stops hellos. `default-information originate` injects R1's default as an O*E2 route only while R1 itself has a default route.",
   },
+  /* ---------------------------------------------------------------- 6 · standard + extended ACLs */
+  {
+    id: "lab-acls", type: "ccna-lab", obj: "5.6", d: 5, title: "Standard and extended ACLs", timeTargetMin: 7,
+    topology: {
+      devices: {
+        R1: { type: "router", x: 240, y: 120 },
+        PC1: pc("10.1.10.11", "10.1.10.1", 70, 40), PC2: pc("10.1.10.12", "10.1.10.1", 70, 200), SW1: { type: "switch", x: 120, y: 120 },
+        PC3: pc("10.1.20.13", "10.1.20.1", 410, 40), SRV: pc("10.1.99.10", "10.1.99.1", 410, 210),
+      },
+      links: [["R1", "g0/0", "SW1", "g0/1"], ["SW1", "f0/1", "PC1"], ["SW1", "f0/2", "PC2"], ["R1", "g0/1", "PC3"], ["R1", "g0/2", "SRV"]],
+    },
+    configs: {
+      R1: ["enable", "configure terminal", "hostname R1", "no ip domain-lookup", "interface g0/0", "description Staff LAN", "ip address 10.1.10.1 255.255.255.0", "no shutdown", "interface g0/1", "description Guest LAN", "ip address 10.1.20.1 255.255.255.0", "no shutdown", "interface g0/2", "description Server LAN", "ip address 10.1.99.1 255.255.255.0", "no shutdown", "end"],
+      SW1: ["enable", "configure terminal", "hostname SW1", "no ip domain-lookup", "end"],
+    },
+    tasks: [
+      T("t1", "Create a standard ACL that stops host 10.1.10.12 (PC2) from reaching the server LAN while permitting every other source. Apply it on R1 as close to the destination as possible."),
+      T("t2", "Create an extended ACL that denies HTTP (TCP 80) from the guest LAN 10.1.20.0/24 to the server 10.1.99.10 and permits all other traffic. Apply it on R1 as close to the source as possible."),
+      T("t3", "Verify: PC1 can still ping the server, PC3 can still ping the server, and PC2 can still ping PC3."),
+    ],
+    guidelines: ["Do not change any interface address or description.", "Do not stop PC2 from reaching the guest LAN.", "Do not change the hostname."],
+    checks: [
+      C("c1", "t1", "aclPacket", { device: "R1", iface: "g0/2", dir: "out", pkt: { src: "10.1.10.12", dst: "10.1.99.10", proto: "icmp" }, expect: "deny" }, 2),
+      C("c2", "t1", "aclApplied", { device: "R1", iface: "g0/2", dir: "out" }),
+      C("c3", "t1", "aclPacket", { device: "R1", iface: "g0/2", dir: "out", pkt: { src: "10.1.10.11", dst: "10.1.99.10", proto: "icmp" }, expect: "permit", requires: ["c1"] }),
+      C("c4", "t2", "forward", { from: "PC3", pkt: { dst: "10.1.99.10", proto: "tcp", dport: 80 }, expect: false }, 2),
+      C("c5", "t2", "aclApplied", { device: "R1", iface: "g0/1", dir: "in" }),
+      C("c6", "t2", "forward", { from: "PC3", pkt: { dst: "10.1.99.10", proto: "tcp", dport: 443 }, expect: true, requires: ["c4"] }),
+      C("c7", "t3", "ping", { from: "PC1", to: "10.1.99.10", requires: ["c1"] }), C("c8", "t3", "ping", { from: "PC3", to: "10.1.99.10", requires: ["c4"] }),
+      C("c9", "t3", "ping", { from: "PC2", to: "10.1.99.10", expect: false, requires: ["c2"] }),
+      G("g0", 0, "interfaceIp", { device: "R1", iface: "g0/2", ip: "10.1.99.1" }), G("g1", 0, "interfaceIp", { device: "R1", iface: "g0/1", ip: "10.1.20.1" }),
+      G("g2", 1, "ping", { from: "PC2", to: "10.1.20.13" }, 2), G("g3", 2, "hostname", { device: "R1", name: "R1" }),
+    ],
+    why: "Standard ACLs match only the source, so they go next to the destination (outbound on the server interface) — placed near the source they would cut PC2 off from everything. Extended ACLs match source, destination and port, so they go next to the source (inbound on the guest interface) and drop the traffic before it crosses the router. Both need an explicit `permit` at the end: the implicit `deny any` would otherwise block everything else. Pings are ICMP, so the extended ACL does not touch them.",
+  },
+  /* ---------------------------------------------------------------- 7 · static NAT + PAT */
+  {
+    id: "lab-nat-pat", type: "ccna-lab", obj: "4.1", d: 4, title: "Static NAT and PAT", timeTargetMin: 6,
+    topology: {
+      devices: {
+        R1: { type: "router", x: 240, y: 130 }, ISP: { type: "router", x: 400, y: 130 }, SW1: { type: "switch", x: 110, y: 130 },
+        PC1: pc("10.1.10.11", "10.1.10.1", 50, 40), PC2: pc("10.1.10.12", "10.1.10.1", 50, 230), SRV: pc("10.1.10.50", "10.1.10.1", 170, 240),
+      },
+      links: [["R1", "g0/0", "SW1", "g0/1"], ["SW1", "f0/1", "PC1"], ["SW1", "f0/2", "PC2"], ["SW1", "f0/3", "SRV"], ["R1", "g0/1", "ISP", "g0/1"]],
+    },
+    configs: {
+      R1: ["enable", "configure terminal", "hostname R1", "no ip domain-lookup", "interface g0/0", "description LAN", "ip address 10.1.10.1 255.255.255.0", "no shutdown", "interface g0/1", "description To ISP", "ip address 203.0.113.2 255.255.255.252", "no shutdown", "exit", "ip route 0.0.0.0 0.0.0.0 203.0.113.1", "end"],
+      ISP: ["enable", "configure terminal", "hostname ISP", "no ip domain-lookup", "interface g0/1", "ip address 203.0.113.1 255.255.255.252", "no shutdown", "interface loopback 0", "ip address 8.8.8.8 255.255.255.255", "exit", "ip route 203.0.113.0 255.255.255.0 203.0.113.2", "end"],
+      SW1: ["enable", "configure terminal", "hostname SW1", "no ip domain-lookup", "end"],
+    },
+    tasks: [
+      T("t1", "On R1, identify Gi0/0 as the NAT inside interface and Gi0/1 as the NAT outside interface."),
+      T("t2", "Publish the server 10.1.10.50 to the Internet as 203.0.113.50 with a one-to-one static NAT. The ISP router must be able to ping 203.0.113.50."),
+      T("t3", "Configure PAT so every host in 10.1.10.0/24 shares R1's Gi0/1 address. Use an ACL to identify the inside hosts. Verify PC1 can ping 8.8.8.8."),
+    ],
+    guidelines: ["Do not change the ISP router.", "Do not change any interface address on R1.", "Do not remove R1's default route."],
+    checks: [
+      C("c1", "t1", "natInside", { device: "R1", iface: "g0/0" }), C("c2", "t1", "natOutside", { device: "R1", iface: "g0/1" }),
+      C("c3", "t2", "natStatic", { device: "R1", il: "10.1.10.50", ig: "203.0.113.50" }), C("c4", "t2", "ping", { from: "ISP", to: "203.0.113.50" }, 2),
+      C("c5", "t3", "natOverload", { device: "R1" }), C("c6", "t3", "ping", { from: "PC1", to: "8.8.8.8" }, 2),
+      C("c7", "t3", "natTranslation", { device: "R1", il: "10.1.10.11", ig: "203.0.113.2", requires: ["c6"] }),
+      G("g0", 0, "unchanged", { device: "ISP" }, 2), G("g1", 1, "interfaceIp", { device: "R1", iface: "g0/1", ip: "203.0.113.2" }), G("g2", 2, "defaultRoute", { device: "R1", nh: "203.0.113.1" }),
+    ],
+    why: "NAT only translates traffic that enters an `ip nat inside` interface and leaves an `ip nat outside` one, so the interface roles come first. A static entry maps one inside local address to one inside global address permanently, which is why the ISP can start a ping toward 203.0.113.50. PAT (`overload`) lets the whole LAN share one global address by tracking source ports; `show ip nat translations` shows each flow with the same inside global and a different port. An ACL, a named ACL, or a one-address pool with `overload` all produce the same result.",
+  },
+  /* ---------------------------------------------------------------- 8 · EtherChannel */
+  {
+    id: "lab-etherchannel", type: "ccna-lab", obj: "2.4", d: 2, title: "LACP EtherChannel trunk", timeTargetMin: 5,
+    topology: {
+      devices: { SW1: { type: "switch", x: 130, y: 100 }, SW2: { type: "switch", x: 350, y: 100 }, PC1: pc("10.1.10.11", "10.1.10.1", 130, 240), PC2: pc("10.1.10.12", "10.1.10.1", 350, 240) },
+      links: [["SW1", "g0/1", "SW2", "g0/1"], ["SW1", "g0/2", "SW2", "g0/2"], ["SW1", "f0/1", "PC1"], ["SW2", "f0/1", "PC2"]],
+    },
+    configs: {
+      SW1: ["enable", "configure terminal", "hostname SW1", "no ip domain-lookup", "vlan 10", "name USERS", "vlan 99", "name NATIVE", "exit", "interface f0/1", "switchport mode access", "switchport access vlan 10", "end"],
+      SW2: ["enable", "configure terminal", "hostname SW2", "no ip domain-lookup", "vlan 10", "name USERS", "vlan 99", "name NATIVE", "exit", "interface f0/1", "switchport mode access", "switchport access vlan 10", "end"],
+    },
+    tasks: [
+      T("t1", "Bundle Gi0/1 and Gi0/2 on both switches into Port-channel 1 using LACP. SW1 must actively initiate negotiation; SW2 must only respond."),
+      T("t2", "Make Port-channel 1 a static 802.1Q trunk with native VLAN 99 on both switches."),
+      T("t3", "Verify the bundle is up (SU with both members P) and PC1 can ping PC2 (10.1.10.12)."),
+    ],
+    guidelines: ["Do not change the access VLAN of Fa0/1 on either switch.", "Do not shut down any interface.", "Do not change the hostnames."],
+    checks: [
+      C("c1", "t1", "etherChannel", { device: "SW1", po: 1, members: ["g0/1", "g0/2"], protocol: "LACP", mode: "active", up: false }, 2),
+      C("c2", "t1", "etherChannel", { device: "SW2", po: 1, members: ["g0/1", "g0/2"], protocol: "LACP", mode: "passive", up: false }, 2),
+      C("c3", "t2", "trunk", { device: "SW1", iface: "po1", native: 99 }), C("c4", "t2", "trunk", { device: "SW2", iface: "po1", native: 99 }),
+      C("c5", "t3", "etherChannel", { device: "SW1", po: 1 }), C("c6", "t3", "ping", { from: "PC1", to: "10.1.10.12" }),
+      G("g0", 0, "accessVlan", { device: "SW1", iface: "f0/1", vlan: 10 }), G("g1", 0, "accessVlan", { device: "SW2", iface: "f0/1", vlan: 10 }),
+      G("g2", 1, "linkedUp", { device: "SW1" }), G("g3", 1, "linkedUp", { device: "SW2" }),
+      G("g4", 2, "hostname", { device: "SW1", name: "SW1" }), G("g5", 2, "hostname", { device: "SW2", name: "SW2" }),
+    ],
+    why: "LACP `active` sends LACPDUs; `passive` only answers, so active/passive and active/active bundle while passive/passive never does. Configure the trunk on the Port-channel interface: its settings are pushed to the members, and members whose settings disagree are suspended. In `show etherchannel summary`, SU means a Layer 2 channel in use and P means the member is bundled.",
+  },
+  /* ---------------------------------------------------------------- 9 · DHCP server + relay */
+  {
+    id: "lab-dhcp", type: "ccna-lab", obj: "4.6", d: 4, title: "DHCP server and relay", timeTargetMin: 6,
+    topology: {
+      devices: {
+        R1: { type: "router", x: 170, y: 110 }, R2: { type: "router", x: 330, y: 110 }, SW1: { type: "switch", x: 80, y: 200 },
+        PC1: { host: true, dhcp: true, x: 60, y: 280 }, PC2: { host: true, dhcp: true, x: 400, y: 260 },
+      },
+      links: [["R1", "g0/0", "SW1", "g0/1"], ["SW1", "f0/1", "PC1"], ["R1", "g0/1", "R2", "g0/1"], ["R2", "g0/0", "PC2"]],
+    },
+    configs: {
+      R1: ["enable", "configure terminal", "hostname R1", "no ip domain-lookup", "interface g0/0", "ip address 10.1.10.1 255.255.255.0", "no shutdown", "interface g0/1", "ip address 10.0.12.1 255.255.255.252", "no shutdown", "exit", "ip route 10.1.20.0 255.255.255.0 10.0.12.2", "end"],
+      R2: ["enable", "configure terminal", "hostname R2", "no ip domain-lookup", "interface g0/0", "ip address 10.1.20.1 255.255.255.0", "no shutdown", "interface g0/1", "ip address 10.0.12.2 255.255.255.252", "no shutdown", "exit", "ip route 0.0.0.0 0.0.0.0 10.0.12.1", "end"],
+      SW1: ["enable", "configure terminal", "hostname SW1", "no ip domain-lookup", "end"],
+    },
+    tasks: [
+      T("t1", "On R1, reserve 10.1.10.1–10.1.10.10 and 10.1.20.1–10.1.20.10 so DHCP never hands them out."),
+      T("t2", "On R1, create a pool for 10.1.10.0/24 with default gateway 10.1.10.1 and DNS server 10.1.10.5. PC1 must lease an address."),
+      T("t3", "On R1, create a pool for 10.1.20.0/24 with default gateway 10.1.20.1 and DNS server 10.1.10.5."),
+      T("t4", "R1 is the only DHCP server. Make R2 forward DHCP requests from its Gi0/0 LAN to R1 (10.0.12.1). PC2 must lease an address and ping 10.1.10.1."),
+    ],
+    guidelines: ["Do not configure a DHCP pool on R2.", "Do not change any interface address.", "Do not change the static routes."],
+    checks: [
+      C("c1", "t1", "dhcpPool", { device: "R1", network: "10.1.10.0", len: 24, excluded: [["10.1.10.1", "10.1.10.10"]], requires: [] }),
+      C("c2", "t1", "runningConfigMatches", { device: "R1", re: "^ip dhcp excluded-address 10\\.1\\.20\\.1 10\\.1\\.20\\.10$" }),
+      C("c3", "t2", "dhcpPool", { device: "R1", network: "10.1.10.0", len: 24, router: "10.1.10.1", dns: ["10.1.10.5"] }),
+      C("c4", "t2", "dhcpLease", { host: "PC1", network: "10.1.10.0", len: 24, notIn: ["10.1.10.1", "10.1.10.10"] }),
+      C("c5", "t3", "dhcpPool", { device: "R1", network: "10.1.20.0", len: 24, router: "10.1.20.1", dns: ["10.1.10.5"] }),
+      C("c6", "t4", "dhcpHelper", { device: "R2", iface: "g0/0", addr: "10.0.12.1" }),
+      C("c7", "t4", "dhcpLease", { host: "PC2", network: "10.1.20.0", len: 24, notIn: ["10.1.20.1", "10.1.20.10"] }),
+      C("c8", "t4", "ping", { from: "PC2", to: "10.1.10.1" }),
+      G("g0", 0, "runningConfigNotMatches", { device: "R2", re: "^ip dhcp pool" }, 2), G("g1", 1, "interfaceIp", { device: "R2", iface: "g0/0", ip: "10.1.20.1" }),
+      G("g2", 2, "staticRoute", { device: "R1", prefix: "10.1.20.0", len: 24, nh: "10.0.12.2" }), G("g3", 2, "defaultRoute", { device: "R2", nh: "10.0.12.1" }),
+    ],
+    why: "Exclusions are global on the server, not per pool, and both ranges are needed because the server hands out the lowest free address. DHCP Discover is a broadcast and routers do not forward broadcasts, so the remote LAN's gateway (R2 Gi0/0) needs `ip helper-address` pointing at the server; the server then picks the pool that matches the relay's interface address (giaddr), which is why the 10.1.20.0/24 pool lives on R1.",
+  },
 ];

@@ -1,0 +1,5 @@
+! device R2
+conf t
+ip dhcp pool LOCAL
+network 10.1.20.0 255.255.255.0
+end
