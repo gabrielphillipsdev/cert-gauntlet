@@ -5,6 +5,7 @@
 > Repo conventions: one branch per chat (`chat-N/short-name`), one PR per chat, squash-merged by Gabe. A chat touches only the folders its row in §6 names. If a chat needs a change to `/core` APIs, it stops and says so; Chat 1 (the engine chat) makes the change and updates ENGINE.md.
 >
 > Status log (newest first):
+> - 2026-10-03 · Chat 7 merged: IOS CLI simulator engine in `core/sims/ios/` (parser/modes/help/completion, device + topology model, forwarding with ARP/VLAN/trunk/STP/routing/ACL/NAT/DHCP, simplified OSPF, all blueprint show commands, ping/traceroute). 118-case conformance suite in `dev/tests/ios-conformance.mjs`. Scope and out-of-scope list in `dev/specs/ccna.md`. Chat 8 builds the lab UI + items on top; `ssh`/`telnet` between devices stay stubbed (each device gets its own terminal tab, like the exam).
 > - 2026-10-02 · Chat 1 merged: engine extracted, per-record Gist sync, service worker, iPad layouts, Sec+ pack ported with the four fixes and objective IDs on all 830 items. Validator found objective 4.2 has no exam-bank items and 4.9 only PBQs — Chat 3 adds those.
 
 Gabe Phillips · Prepared Oct 2, 2026 · One app, three packs: Security+ SY0-701 → SC-200 → CCNA 200-301 v1.1 (plus AZ-900 / SC-900 warm-ups)
