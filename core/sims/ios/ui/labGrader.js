@@ -61,7 +61,7 @@
    subinterface       device iface vlan [ip] [len] [native]
    stpRole            device iface vlan role             Root | Desg | Altn (uses live STP)
    stpRoot            device vlan
-   answer             id accept[]                        analyze lab text answers (case/space-insensitive; interface names normalized)
+   answer             answer accept[]                    analyze lab text answer (answer = id in item.answers; case/space-insensitive; interface names normalized)
    runningConfigMatches / runningConfigNotMatches  device re [flags]
    cmd                device line re                     run a show command on a scratch session and regex its output   */
 import { createLab, runningConfig, parseIfName, makeSession, net } from "../index.js";
@@ -127,7 +127,7 @@ export const CHECKS = {
   ipRouting(c, k) { return R(c.dev(k.device).ipRouting, `ip routing ${c.dev(k.device).ipRouting ? "on" : "off"}`); },
   hostname(c, k) { const d = c.dev(k.device); return R(d.hostname === k.name, `hostname ${d.hostname}`); },
   vlanExists(c, k) { const v = c.dev(k.device).vlans[k.vlan]; if (!v) return R(false, `VLAN ${k.vlan} does not exist on ${k.device}`); return R(!k.name || norm(v.name) === norm(k.name), `VLAN ${k.vlan} is "${v.name}"`); },
-  accessVlan(c, k) { const i = c.iface(k.device, k.iface); if (!i?.switchport) return R(false, `no switchport ${k.iface}`); return R(i.rt.opMode !== "trunk" && i.switchport.access === k.vlan, `${ifShort(i.name)}: ${i.rt.opMode || "down"}, access VLAN ${i.switchport.access}`); },
+  accessVlan(c, k) { const i = c.iface(k.device, k.iface); if (!i?.switchport) return R(false, `no switchport ${k.iface}`); return R(i.rt.opMode !== "trunk" && i.switchport.access === k.vlan, `${k.device} ${ifShort(i.name)}: ${i.rt.opMode === "trunk" ? "trunking" : "access"}, access VLAN ${i.switchport.access}`); },
   voiceVlan(c, k) { const i = c.iface(k.device, k.iface); return R(i?.switchport && i.switchport.voice === k.vlan, i ? `voice VLAN ${i.switchport?.voice ?? "none"}` : `no ${k.iface}`); },
   trunk(c, k) {
     const i = c.iface(k.device, k.iface); if (!i?.switchport) return R(false, `no switchport ${k.iface}`);
@@ -220,7 +220,7 @@ export const CHECKS = {
   stpRole(c, k) { c.topo.converge(); const i = c.iface(k.device, k.iface); const st = i?.rt.stp?.[k.vlan]; return R(st && st.role === k.role, st ? `${ifShort(i.name)} VLAN ${k.vlan}: ${st.role}/${st.sts}` : `${k.iface} not in VLAN ${k.vlan} STP`); },
   stpRoot(c, k) { c.topo.converge(); const d = c.dev(k.device); return R(d.rt.stp?.[k.vlan]?.root, `${k.device} ${d.rt.stp?.[k.vlan]?.root ? "is" : "is not"} root for VLAN ${k.vlan}`); },
   answer(c, k, answers) {
-    const got = answers?.[k.id] ?? ""; const g = norm(got); const gi = parseIfName(g)?.short?.toLowerCase();
+    const got = answers?.[k.answer] ?? ""; const g = norm(got); const gi = parseIfName(g)?.short?.toLowerCase();
     const ok = k.accept.some(a => { const n = norm(a); return n === g || (gi && parseIfName(n)?.short?.toLowerCase() === gi); });
     return R(ok, got ? `you answered "${got}"` : "no answer");
   },

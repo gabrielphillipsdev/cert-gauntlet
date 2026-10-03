@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CCNA lab — dev page</title>
+<link rel="stylesheet" href="../../core/styles.css">
+<style>.view{max-width:var(--maxw-wide)} .devpick{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0} .devpick a{font-size:12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 8px;color:var(--ink);text-decoration:none}</style>
+</head><body>
+<div class="view wide" id="view"></div>
+<script type="module">
+/* Standalone harness for one CCNA lab item outside the app: dev/pages/ccna-lab.html?lab=<id>. Serve the repo root (python3 -m http.server 8765). */
+import { LABS } from "../../packs/ccna/labs.js";
+import { sim } from "../../core/sims/registry.js";
+import "../../core/sims/ios/ui/labItem.js";
+import { esc } from "../../core/util.js";
+const view = document.getElementById("view");
+const id = new URLSearchParams(location.search).get("lab") || LABS[0].id;
+const item = LABS.find(l => l.id === id) || LABS[0];
+const def = sim(item.type); let st = def.create(item), locked = false;
+view.innerHTML = `<div class="tb"><a href="?">Labs</a><div class="labtitle">${esc(item.title)}</div><button class="ghost tiny" id="reset">Reset</button></div><div class="devpick">${LABS.map(l => `<a href="?lab=${l.id}" ${l.id === item.id ? 'style="border-color:var(--teal)"' : ""}>${esc(l.id.replace(/^lab-/, ""))}</a>`).join("")}</div><div id="body" class="simbox"></div><div class="pbqfoot"><button class="bigbtn amber" id="submit">Check answers</button></div><div id="fb" class="pbqfb"></div>`;
+const body = document.getElementById("body");
+const draw = reveal => def.render(body, item, st, { onChange() { window.__labState = st; }, locked: reveal, reveal });
+draw(false);
+document.getElementById("reset").onclick = () => { if (locked) return; st = def.create(item); draw(false); };
+document.getElementById("submit").onclick = () => { if (locked) return; locked = true; const r = def.score(item, st); draw(true); const fb = document.getElementById("fb"); fb.style.display = "block"; fb.innerHTML = `<div class="fbscore">${Math.round(r.f * 100)}%</div><div class="fbwhy">${esc(r.notes.join("\n"))}\n\n${esc(r.why || "")}</div><div class="fbbtns"><button class="bigbtn" onclick="location.reload()">Try again</button></div>`; };
+window.__lab = { item, get st() { return st; }, def };
+</script></body></html>
