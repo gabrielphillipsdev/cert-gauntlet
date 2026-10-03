@@ -1,0 +1,445 @@
+/* SC-200 Exam Bank A — ingestion, detection engineering, Sentinel platform heavy.
+   50 units: case study a001 (8) + standalone a002–a039 (38) + solution series a040 (4). */
+export const SC200_BANK_A = [
+{id:"a001",t:"case",title:"Fabrikam: SIEM migration to Microsoft Sentinel",
+ tabs:{
+ overview:"Fabrikam Logistics runs a six-analyst SOC in Cincinnati. The company is retiring a third-party SIEM and moving all detection and response to Microsoft Sentinel, operated from the Microsoft Defender portal. A single Log Analytics workspace named fab-sentinel-prod has been created in resource group RG-Sentinel inside subscription Sub1. Two security engineers own ingestion and automation; Tier-1 analysts handle the incident queue in shifts. Cutover from the old SIEM must finish within 90 days, and the finance team has asked the SOC to justify every ingested gigabyte.",
+ environment:"On-premises: 400 Windows Server 2019 and 2022 hosts, including six domain controllers, all onboarded to Azure Arc. Azure: 120 virtual machines split across subscription Sub1 (production) and Sub2 (development). Network: 12 Linux-based firewall and proxy appliances that emit CEF-formatted messages over syslog to a Linux VM named fab-fwd-01, which runs rsyslog and the Azure Monitor Agent as a log forwarder. Identity and productivity: Microsoft Entra ID P2 and Microsoft 365 E5, with Defender for Endpoint on every server. Defender for Cloud with Defender for Servers Plan 2 is enabled on Sub1 only. The Defender XDR data connector is connected. Automation: a Consumption Logic App named PB-Isolate-Host, using a system-assigned managed identity, lives in resource group RG-SOC-Automation. Its steps are: trigger Microsoft Sentinel incident, Entities - Get Hosts, Actions - Isolate machine, Add comment to incident (V3). The workspace uses the default 90-day Analytics retention.",
+ requirements:"R1. Only Windows Security events 4624, 4625, 4672, 4688 and 4720 may be collected from the Arc-enabled servers, to keep ingestion cost minimal.\nR2. SecurityEvent data must stay interactively searchable for 180 days and be retained for two years in total at the lowest possible cost, without breaking analytics rules.\nR3. An alert must fire within two minutes whenever event 4720 (a user account was created) is logged on a domain controller.\nR4. Tier-1 analysts must be able to assign, comment on and close incidents and manually run PB-Isolate-Host from an incident, but must not be able to create or edit analytics rules. Use least privilege.\nR5. For High severity incidents whose title contains the word Ransomware, an automation rule must tag the incident Auto-Isolated and a second automation rule must then run PB-Isolate-Host.\nR6. Hourly counts of firewall allow and deny events per source IP must remain queryable in the Analytics tier for 12 months, while raw CommonSecurityLog rows are moved to the Data lake tier.",
+ issues:"I1. After cutover, an engineer created a Microsoft security analytics rule named Create incidents based on Microsoft Defender for Endpoint alerts. Every Defender for Endpoint alert now appears twice in the incident queue: once with provider Microsoft Defender XDR and once created by that rule.\nI2. The Common Event Format (CEF) via AMA connector page shows no data. On fab-fwd-01, netstat -lnptv shows rsyslog is not listening on port 514. The appliances send to fab-fwd-01 on UDP 514. A separate Syslog via AMA data collection rule targets fab-fwd-01 and collects facility local4 at LOG_INFO; the CEF data collection rule also selects local4.\nI3. When an automation rule tries to run PB-Isolate-Host, the automation rule run fails with a message that the caller does not have permission to run the playbook. When an engineer who is Owner of both resource groups runs the playbook manually from an incident, it succeeds."},
+ questions:[
+ {id:"a001-1",d:1,obj:"1.3.2",cat:"ingest",t:"mc",
+  q:"You create the data collection rule for the Windows Security Events via AMA connector so that the Arc-enabled servers satisfy requirement R1. On the Collect tab you choose Custom. Which XPath query should you enter?",
+  o:[
+   {t:"Security!*[System[(EventID=4624 or EventID=4625 or EventID=4672 or EventID=4688 or EventID=4720)]]",ok:true,x:"The Security channel name, the ! separator and an EventID expression joined with or is the XPath form a DCR accepts, and it collects only the five IDs R1 allows."},
+   {t:"Security!*[System[EventID in (4624,4625,4672,4688,4720)]]",ok:false,x:"XPath 1.0 has no in operator, so the DCR rejects this expression and nothing is collected from the servers."},
+   {t:"Event!*[System[(EventID=4624 or EventID=4625 or EventID=4672 or EventID=4688 or EventID=4720)]]",ok:false,x:"The text before ! must be the Windows channel name. There is no channel named Event; the logons and process events R1 wants live in the Security channel."},
+   {t:"Security!*[System[(Level=1 or Level=2 or Level=3)]]",ok:false,x:"Filtering on Level collects every critical, error and warning event regardless of ID, which brings in far more than the five events R1 permits."}
+  ],
+  w:"DCR XPath is Channel!*[System[(EventID=n or EventID=m)]]. Only or-joined comparisons work; there is no in() and the channel is Security, not Event."},
+ {id:"a001-2",d:1,obj:"1.2.2",cat:"sentplat",t:"mc",
+  q:"You need to configure the SecurityEvent table to meet requirement R2. What should you do on the Tables page under Microsoft Sentinel Configuration?",
+  o:[
+   {t:"Keep the Analytics tier, set Analytics retention to 180 days and Total retention to 2 years",ok:true,x:"Analytics retention is the interactive window; Total retention extends into low-cost long-term storage. 180 days interactive plus two years total meets R2 without disabling detections."},
+   {t:"Keep the Analytics tier and set Analytics retention to 2 years",ok:false,x:"This keeps all two years in the interactive tier, so Fabrikam pays the higher Analytics retention price for 18 months it only needs for compliance, violating the lowest-cost condition."},
+   {t:"Change the table to the Data lake tier with 2 years of retention",ok:false,x:"Moving SecurityEvent to the Data lake tier stops analytics rules, alerting and advanced hunting on the table, which R2 explicitly forbids and R3 depends on."},
+   {t:"Change the workspace default retention to 2 years",ok:false,x:"A workspace-level change applies to every table, raising cost across the board, and still leaves the whole two years in the interactive tier rather than splitting it as R2 requires."}
+  ],
+  w:"Per-table settings: Tier, Analytics (interactive) retention up to 2 years, Total retention up to 12 years. Keep detections working by staying in the Analytics tier and extending Total retention."},
+ {id:"a001-3",d:1,obj:"1.4.3",cat:"detect",t:"mc",
+  q:"You need to create the detection for requirement R3 against the SecurityEvent table. Which type of analytics rule should you create?",
+  o:[
+   {t:"A near-real-time (NRT) rule",ok:true,x:"NRT rules run once a minute on data as it is ingested, so a 4720 on a domain controller produces an alert inside the two-minute window R3 demands."},
+   {t:"A scheduled query rule that runs every 5 minutes",ok:false,x:"Five minutes is the shortest schedule a scheduled rule allows, and the query only looks back at TimeGenerated, so the alert can arrive well after R3's two-minute limit."},
+   {t:"A Fusion rule",ok:false,x:"Fusion correlates multiple signals into multistage incidents using Microsoft's models; it cannot be pointed at a single event ID on specific hosts."},
+   {t:"A Microsoft security incident creation rule",ok:false,x:"These rules turn alerts from Microsoft security products into incidents; they do not run KQL against SecurityEvent and cannot detect a raw Windows event."}
+  ],
+  w:"When the stem says alert within one or two minutes on a single event, the answer is NRT. Scheduled rules bottom out at 5 minutes; Fusion and Microsoft security rules do not run custom KQL."},
+ {id:"a001-4",d:1,obj:"1.2.1",cat:"sentplat",t:"ms",pick:2,
+  q:"You need to grant the Tier-1 analysts the access described in requirement R4. Which two role assignments should you make? Each correct answer presents part of the solution.",
+  o:[
+   {t:"Microsoft Sentinel Responder on resource group RG-Sentinel",ok:true,x:"Responder adds incident management (assign, comment, close) to Reader without granting the ability to create or edit analytics rules, matching the first half of R4."},
+   {t:"Microsoft Sentinel Playbook Operator on resource group RG-SOC-Automation",ok:true,x:"Manually running a playbook from an incident requires Playbook Operator on the playbook or its resource group; PB-Isolate-Host lives in RG-SOC-Automation."},
+   {t:"Microsoft Sentinel Contributor on resource group RG-Sentinel",ok:false,x:"Contributor can create and edit analytics rules, which R4 explicitly prohibits for Tier-1 analysts."},
+   {t:"Microsoft Sentinel Automation Contributor on resource group RG-SOC-Automation",ok:false,x:"Automation Contributor exists for the Microsoft Sentinel service identity so automation rules can run playbooks; it is not meant for users and does not let an analyst run a playbook manually."},
+   {t:"Logic App Contributor on resource group RG-SOC-Automation",ok:false,x:"Logic App Contributor lets a person edit the playbook's workflow, which is more than R4 allows and still is not the Sentinel permission that surfaces Run playbook on an incident."},
+   {t:"Microsoft Sentinel Reader on resource group RG-Sentinel",ok:false,x:"Reader can view incidents but cannot assign, comment on or close them, so it fails the incident-handling part of R4."}
+  ],
+  w:"Responder = manage incidents, no rule editing. Playbook Operator = run playbooks manually, scoped to where the playbook lives. Automation Contributor is for Sentinel's own identity."},
+ {id:"a001-5",d:1,obj:"1.1.10",cat:"sentauto",t:"build",ordered:true,
+  q:"You need to satisfy requirement R5 and resolve issue I3. Resolve issue I3 before creating any rule that runs the playbook. Which three actions should you perform in sequence? To answer, move the appropriate actions from the list to the answer area and arrange them in the correct order.",
+  pool:["Use Manage playbook permissions to grant Microsoft Sentinel Automation Contributor on RG-SOC-Automation","Create an incident-created rule, order 1, severity High and title contains Ransomware, action Add tags Auto-Isolated","Create an incident-created automation rule, order 2, same conditions, action Run playbook PB-Isolate-Host","Assign Microsoft Sentinel Playbook Operator to the Microsoft Sentinel service identity","Create an alert-created automation rule that runs PB-Isolate-Host","Create an incident-updated automation rule that adds the tag Auto-Isolated"],
+  answer:[0,1,2],
+  x:"I3 is the missing Automation Contributor grant for Sentinel's identity on the playbook's resource group, so fix that first or the second rule will keep failing. R5 wants tagging before isolation, and rules with the same trigger run in order-number sequence, so the tag rule gets order 1 and the playbook rule order 2. Playbook Operator is a user role, an alert-trigger rule cannot run an incident playbook, and an incident-updated trigger would not fire on creation.",
+  w:"Automation rules with the same trigger run lowest order number first. Sentinel's own identity needs Automation Contributor on the playbook's resource group before any rule can run that playbook."},
+ {id:"a001-6",d:1,obj:"1.3.4",cat:"ingest",t:"ms",pick:2,
+  q:"You need to resolve issue I2 so that firewall events arrive in CommonSecurityLog exactly once. Which two actions should you perform? Each correct answer presents part of the solution.",
+  o:[
+   {t:"Run the Forwarder_AMA_installer.py script on fab-fwd-01",ok:true,x:"The installer configures rsyslog to listen on port 514 over UDP and TCP and restarts the daemon, which is exactly what netstat shows is missing."},
+   {t:"Remove facility local4 from the Syslog via AMA data collection rule",ok:true,x:"When a Syslog DCR and a CEF DCR on the same forwarder both select a facility, every message is ingested twice. Leaving local4 only to the CEF rule stops the duplicates."},
+   {t:"Reconfigure the appliances to send to fab-fwd-01 on TCP 443",ok:false,x:"Port 443 is the agent's outbound path to Azure Monitor, not a syslog listener. The appliances are already using the port the forwarder is supposed to listen on."},
+   {t:"Install the Azure Connected Machine agent on fab-fwd-01",ok:false,x:"fab-fwd-01 is already an Azure VM running the Azure Monitor Agent; Arc is for machines outside Azure and would not make rsyslog listen."},
+   {t:"Change the CEF data collection rule to collect facility local4 at LOG_DEBUG",ok:false,x:"Lowering the minimum level changes how much is collected, not whether rsyslog receives anything, and it does nothing about the overlapping Syslog rule."},
+   {t:"Delete the CEF data collection rule and rely on the Syslog data collection rule",ok:false,x:"Messages collected by the Syslog rule land in the Syslog table as raw text, not in CommonSecurityLog with parsed CEF fields, so the requirement is not met."}
+  ],
+  w:"CEF via AMA: the forwarder script opens 514 UDP/TCP in rsyslog or syslog-ng; never let a Syslog DCR and a CEF DCR share a facility on the same forwarder or you ingest twice."},
+ {id:"a001-7",d:2,obj:"2.1.7",cat:"xdrresp",t:"mc",
+  q:"You need to stop the duplicate incidents described in issue I1 while keeping Defender for Endpoint incidents synchronized between the Defender portal and Microsoft Sentinel. What should you do?",
+  o:[
+   {t:"Disable the Create incidents based on Microsoft Defender for Endpoint alerts analytics rule",ok:true,x:"With the Defender XDR connector connected, Defender for Endpoint incidents already arrive through it. The Microsoft security rule the engineer created re-creates them, so disabling that rule removes the duplicates."},
+   {t:"Disconnect the Microsoft Defender XDR data connector",ok:false,x:"That removes the bi-directional incident sync Fabrikam relies on and keeps only the rule-created copies, which lack the Defender portal correlation."},
+   {t:"Create an automation rule that closes incidents whose provider is Microsoft Defender XDR",ok:false,x:"Auto-closing one of every pair hides the symptom while still ingesting two incidents per alert and discarding the synchronized copy."},
+   {t:"Enable alert grouping on the Microsoft security rule and set a 24-hour grouping window",ok:false,x:"Microsoft security incident creation rules do not run KQL or offer alert grouping settings, and grouping would not merge an incident created by a different provider anyway."}
+  ],
+  w:"Defender XDR connector + a Microsoft security incident creation rule for the same product = duplicate incidents. The connector normally disables those rules; keep them off."},
+ {id:"a001-8",d:3,obj:"3.2.3",cat:"senthunt",t:"mc",
+  q:"You need to implement requirement R6 for the firewall data. What should you create?",
+  o:[
+   {t:"A summary rule that aggregates CommonSecurityLog hourly into a custom _CL table in the Analytics tier",ok:true,x:"Summary rules run an aggregation on a schedule and write to an Analytics-tier custom table, so the counts stay queryable for a year while the raw rows can live in the lake."},
+   {t:"A one-time KQL job that aggregates the last 12 months of CommonSecurityLog",ok:false,x:"A one-time job produces a single snapshot; R6 needs continuously updated hourly counts, and a job over lake data runs after the rows are already in the lake, not as an ongoing process."},
+   {t:"A workbook with a query that counts allow and deny events by source IP",ok:false,x:"A workbook visualizes whatever is queryable at view time; once raw CommonSecurityLog is in the Data lake tier the workbook query has nothing in the Analytics tier to read."},
+   {t:"A scheduled analytics rule that groups events by source IP every hour",ok:false,x:"Analytics rules produce alerts and incidents, not a stored aggregate table, and they cannot query Data lake tier data at all."}
+  ],
+  w:"Summary rules = scheduled aggregation into an Analytics-tier _CL table; the raw source can sit in a cheaper tier. KQL jobs promote lake data on demand; analytics rules only alert."}
+ ]},
+{id:"a002",d:2,obj:"2.1.7",cat:"xdrresp",t:"mc",
+ q:"You run the query shown in the exhibit against a Microsoft Sentinel workspace. You need to identify which incident was created by a Microsoft Sentinel analytics rule and is still awaiting an analyst. Which IncidentNumber should you investigate first?",
+ ex:"SecurityIncident\n| summarize arg_max(TimeGenerated, *) by IncidentNumber\n| project IncidentNumber, Severity, Status, ProviderName, Classification, Owner\n\nIncidentNumber  Severity  Status  ProviderName                 Classification  Owner\n4471            High      New     Azure Sentinel               (empty)         (empty)\n4472            High      Active  Microsoft 365 Defender       (empty)         ana@fabrikam.com\n4473            Medium    Closed  Azure Sentinel               BenignPositive  rob@fabrikam.com\n4474            Low       New     Microsoft 365 Defender       (empty)         (empty)",
+ o:[
+  {t:"4471",ok:true,x:"ProviderName Azure Sentinel means the incident came from a Sentinel analytics rule, and Status New with no owner means nobody has picked it up. It is also High severity."},
+  {t:"4472",ok:false,x:"This incident is already Active and owned by an analyst, and its provider shows it originated in Defender XDR rather than a Sentinel analytics rule."},
+  {t:"4473",ok:false,x:"The incident is Closed with a BenignPositive classification; there is nothing left to triage."},
+  {t:"4474",ok:false,x:"Although it is New and unassigned, its provider is Microsoft 365 Defender, so it was not created by a Sentinel scheduled rule, and it is only Low severity."}
+ ],
+ w:"In SecurityIncident, use arg_max per IncidentNumber for the latest row. ProviderName Azure Sentinel = Sentinel analytics rules (any type); Microsoft 365 Defender = XDR-originated incidents."},
+{id:"a003",d:1,obj:"1.3.5",cat:"ingest",t:"ms",pick:2,
+ q:"Northwind has 14 Azure subscriptions under one management group and creates new subscriptions monthly. You need Azure Activity logs from every current and future subscription to flow into a Microsoft Sentinel workspace with no per-subscription steps. Which two actions should you perform? Each correct answer presents part of the solution.",
+ o:[
+  {t:"From the Azure Activity connector, launch the Azure Policy Assignment wizard scoped to the management group",ok:true,x:"The connector's policy configures diagnostic settings on every subscription in scope, and a management-group scope covers subscriptions created later without further work."},
+  {t:"On the Remediation tab of the assignment, select Create a remediation task",ok:true,x:"Policy applies to new subscriptions automatically, but the 14 existing ones are only configured when a remediation task runs."},
+  {t:"Add a diagnostic setting on each subscription that sends the activity log to the workspace",ok:false,x:"Manual diagnostic settings work for the current 14 but require a repeat for every new subscription, which the scenario rules out."},
+  {t:"Deploy the Azure Monitor Agent to every virtual machine in the subscriptions",ok:false,x:"Activity logs are a control-plane feed from Azure Resource Manager; they are not collected by an agent on virtual machines."},
+  {t:"Enable Microsoft Defender for Cloud on each subscription",ok:false,x:"Defender for Cloud produces security alerts and recommendations, not the Azure Activity log, and still requires per-subscription enablement."},
+  {t:"Scope the Azure Policy assignment to the Sub1 subscription only",ok:false,x:"A single-subscription scope leaves the other 13 and all future subscriptions unconnected."}
+ ],
+ w:"Azure Activity connector = Azure Policy that sets diagnostic settings. Scope at the management group for future subscriptions and tick Create a remediation task for existing ones."},
+{id:"a004",d:3,obj:"3.1.1",cat:"kql",t:"mc",
+ q:"In Microsoft Defender XDR advanced hunting, you need to find every instance of a renamed copy of certutil.exe launched with a URL argument on managed devices during the last 7 days. Which table should you query?",
+ o:[
+  {t:"DeviceProcessEvents",ok:true,x:"Process creation rows, including the command line and the original file name of the image, live in DeviceProcessEvents, which is exactly what a renamed-binary hunt needs."},
+  {t:"DeviceNetworkEvents",ok:false,x:"Network rows show the connection the download made, but not the process command line or the original file name needed to spot the rename."},
+  {t:"DeviceFileEvents",ok:false,x:"File events show creation, modification and rename of files on disk, not the execution of a process with arguments."},
+  {t:"DeviceEvents",ok:false,x:"DeviceEvents is the catch-all for miscellaneous sensor events such as ASR or AMSI; process launches with command lines are recorded in DeviceProcessEvents."}
+ ],
+ w:"Process launch + command line + original file name = DeviceProcessEvents. Network = DeviceNetworkEvents, file on disk = DeviceFileEvents, everything else = DeviceEvents."},
+{id:"a005",d:1,obj:"1.1.11",cat:"sentauto",t:"mc",
+ q:"A Consumption Logic App playbook in a Woodgrove subscription is shown in the exhibit. It authenticates every Microsoft Sentinel action with its system-assigned managed identity. When run from an incident, step 4 fails with an authorization error naming Microsoft.SecurityInsights/incidents/comments/write; the isolation in step 3 succeeds. You need the playbook to complete. What should you do?",
+ ex:"1. Trigger: Microsoft Sentinel incident\n2. Entities - Get Hosts\n3. For each host: Actions - Isolate machine (Microsoft Defender for Endpoint)\n4. Add comment to incident (V3)\n   -> 403 Forbidden: identity lacks Microsoft.SecurityInsights/incidents/comments/write on scope .../RG-Sentinel",
+ o:[
+  {t:"Assign the Microsoft Sentinel Responder role to the playbook's managed identity on the workspace resource group",ok:true,x:"Writing a comment is an incident write action. The Sentinel connector's identity needs Responder (or Contributor) on the workspace; Reader-level access covers only triggers and reads."},
+  {t:"Assign the Microsoft Sentinel Automation Contributor role to the playbook's managed identity on RG-SOC-Automation",ok:false,x:"Automation Contributor is granted to Microsoft Sentinel's own service identity so it can run playbooks; it does not give the playbook's identity write access to incidents."},
+  {t:"Grant the managed identity the Machine.Isolate application permission",ok:false,x:"Step 3 already isolates successfully, so Defender for Endpoint permissions are not the problem; the failing step talks to Microsoft Sentinel, not the Defender API."},
+  {t:"Change the trigger to Microsoft Sentinel alert",ok:false,x:"The trigger type decides what the playbook receives, not what the identity is allowed to write. The same comment action would fail with the same 403."}
+ ],
+ w:"A playbook's own identity needs Microsoft Sentinel Responder on the workspace to update or comment on incidents. Automation Contributor is for Sentinel's identity on the playbook's resource group."},
+{id:"a006",d:2,obj:"2.1.5",cat:"xdrresp",t:"ms",pick:2,
+ q:"A Microsoft Sentinel incident shows that a Tailspin user's Microsoft Entra ID Protection user risk is High after sign-ins from an anonymous IP address and a mailbox forwarding rule was created. The attacker may hold a valid refresh token. You need to end the attacker's access and have Entra ID Protection show the user as remediated. Which two actions should you perform? Each correct answer presents part of the solution.",
+ o:[
+  {t:"From the Risky users page, select Reset password to issue a temporary password",ok:true,x:"An admin-generated temporary password sets the user's risk state to Remediated and forces a credential change at next sign-in."},
+  {t:"Revoke the user's refresh tokens",ok:true,x:"A password reset alone does not invalidate tokens already issued; revoking refresh tokens cuts off the session the attacker is holding."},
+  {t:"Select Dismiss user risk",ok:false,x:"Dismissing tells the model the detections were false positives and leaves the password unchanged, which is wrong for a confirmed compromise with a forwarding rule in place."},
+  {t:"Select Confirm sign-in safe on the anonymous IP sign-in",ok:false,x:"Marking the malicious sign-in safe lowers risk and feeds bad feedback to Entra ID Protection; it does nothing about the attacker's access."},
+  {t:"Add the anonymous IP range to the named locations as trusted",ok:false,x:"Trusting the attacker's egress stops future detections from that source and widens the breach instead of closing it."},
+  {t:"Delete the user account and create a new one",ok:false,x:"Deleting the account destroys audit history and mailbox data and is far beyond what is needed; risk remediation and token revocation suffice."}
+ ],
+ w:"Confirmed compromise: reset the password (risk becomes Remediated) and revoke refresh tokens. Dismiss is for false positives; Confirm safe is for benign sign-ins."},
+{id:"a007",d:1,obj:"1.4.3",cat:"detect",t:"mc",
+ q:"You are building a scheduled analytics rule in Microsoft Sentinel from the query in the exhibit. You need the incident to show the signed-in user as an Account entity and the server as a Host entity so that entity pages and investigation graphs work. How should you configure entity mapping?",
+ ex:"SecurityEvent\n| where EventID == 4624 and LogonType == 10\n| where AccountType == \"User\"\n| project TimeGenerated, Computer, Account, TargetUserName, TargetDomainName, IpAddress\n\nTimeGenerated         Computer              Account             TargetUserName  TargetDomainName  IpAddress\n2026-09-30 02:11:04   FAB-SQL01.fabrikam.local  FABRIKAM\\jsmith  jsmith          FABRIKAM          203.0.113.45\n2026-09-30 02:13:51   FAB-SQL01.fabrikam.local  FABRIKAM\\jsmith  jsmith          FABRIKAM          203.0.113.45\n2026-09-30 02:40:17   FAB-WEB02.fabrikam.local  FABRIKAM\\svc_bk  svc_bk          FABRIKAM          198.51.100.7",
+ o:[
+  {t:"Account: Name = TargetUserName, NTDomain = TargetDomainName. Host: HostName = Computer. IP: Address = IpAddress",ok:true,x:"Each entity type gets its own mapping with identifier columns that the query projects. Name plus NTDomain uniquely identifies the on-premises account; Computer carries the host name."},
+  {t:"Account: Name = Account. Host: HostName = IpAddress",ok:false,x:"IpAddress is the remote client, not the server name, so the Host entity would be wrong, and the combined DOMAIN\\user string does not split into the Name and NTDomain identifiers."},
+  {t:"Map a single Account entity with Name = Computer and leave the Host entity unmapped",ok:false,x:"Putting the computer name into an Account entity misidentifies the server as a user and leaves no Host entity for the investigation graph."},
+  {t:"Enable alert grouping by all entities instead of configuring entity mapping",ok:false,x:"Grouping uses the entities a rule has already mapped; without mappings there are no entities to group by, and no entity pages are produced."}
+ ],
+ w:"Entity mapping: pick the entity type, then the identifier columns (Account Name + NTDomain, Host HostName, IP Address). Up to 10 mappings per rule, 3 identifiers each; the query must project those columns."},
+{id:"a008",d:2,obj:"2.3.1",cat:"m365inv",t:"mc",
+ q:"A Litware analyst retrieves the Microsoft Purview Audit record shown in the exhibit while investigating a possible business email compromise. What does the record prove?",
+ ex:"CreationTime: 2026-09-28T03:14:22\nOperation: MailItemsAccessed\nUserId: m.chen@litware.com\nClientIPAddress: 198.51.100.23\nClientInfoString: Client=REST;Client=RESTSystem;;\nLogonType: 0\nMailAccessType: Bind\nOperationProperties: MailAccessType=Bind; IsThrottled=False\nFolders: [{\"Path\":\"\\\\Inbox\",\"FolderItems\":[{\"InternetMessageId\":\"<4a7d@litware.com>\"}]}]\nResultStatus: Succeeded",
+ o:[
+  {t:"A message in m.chen's Inbox was opened through a REST client from 198.51.100.23 using m.chen's own credentials",ok:true,x:"MailItemsAccessed with MailAccessType Bind records an item being read; LogonType 0 (Owner) means the mailbox owner's identity was used, and ClientIPAddress shows the source."},
+  {t:"m.chen's mailbox was accessed by a delegate who was granted Full Access",ok:false,x:"Delegate access would show LogonType 2 (Delegate), not LogonType 0 (Owner). This record shows the owner's identity, which is why credential compromise is suspected."},
+  {t:"A message was sent from m.chen's mailbox to an external recipient",ok:false,x:"Sending is recorded as the Send operation; MailItemsAccessed only covers reading or syncing mail items."},
+  {t:"The Exchange Online throttling limit for audit records was reached, so some access went unrecorded",ok:false,x:"IsThrottled=False states that the access was fully logged for the period; nothing in the record indicates lost events."}
+ ],
+ w:"MailItemsAccessed (now included in Audit (Standard)) records mail reads: Bind = individual item, Sync = folder sync. LogonType 0 (Owner) means the account's own identity was used; check the client IP and ClientInfoString."},
+{id:"a009",d:3,obj:"3.2.1",cat:"senthunt",t:"build",ordered:true,
+ q:"A Fabrikam hunter runs a custom hunting query in Microsoft Sentinel and finds three result rows showing an unknown scheduled task created on a domain controller. The hunter needs to preserve those rows with their entities and have an analyst work them as a new incident. Which three actions should the hunter perform in sequence? To answer, move the appropriate actions to the answer area and arrange them in order.",
+ pool:["Select the three result rows and choose Add bookmark","In the bookmark, map the entity columns (host and account) and add notes","On the Bookmarks tab, select the bookmark and choose Incident actions, Create new incident","Create a livestream session from the hunting query","Run the query as a one-time KQL job over the data lake","Export the query results to CSV and attach the file to a case","Convert the hunting query into a scheduled analytics rule"],
+ answer:[0,1,2],
+ x:"Bookmarks are the mechanism for preserving hunting rows: mark the rows, add the bookmark with entity mapping and notes, then promote the bookmark to a new incident from the Bookmarks tab. Livestream is no longer available in Microsoft Sentinel, a KQL job re-runs a query rather than saving these rows, a CSV loses entities, and a scheduled rule would detect future events rather than hand over these three findings.",
+ w:"Hunting handoff: rows -> Add bookmark (entities, notes, tags) -> Bookmarks tab -> Incident actions -> Create new incident or Add to existing incident. Bookmarks also land in the HuntingBookmark table."},
+{id:"a010",d:2,obj:"2.1.3",cat:"xdrresp",t:"mc",
+ q:"Northwind connected the Microsoft Defender XDR data connector to Microsoft Sentinel. Incidents from Microsoft Defender for Cloud now appear in the Sentinel queue, but each one contains no alerts and no entities, so analysts cannot see the affected virtual machine. You need the Defender for Cloud incidents to include their alerts and entities. What should you do?",
+ o:[
+  {t:"Connect the tenant-based Microsoft Defender for Cloud data connector in Microsoft Sentinel",ok:true,x:"Defender for Cloud incidents arrive through the XDR connector, but the alerts and entities inside them are synchronized only when the Defender for Cloud connector is also connected."},
+  {t:"Enable Defender for Servers Plan 2 on every subscription",ok:false,x:"Plan selection changes which workload protections generate alerts; the alerts here already exist and simply are not being synchronized into the Sentinel incidents."},
+  {t:"Create a Microsoft security incident creation rule for Microsoft Defender for Cloud",ok:false,x:"That would create a second set of incidents from the same alerts, producing duplicates alongside the empty XDR-sourced ones instead of filling them."},
+  {t:"Deploy the Azure Monitor Agent to the virtual machines",ok:false,x:"The agent collects host logs; it has no role in forwarding Defender for Cloud alerts or their entities to Sentinel."}
+ ],
+ w:"Defender for Cloud incidents via the XDR connector show up empty unless the Defender for Cloud connector is also connected to sync alerts and entities."},
+{id:"a011",d:1,obj:"1.3.6",cat:"ingest",t:"mc",
+ q:"Tailspin's threat intelligence platform will push STIX indicator and threat-actor objects into a Microsoft Sentinel workspace by using the Threat Intelligence Upload API. You register a Microsoft Entra application for the platform. Which role should you assign to the application?",
+ o:[
+  {t:"Microsoft Sentinel Contributor on the workspace",ok:true,x:"The upload API authenticates as the app and writes threat intelligence into the workspace; the documented requirement is Microsoft Sentinel Contributor at workspace level."},
+  {t:"Monitoring Metrics Publisher on a data collection rule",ok:false,x:"That role is for clients of the Logs ingestion API posting to a DCR; the threat intelligence upload API needs no DCR or connector at all."},
+  {t:"Microsoft Sentinel Reader on the workspace",ok:false,x:"Reader can query threat intelligence but cannot create or update indicators, so every upload call would be rejected."},
+  {t:"Security Administrator in Microsoft Entra ID",ok:false,x:"Entra directory roles do not grant data-plane rights on a Log Analytics workspace; the API checks Azure RBAC on the workspace."}
+ ],
+ w:"TI Upload API: app registration + Microsoft Sentinel Contributor on the workspace, no data connector required. Objects land in ThreatIntelIndicators and ThreatIntelObjects."},
+{id:"a012",d:2,obj:"2.2.2",cat:"dferesp",t:"order",
+ q:"During a Microsoft Defender for Endpoint investigation, an analyst must capture a copy of an unknown executable found running on a device, then remove it, keeping the evidence intact. Which four actions should the analyst perform in sequence?",
+ pool:["Initiate a live response session on the device","Run processes to identify the executable's path and process ID","Run getfile to download a copy of the executable","Run remediate on the file to remove it"],
+ answer:[0,1,2,3],
+ x:"Live response commands need an active session first. The processes listing reveals where the binary lives and what to target; getfile must come before remediate because remediation removes the file and the copy would be lost. Removing it last satisfies the evidence-preservation condition.",
+ w:"Live response flow: start session, locate with processes or findfile, capture with getfile, then remediate. Undo exists, but a deleted file cannot be downloaded afterward."},
+{id:"a013",d:1,obj:"1.4.3",cat:"detect",t:"mc",
+ q:"A scheduled analytics rule in Woodgrove's workspace has the settings shown in the exhibit. Analysts complain that a single password-spray campaign against 40 accounts produces 40 separate incidents within a few minutes. You need one incident per campaign without losing per-account alerts. What should you change?",
+ ex:"Rule: Password spray - multiple accounts from one IP\nRun query every: 5 minutes   Lookup data from the last: 15 minutes\nAlert threshold: Is greater than 0\nEvent grouping: Trigger an alert for each event\nEntity mapping: Account (Name=UserPrincipalName), IP (Address=IPAddress)\nIncident settings: Create incidents = Enabled\nAlert grouping: Disabled",
+ o:[
+  {t:"Enable alert grouping, group by selected entities, choose IP, and set the time frame to 24 hours",ok:true,x:"Each alert still fires per event, but alerts sharing the source IP within the window are folded into one incident, which is the campaign-level view the analysts want."},
+  {t:"Change event grouping to Group all events into a single alert",ok:false,x:"That collapses the 40 accounts into one alert, so the per-account alerts the stem says must be kept are lost."},
+  {t:"Enable alert grouping and group by all entities",ok:false,x:"Every alert has a different Account entity, so no two alerts share all entities and 40 incidents are still created."},
+  {t:"Set the alert threshold to Is greater than 40",ok:false,x:"The query runs per event; a threshold on result count would stop the rule from alerting at all for smaller sprays and does not merge anything."}
+ ],
+ w:"Alert-per-event plus grouping by a selected shared entity (the source IP) gives one incident per campaign with all per-account alerts inside. Grouping by all entities only merges identical entity sets."},
+{id:"a014",d:2,obj:"2.1.10",cat:"xdrresp",t:"ms",pick:2,
+ q:"Litware's SOC uses the Microsoft Defender portal with a connected Microsoft Sentinel workspace. A multi-week investigation spans several incidents and needs tasks with due dates, file attachments and a shared activity history. Analysts hold only the Microsoft Sentinel Reader role and cannot create the work item. Which two actions should you perform? Each correct answer presents a part of the solution.",
+ o:[
+  {t:"Create a case in the Cases page and link the related incidents to it",ok:true,x:"Cases are the Defender portal work item that carries tasks, attachments, comments and an audit trail across multiple incidents."},
+  {t:"Assign the analysts the Microsoft Sentinel Responder role",ok:true,x:"Creating and managing cases maps to the Alerts (manage) permission, which Responder holds; Reader can only view cases."},
+  {t:"Create an automation rule that adds incident tasks to each incident",ok:false,x:"Incident tasks live inside one incident; they do not provide a container that spans several incidents with attachments and shared history."},
+  {t:"Assign the analysts the Microsoft Sentinel Contributor role",ok:false,x:"Contributor would work but exceeds least privilege; it also lets analysts edit analytics rules, which the stem does not ask for."},
+  {t:"Create a workbook that lists the incidents",ok:false,x:"A workbook is a visualization; it has no tasks, attachments, assignees or activity history."},
+  {t:"Open the investigation in a hunting notebook",ok:false,x:"Notebooks are for analysis over data, not for tracking collaborative work items and due dates."}
+ ],
+ w:"Case management lives in the Defender portal: a case links incidents and holds tasks, attachments, comments and audit history. Responder (Alerts manage) creates cases; Reader only views them."},
+{id:"a015",d:3,obj:"3.1.2",cat:"kql",t:"mc",
+ q:"A Fabrikam hunter runs the query in the exhibit in Microsoft Sentinel to find hosts where a given account signed in interactively from more than three distinct IP addresses in the past day. The results are not what the hunter expects. What is the problem?",
+ ex:"SecurityEvent\n| where TimeGenerated > ago(1d)\n| where EventID == 4624 and LogonType in (2, 10)\n| summarize Ips = make_set(IpAddress) by Account, Computer\n| where Ips > 3\n\nResult: the query returns no matching rows (or fails to compile)",
+ o:[
+  {t:"The final where compares a dynamic array to a number; it should use dcount(IpAddress) or array_length(Ips)",ok:true,x:"make_set returns a dynamic array, so comparing Ips to a number is not a valid count test. Summarize with dcount(IpAddress) or test array_length(Ips) > 3 to compare a count."},
+  {t:"LogonType must be compared as strings, so the in() list needs quotes",ok:false,x:"LogonType in SecurityEvent is numeric; in (2, 10) is valid and would match interactive and remote interactive logons."},
+  {t:"make_set cannot be used with a by clause",ok:false,x:"make_set is an aggregation function and is routinely grouped with by; that line runs without error."},
+  {t:"ago(1d) must be written as ago(24h) for SecurityEvent",ok:false,x:"1d and 24h are the same timespan; the time filter is not why no rows are returned."}
+ ],
+ w:"make_set returns a dynamic array; count it with array_length() or use dcount() when you only need the number. A silent empty result often means a type mismatch, not a missing data source."},
+{id:"a016",d:1,obj:"1.1.10",cat:"sentauto",t:"mc",
+ q:"The Microsoft Sentinel automation rules in the exhibit are all enabled. A new High severity incident is created by the analytics rule Suspicious service installation, with no tags. After all automation finishes, the SOC expects the incident to be assigned to the Tier-2 group and to still be open, but it is closed. What should you do?",
+ ex:"Order  Name                              Trigger            Conditions                                   Actions\n1      Close benign scanner incidents    Incident created   Analytics rule name contains Scanner         Change status: Closed (Benign positive)\n2      Assign Tier-2                     Incident created   Severity equals High                         Assign owner: Tier-2 group\n3      Close test incidents              Incident created   Tags does not contain Production             Change status: Closed (Undetermined)\n4      Notify on High                    Incident updated   Severity equals High, Status changed to Active   Run playbook: PB-Teams-Notify",
+ o:[
+  {t:"Change rule 3 so its condition is Tags contains Test instead of Tags does not contain Production",ok:true,x:"The new incident has no tags, so does not contain Production is true and rule 3 closes it after rule 2 assigns it. Matching on an explicit Test tag limits closure to the intended incidents."},
+  {t:"Move rule 2 to order 4 so it runs after the closing rules",ok:false,x:"Rule 3 would still close the untagged incident; running the assignment later only changes the owner of an already closed incident."},
+  {t:"Change rule 1 to use the Incident updated trigger",ok:false,x:"Rule 1 never matched this incident because its analytics rule name does not contain Scanner; it is not involved in the unexpected closure."},
+  {t:"Disable rule 4",ok:false,x:"Rule 4 is an update-trigger notification that requires the status to change to Active; it neither closes the incident nor ran in this chain."}
+ ],
+ w:"Automation rules with the same trigger run in order-number sequence. A does-not-contain condition is true for an incident with no tags at all, so prefer positive conditions for destructive actions like closing."},
+{id:"a017",d:2,obj:"2.3.2",cat:"m365inv",t:"mc",
+ q:"A Tailspin executive's assistant reports a confidential merger memo was emailed outside the company. You must find every mailbox and SharePoint site that still holds a copy of the memo, review the hits and export them for legal, across all users including those without Defender for Office 365 licensing. Which Microsoft Purview tool should you use?",
+ o:[
+  {t:"Content search in Microsoft Purview eDiscovery",ok:true,x:"Content search queries mailboxes, SharePoint and OneDrive across the tenant by keyword or condition, previews hits and exports the actual items, which is what legal needs."},
+  {t:"Audit log search",ok:false,x:"Audit records tell you who did what and when; they do not return the memo itself or show where copies still reside."},
+  {t:"Threat Explorer",ok:false,x:"Threat Explorer shows mail flow and threats detected by Defender for Office 365 and is limited to covered mailboxes; it does not search SharePoint content or export stored items for legal."},
+  {t:"Data loss prevention alerts",ok:false,x:"DLP alerts fire only where a matching policy existed at the time of the action; the stem needs a retrospective search for an item, not policy matches."}
+ ],
+ w:"Need the content itself (find, preview, export items across mailboxes and sites) = Content search in eDiscovery. Need who-did-what = Purview Audit. Need mail threat telemetry = Threat Explorer."},
+{id:"a018",d:1,obj:"1.3.7",cat:"ingest",t:"build",ordered:true,
+ q:"A Woodgrove application writes JSON audit events that must be ingested into a new custom table in a Microsoft Sentinel workspace by using the Logs ingestion API, with no agent on the application server. Which four actions should you perform in sequence? To answer, move the appropriate actions to the answer area and arrange them in order.",
+ pool:["Create the custom table AppAudit_CL with a DCR-based schema in the workspace","Register a Microsoft Entra application and create a client secret","Assign the application the Monitoring Metrics Publisher role on the data collection rule","Send HTTP POST requests with the JSON array to the DCR's logs ingestion endpoint","Install the Azure Monitor Agent on the application server","Assign the application the Microsoft Sentinel Contributor role on the workspace","Enable the Custom Logs via AMA data connector"],
+ answer:[1,0,2,3],
+ alt:[[0,1,2,3]],
+ x:"Register the client identity, create the table and its DCR (these two can be done in either order), grant the app Monitoring Metrics Publisher on that DCR, then POST to the ingestion endpoint. An agent and the Custom Logs via AMA connector are for text files on a machine, which the scenario rules out, and Sentinel Contributor is not what the ingestion API checks.",
+ w:"Logs ingestion API = custom _CL table + DCR + Entra app with Monitoring Metrics Publisher on the DCR + POST to the ingestion endpoint. No agent, no connector."},
+{id:"a019",d:3,obj:"3.2.2",cat:"senthunt",t:"mc",
+ q:"Fabrikam keeps a year of proxy logs only in the Data lake tier. A hunter writes a KQL query over that data that finds beaconing patterns and wants the matching rows copied every night into the Analytics tier so that analytics rules can alert on them. What should the hunter create in Data lake exploration?",
+ o:[
+  {t:"A scheduled KQL job that writes to a new Analytics-tier table",ok:true,x:"KQL jobs run a query against lake data on a schedule and write the results to a table in the Analytics tier (suffixed _KQL_CL), where analytics rules can use them."},
+  {t:"An NRT analytics rule that queries the proxy table in the lake",ok:false,x:"Analytics rules, including NRT, run only against the Analytics tier; they cannot read Data lake tier tables."},
+  {t:"A summary rule on the proxy table",ok:false,x:"Summary rules aggregate; the hunter wants the matching rows themselves promoted nightly, which is the job pattern rather than an aggregate."},
+  {t:"A hunting query saved on the Hunting page",ok:false,x:"Saved hunting queries run interactively against the Analytics tier and persist nothing; they cannot schedule lake queries or write results to a table."}
+ ],
+ w:"KQL jobs: one-time or scheduled queries over the data lake whose results are written to an Analytics-tier table ending in _KQL_CL. That is how lake data becomes detectable."},
+{id:"a020",d:2,obj:"2.2.1",cat:"dferesp",t:"mc",
+ q:"The device timeline rows in the exhibit come from a Microsoft Defender for Endpoint alert on a Litware laptop. You need to identify the process that started the attack chain. Which process is it?",
+ ex:"Time      Event                                                                 Process (PID)        Parent (PID)\n09:02:11  WINWORD.EXE opened Invoice_7731.docm                                   WINWORD.EXE (5120)   explorer.exe (3344)\n09:02:19  WINWORD.EXE created process cmd.exe /c powershell -enc JABj...        cmd.exe (6208)       WINWORD.EXE (5120)\n09:02:19  cmd.exe created process powershell.exe -enc JABj...                    powershell.exe (6244) cmd.exe (6208)\n09:02:24  powershell.exe connected to 203.0.113.80:443                           powershell.exe (6244) cmd.exe (6208)\n09:02:31  powershell.exe created file C:\\Users\\Public\\upd.exe                   powershell.exe (6244) cmd.exe (6208)",
+ o:[
+  {t:"WINWORD.EXE (5120)",ok:true,x:"Word is the first process in the chain that does something abnormal: launched normally from explorer, it spawns cmd.exe, which is the pivot from a document into code execution."},
+  {t:"explorer.exe (3344)",ok:false,x:"Explorer merely launched Word when the user opened the document; it is the benign parent of a normal user action, not the attack's origin."},
+  {t:"powershell.exe (6244)",ok:false,x:"PowerShell performs the network call and drops the payload, but it is two levels down the tree from the process that introduced the malicious behavior."},
+  {t:"cmd.exe (6208)",ok:false,x:"cmd.exe is the intermediate launcher created by Word; following the Parent column one step up shows where the chain actually began."}
+ ],
+ w:"Read a device timeline by Parent PID: walk up from the suspicious action until the parent becomes benign. An Office app spawning cmd or PowerShell is the classic macro entry point."},
+{id:"a021",d:1,obj:"1.2.4",cat:"sentplat",t:"mc",
+ q:"On the SOC optimization page, Northwind's engineer sees a data value recommendation stating that the custom table AppGwAccess_CL has been ingested for 90 days but no analytics rule queries it. The table must remain available for KQL jobs and compliance reporting but is not needed for detections. Which action best fits the recommendation?",
+ o:[
+  {t:"Change the table's tier to Data lake",ok:true,x:"Data value recommendations target unused ingested data; moving an eligible table to the Data lake tier keeps it for KQL jobs, notebooks and audit at much lower cost."},
+  {t:"Enable the analytics rule templates that reference AppGwAccess_CL from the content hub",ok:false,x:"Adding rules is the other path the recommendation offers, but the stem says the data is not needed for detections, so creating rules just adds noise and cost."},
+  {t:"Delete the AppGwAccess_CL table",ok:false,x:"The data must stay available for KQL jobs and compliance, so deleting it violates the stated need."},
+  {t:"Dismiss the recommendation",ok:false,x:"Dismissing records that no action is planned; the engineer does want to act on the cost finding."}
+ ],
+ w:"SOC optimization data value recommendations flag tables no rule uses: either add detections or move an eligible table to the Data lake (basic logs) tier. Threat-based recommendations address MITRE coverage gaps."},
+{id:"a022",d:2,obj:"2.1.1",cat:"xdrresp",t:"mc",
+ q:"A Microsoft Defender XDR incident at Tailspin carries the Attack Disruption tag and a yellow banner. The incident shows that a finance user's account was used to send payment-redirection emails after an adversary-in-the-middle phishing sign-in. Which automatic response action should an analyst expect to find already applied?",
+ o:[
+  {t:"The user account was disabled or contained to stop further sign-ins",ok:true,x:"For business email compromise and AiTM scenarios, attack disruption contains the identity (disable or contain user) so the attacker cannot keep sending from the mailbox."},
+  {t:"All messages in the tenant from the attacker's domain were deleted",ok:false,x:"Attack disruption acts on the compromised identity and assets, not on tenant-wide mail purges; mail cleanup remains an analyst or AIR action."},
+  {t:"The user's device was reimaged",ok:false,x:"No Defender response action reimages devices; device actions are contain or isolate, and this was an identity-driven email attack."},
+  {t:"A Conditional Access policy requiring MFA was created",ok:false,x:"Attack disruption does not author Conditional Access policies; MFA already existed in an AiTM scenario because the attacker relayed it."}
+ ],
+ w:"Attack disruption responses: contain or isolate device, contain IP, disable or contain user, revoke session. Look for the Attack Disruption tag and banner; actions are reversible from the incident."},
+{id:"a023",d:3,obj:"3.1.1",cat:"kql",t:"ms",pick:2,
+ q:"A Litware hunter in Microsoft Defender XDR advanced hunting needs to correlate inbound messages that contained a specific URL with the users who later clicked that URL. Which two tables should the hunter join? Each correct answer presents part of the solution.",
+ o:[
+  {t:"EmailUrlInfo",ok:true,x:"EmailUrlInfo lists the URLs found in each message with the NetworkMessageId, which is the key for tying a URL to a delivered email."},
+  {t:"UrlClickEvents",ok:true,x:"UrlClickEvents records Safe Links click events, including the user, the URL and the click verdict, which is the second half of the correlation."},
+  {t:"EmailAttachmentInfo",ok:false,x:"Attachment metadata does not contain URLs or clicks; it would only help for a file-based lure."},
+  {t:"DeviceNetworkEvents",ok:false,x:"Endpoint connections could show traffic to the destination host but do not tie back to the email or to the Safe Links click."},
+  {t:"IdentityLogonEvents",ok:false,x:"Logon telemetry is useful after a credential theft, not for linking a URL in a message to who clicked it."},
+  {t:"EmailPostDeliveryEvents",ok:false,x:"Post-delivery events track zero-hour auto purge and similar actions on messages, not user clicks on links."}
+ ],
+ w:"Email URL hunts: EmailEvents for the message, EmailUrlInfo for the URLs inside it, UrlClickEvents for who clicked. NetworkMessageId joins them."},
+{id:"a024",d:1,obj:"1.3.2",cat:"ingest",t:"hot",pick:1,
+ q:"You are creating a data collection rule from the Windows Security Events via AMA connector. Only logon failures (event 4625) may be collected from the selected machines. On the Collect tab shown, which option should you select to make that possible?",
+ screen:"The Collect tab of the Create data collection rule wizard. Under the heading Select which events to stream are four radio buttons stacked vertically, each with a short description: All security events, Common (a standard set of events for auditing), Minimal (a small set of events for threat detection) and Custom (enter XPath queries). Below them is a text box labelled XPath queries that is greyed out until Custom is selected.",
+ regions:[{l:"All security events",ok:false},{l:"Common",ok:false},{l:"Minimal",ok:false},{l:"Custom",ok:true}],
+ img:null,
+ x:"Only the Custom option exposes the XPath box where a single-event filter such as Security!*[System[(EventID=4625)]] can be entered. All, Common and Minimal are fixed event sets that each include far more than 4625.",
+ w:"Windows Security Events via AMA offers All, Common, Minimal or Custom. Any requirement that names specific event IDs means Custom plus XPath."},
+{id:"a025",d:2,obj:"2.1.6",cat:"xdrresp",t:"mc",
+ q:"Microsoft Defender for Identity raises the alert Suspected DCSync attack (replication of directory services) for an on-premises service account at Fabrikam. The account has no Entra ID synchronization and the SOC must stop it from authenticating anywhere in Active Directory immediately, from the Microsoft Defender portal. What should the analyst do?",
+ o:[
+  {t:"On the user's page, select Disable to disable the account in Active Directory",ok:true,x:"Defender for Identity's response action disables the on-premises account through a domain-controller sensor, which cuts off Kerberos and NTLM authentication across the forest."},
+  {t:"Isolate the domain controller that reported the alert",ok:false,x:"Isolating a DC breaks authentication for everyone and does not stop the account from authenticating against the other five domain controllers."},
+  {t:"Confirm the user compromised in Microsoft Entra ID Protection",ok:false,x:"The account is not synchronized to Entra ID, so Identity Protection has no risk object for it and cannot block on-premises authentication."},
+  {t:"Add the account to a watchlist in Microsoft Sentinel",ok:false,x:"A watchlist improves detections and enrichment; it takes no action against the account."}
+ ],
+ w:"Defender for Identity response actions on an identity: Disable, Enable, Force password change, Revoke session, Mark as compromised. Disable is the on-prem kill switch; they need an action account or the sensor's local system account."},
+{id:"a026",d:1,obj:"1.2.2",cat:"sentplat",t:"mc",
+ q:"Woodgrove plans to ingest 2 TB per day of DNS resolver logs into Microsoft Sentinel. The logs will never be used by analytics rules; hunters will query them occasionally with KQL jobs and notebooks, and auditors need 7 years of retention. Which tier should you choose for the table?",
+ o:[
+  {t:"Data lake tier with 7 years of retention",ok:true,x:"Lake-only ingestion costs far less, supports KQL jobs, notebooks and search, and retention can run to 12 years, which covers the 7-year audit need without paying Analytics prices."},
+  {t:"Analytics tier with Analytics retention set to 7 years",ok:false,x:"Interactive Analytics retention tops out at two years, so this cannot be configured, and it would be the most expensive option for data no detection uses."},
+  {t:"Analytics tier with Total retention set to 7 years",ok:false,x:"This works technically but pays full Analytics ingestion for 2 TB a day that no analytics rule will ever read; the data value is only in cheap long-term storage."},
+  {t:"Analytics tier with the default 90-day retention plus continuous export to a storage account",ok:false,x:"Exported blobs are not queryable with KQL jobs or notebooks inside Sentinel, so hunters lose the access the scenario requires."}
+ ],
+ w:"High-volume, no-detection data = Data lake tier (up to 12 years). Analytics tier is for anything rules must query; its interactive retention maxes at 2 years, total at 12."},
+{id:"a027",d:2,obj:"2.1.4",cat:"xdrresp",t:"ms",pick:2,
+ q:"Microsoft Defender for Cloud Apps alerts that a Northwind contractor downloaded 3,000 files from SharePoint in ten minutes from a new country. The investigation confirms the account is being misused. You need to immediately end the contractor's active sessions and block new sign-ins, using actions available from the alert. Which two governance actions should you apply? Each correct answer presents part of the solution.",
+ o:[
+  {t:"Require user to sign in again",ok:true,x:"This action revokes the user's refresh tokens and session cookies, terminating the sessions the downloader is using right now."},
+  {t:"Suspend user",ok:true,x:"Suspending removes the ability to sign in at all, which blocks new sessions until the contractor's account is cleaned up."},
+  {t:"Notify user",ok:false,x:"An email to the misused account warns the attacker and changes nothing about access."},
+  {t:"Put the downloaded files in admin quarantine",ok:false,x:"File quarantine is a file-governance action for policy matches on stored files; it does nothing about the sessions or the ability to sign in."},
+  {t:"Remove external users from the SharePoint site",ok:false,x:"The contractor is a tenant account, and site-level sharing changes do not end active sessions."},
+  {t:"Apply a sensitivity label to the files",ok:false,x:"Labelling protects content going forward; it does not revoke sessions or stop sign-ins."}
+ ],
+ w:"Defender for Cloud Apps user governance: Require user to sign in again (revokes tokens), Suspend user (blocks sign-in), Confirm user compromised (raises Entra risk). File actions quarantine or relabel content."},
+{id:"a028",d:3,obj:"3.2.3",cat:"senthunt",t:"ms",pick:2,
+ q:"A Fabrikam engineer is writing a summary rule in Microsoft Sentinel to aggregate CommonSecurityLog into a reporting table. Which two statements about the rule are true? Each correct answer presents a complete answer.",
+ o:[
+  {t:"The destination table name must end with _CL and the table uses the Analytics plan",ok:true,x:"Summary rules always write to a custom log table that ends in _CL on the Analytics data plan; the table is created from the query schema if it does not exist."},
+  {t:"The query cannot reference another workspace with the workspace() expression",ok:true,x:"Cross-resource expressions such as workspace(), app(), resource(), adx() and arg() are not supported in summary rule queries."},
+  {t:"The rule can run only against tables in the Analytics tier",ok:false,x:"Summary rules can aggregate Analytics, Basic, Auxiliary and Data lake tier tables, which is the whole point of summarizing cheap-tier data into a queryable table."},
+  {t:"The rule produces alerts that become incidents",ok:false,x:"Summary rules write aggregated rows to a table; alerting, if wanted, comes from a separate analytics rule that queries that table."},
+  {t:"The bin size can be any value in minutes",ok:false,x:"Bin size is limited to fixed choices from 20 minutes up to 1,440 minutes (24 hours)."},
+  {t:"User-defined functions can be called from the query",ok:false,x:"Summary rule queries do not support user-defined functions, so the aggregation logic must be written inline."}
+ ],
+ w:"Summary rules: fixed bin sizes 20 min to 24 h, destination tableName_CL on the Analytics plan, any source tier, no cross-workspace expressions or user-defined functions, no alerts of their own."},
+{id:"a029",d:2,obj:"2.2.3",cat:"dferesp",t:"mc",
+ q:"During a Microsoft Defender for Endpoint investigation at Litware, an analyst confirms that a file with a specific SHA-256 is a credential stealer. It has been seen on three devices so far. The analyst needs to prevent the file from running on any onboarded device, including ones where it has not yet appeared. What should the analyst do from the file's page?",
+ o:[
+  {t:"Add an indicator for the SHA-256 with the Block and remediate action",ok:true,x:"A file indicator with block applies tenant-wide to every onboarded device, so future copies are blocked and quarantined wherever they land."},
+  {t:"Select Stop and Quarantine File",ok:false,x:"Stop and quarantine acts on the file where it currently exists; it does not stop a new copy from executing on a device that has never seen it."},
+  {t:"Isolate the three devices",ok:false,x:"Isolation contains the devices already affected but does nothing to prevent execution on the rest of the fleet."},
+  {t:"Collect an investigation package from one device",ok:false,x:"The package gathers forensic artifacts for analysis; it does not block anything."}
+ ],
+ w:"Tenant-wide prevention = custom indicator (file hash, IP, URL or certificate) with Block. Stop and Quarantine is a one-off removal on known locations; isolation is per device."},
+{id:"a030",d:2,obj:"2.1.7",cat:"xdrresp",t:"order",
+ q:"A Tier-1 analyst at Woodgrove picks up a new High severity Microsoft Sentinel incident in the Microsoft Defender portal that shows a credential-dumping alert on a server and a risky sign-in for the server's administrator. Which four actions should the analyst perform in sequence to work the incident from the queue to closure?",
+ pool:["Assign the incident to yourself and set its status to Active","Review the alerts, entities and attack story to establish scope and impact","Isolate the server and reset the administrator's password","Set the status to Closed with a classification and a closing comment"],
+ answer:[0,1,2,3],
+ x:"Ownership and an Active status come first so that no other analyst duplicates the work and metrics reflect reality. Scoping before response prevents containing the wrong asset or missing a second one. Response actions follow the investigation, and only then is the incident closed with a classification that documents the outcome.",
+ w:"Incident lifecycle: own it (assign, Active), understand it (alerts, entities, attack story), act on it (contain, remediate), close it (classification, comment). Closing first or acting first are the classic wrong orders."},
+{id:"a031",d:2,obj:"2.3.3",cat:"m365inv",t:"ms",pick:2,
+ q:"A Tailspin SOC suspects a third-party OAuth application is enumerating groups and users through Microsoft Graph with a stolen token. The SOC needs to see every Graph request the app made, including the request URI and response code, in a Microsoft Sentinel workspace. Which two actions should you perform? Each correct answer presents part of the solution.",
+ o:[
+  {t:"In Microsoft Entra ID diagnostic settings, send the MicrosoftGraphActivityLogs category to the workspace",ok:true,x:"Graph activity logs are enabled as a diagnostic settings category on the tenant and stream to Log Analytics, which is the only way to get per-request Graph telemetry."},
+  {t:"Query the MicrosoftGraphActivityLogs table, filtering on AppId and RequestUri",ok:true,x:"The table records each HTTP request with RequestUri, ResponseStatusCode, AppId and ServicePrincipalId, which answers what the application enumerated."},
+  {t:"Search Microsoft Purview Audit for the application's activities",ok:false,x:"Audit records capture workload actions (mail, files, admin changes), not the individual Graph API calls and their URIs."},
+  {t:"Query the SigninLogs table for the application's sign-ins",ok:false,x:"Sign-in logs show the token being issued, not what the app did with it afterwards."},
+  {t:"Enable the Office 365 data connector",ok:false,x:"OfficeActivity covers Exchange, SharePoint and Teams operations and does not include Graph API request logs."},
+  {t:"Create a hunting bookmark on the application's service principal",ok:false,x:"A bookmark preserves findings you already have; it does not generate the missing telemetry."}
+ ],
+ w:"Microsoft Graph activity logs = Entra diagnostic settings category MicrosoftGraphActivityLogs to Log Analytics (requires P1 or P2). Columns: RequestUri, ResponseStatusCode, AppId, UserId, SignInActivityId."},
+{id:"a032",d:1,obj:"1.3.2",cat:"ingest",t:"order",
+ q:"Fabrikam needs to collect Windows Security events from a new on-premises file server into Microsoft Sentinel by using the Windows Security Events via AMA connector. The server is not yet connected to Azure. Which five actions should you perform in sequence?",
+ pool:["Install the Azure Connected Machine agent to onboard the server to Azure Arc","Open the Windows Security Events via AMA connector and select Create data collection rule","On the Resources tab, select the Arc-enabled server","On the Collect tab, choose the event set or enter XPath queries","Verify rows in the SecurityEvent table"],
+ answer:[0,1,2,3,4],
+ x:"A non-Azure machine must exist as an Arc resource before a DCR can target it, and associating the DCR deploys the Azure Monitor Agent. The connector's wizard then walks Basics, Resources and Collect in that order, after which SecurityEvent is the table to check. Nothing is ingested until the collection filter is defined.",
+ w:"On-prem servers: Azure Arc first, then DCR via the connector (Resources, then Collect). The AMA is installed by the DCR association; events land in SecurityEvent."},
+{id:"a033",d:3,obj:"3.1.2",cat:"kql",t:"mc",
+ q:"A Northwind hunter wants rows from the SigninLogs table where the user agent is any Python requests client, such as python-requests/2.31. The query in the exhibit returns rows for browsers whose user agent merely mentions Python in a plug-in list. Which change makes the filter match only user agents that begin with the python-requests token?",
+ ex:"SigninLogs\n| where TimeGenerated > ago(7d)\n| where UserAgent contains \"python\"\n| project TimeGenerated, UserPrincipalName, UserAgent, ResultType",
+ o:[
+  {t:"Replace contains \"python\" with startswith \"python-requests\"",ok:true,x:"startswith anchors the match to the beginning of the string, so only user agents that open with the python-requests token qualify, excluding browsers that mention Python elsewhere."},
+  {t:"Replace contains \"python\" with has \"python\"",ok:false,x:"has matches a whole term anywhere in the string, so a browser user agent that lists Python as a separate word still matches."},
+  {t:"Replace contains \"python\" with contains_cs \"python\"",ok:false,x:"The case-sensitive variant only changes casing behavior; the substring can still appear in the middle of a browser string."},
+  {t:"Add | distinct UserAgent after the where clause",ok:false,x:"distinct deduplicates the output; it does not change which rows pass the filter."}
+ ],
+ w:"contains = substring anywhere, has = whole term anywhere (indexed, faster), startswith/endswith = anchored. Pick the operator by where the text must sit, not just whether it appears."},
+{id:"a034",d:2,obj:"2.1.8",cat:"xdrresp",t:"mc",
+ q:"A Litware analyst opens a Microsoft Defender XDR incident containing a Base64-encoded PowerShell command line that is several hundred characters long. The analyst needs a plain-language description of what the command does without decoding it by hand. Which Copilot in Defender capability should the analyst use?",
+ o:[
+  {t:"Script analysis on the command line from the incident",ok:true,x:"Script analysis decodes and explains scripts and command lines found in alerts, describing their behaviour and intent in natural language."},
+  {t:"Incident summary",ok:false,x:"The summary describes the incident's overall story, timeline and assets; it does not break down an individual encoded command."},
+  {t:"Guided response",ok:false,x:"Guided response recommends containment and remediation actions; it does not explain what a script does."},
+  {t:"Query assistant for natural language to KQL",ok:false,x:"The query assistant generates advanced hunting queries from prose; it does not interpret a specific script's logic."}
+ ],
+ w:"Copilot in Defender: incident summary (what happened), guided response (what to do), script and file analysis (what this code does), query assistant (write the KQL), incident report (write it up)."},
+{id:"a035",d:2,obj:"2.1.3",cat:"xdrresp",t:"mc",
+ q:"Every night, a sanctioned vulnerability scanner at 192.0.2.10 triggers Microsoft Defender for Cloud alerts titled Suspicious incoming network scanning activity on Woodgrove's production subscription. The SOC must stop these specific alerts from being generated for the scanner while keeping the same detection active for every other source. What should you do?",
+ o:[
+  {t:"From the alert's Take action tab, create a suppression rule for similar alerts scoped to the scanner's IP entity",ok:true,x:"Suppression rules in Defender for Cloud match future alerts by type and entity, so only alerts involving 192.0.2.10 are suppressed and the detection stays on for everyone else."},
+  {t:"Dismiss each alert as it arrives",ok:false,x:"Dismissing handles alerts one at a time after they are raised; it does not prevent tomorrow's alert and keeps consuming analyst time."},
+  {t:"Disable Defender for Servers on the production subscription",ok:false,x:"That removes the detection, and every other workload protection, for all resources rather than for one source."},
+  {t:"Create a Microsoft Sentinel automation rule that closes incidents whose IP entity is 192.0.2.10",ok:false,x:"An automation rule only tidies the Sentinel incident queue; the alerts are still generated in Defender for Cloud, which is what the stem asks to stop."}
+ ],
+ w:"Defender for Cloud: Take action tab offers Mitigate the threat, Prevent future attacks, Trigger automated response and Suppress similar alerts. Suppression rules can be scoped by entity and given an expiry."},
+{id:"a036",d:3,obj:"3.2.1",cat:"senthunt",t:"mc",
+ q:"A Fabrikam hunter has a hunting query that finds a rare sequence of events. The hunter wants the query to run automatically every few minutes and to receive an alert as soon as it returns results. What should the hunter do?",
+ o:[
+  {t:"Create an analytics rule from the hunting query",ok:true,x:"Analytics rules are the mechanism for recurring evaluation with alerts and incidents; the Hunting page offers creating a rule directly from a saved query."},
+  {t:"Start a livestream session from the hunting query",ok:false,x:"Livestream has been removed from Microsoft Sentinel; the documented replacements are KQL jobs, analytics rules and playbooks."},
+  {t:"Add the query to a hunt and mark it as a favorite",ok:false,x:"Hunts organize queries and bookmarks around a hypothesis; they do not schedule queries or raise alerts."},
+  {t:"Create a workbook that includes the query",ok:false,x:"Workbooks render results when opened; nothing runs or notifies in the background."}
+ ],
+ w:"Recurring detection with alerts = analytics rule (scheduled or NRT) created from the hunting query. Livestream no longer exists; KQL jobs persist results but do not alert."},
+{id:"a037",d:2,obj:"2.3.1",cat:"m365inv",t:"mc",
+ q:"Northwind has Microsoft 365 E5. An auditor asks the SOC to retrieve records of who accessed a specific SharePoint document 15 months ago. The SOC has never changed audit retention settings. What is the outcome?",
+ o:[
+  {t:"The records are no longer available because the default Audit (Premium) retention is one year",ok:true,x:"E5 includes Audit (Premium), whose default retention is one year; without a retention policy or the 10-year add-on, 15-month-old records have aged out."},
+  {t:"The records are available because Audit (Premium) retains data for 10 years by default",ok:false,x:"Ten-year retention requires the separate per-user add-on license and a retention policy; it is not the default."},
+  {t:"The records are available because SharePoint audit data is kept indefinitely",ok:false,x:"Unified audit records follow Purview Audit retention; SharePoint has no indefinite exception."},
+  {t:"The records are no longer available because Audit (Standard) retains data for 90 days",ok:false,x:"Audit (Standard) retention is 180 days, and an E5 tenant is on Audit (Premium) anyway."}
+ ],
+ w:"Purview Audit retention: Standard 180 days, Premium 1 year by default, 10 years with the add-on license. Retention is not retroactive, so set policies before you need the history."},
+{id:"a038",d:2,obj:"2.1.7",cat:"xdrresp",t:"ms",pick:2,
+ q:"Litware's red team will run an authorized exercise from host RT-JUMP01 for the next 14 days. A Microsoft Sentinel incident has already fired for their first action. The SOC must record the current incident correctly and avoid analysts spending time on further incidents from that host during the exercise, without disabling any analytics rules. Which two actions should you perform? Each correct answer presents part of the solution.",
+ o:[
+  {t:"Close the incident with the classification Benign positive - Suspicious but expected",ok:true,x:"The activity is real but authorized, which is exactly what the benign positive classification records and what feeds accurate incident metrics."},
+  {t:"Create an incident-created automation rule, expiring in 14 days, that closes incidents whose Host entity is RT-JUMP01",ok:true,x:"An expiring automation rule suppresses the exercise's incidents for exactly the engagement window and then stops, leaving every analytics rule enabled."},
+  {t:"Close the incident with the classification False positive - Inaccurate data",ok:false,x:"The detection was accurate; labelling it a false positive misrepresents rule quality and skews tuning."},
+  {t:"Disable the analytics rules that detected the red team activity",ok:false,x:"The stem forbids disabling rules, and doing so would blind the SOC to real attackers for two weeks."},
+  {t:"Delete the incident",ok:false,x:"Incidents cannot simply be deleted from the queue, and even if they could, the record of the exercise would be lost."},
+  {t:"Add RT-JUMP01 to a watchlist named Approved and change nothing else",ok:false,x:"A watchlist alone does nothing until rules are modified to reference it, and the stem asks for no rule changes."}
+ ],
+ w:"Authorized activity = Benign positive - Suspicious but expected. Time-boxed suppression = automation rule with an expiration date, conditions on the entity, action close; rules stay on."},
+{id:"a039",d:3,obj:"3.1.1",cat:"kql",t:"mc",
+ q:"In Microsoft Sentinel, a Woodgrove hunter needs the raw alert payload, including the Entities column, for every Microsoft Defender for Endpoint alert from the last 24 hours, regardless of whether the alert was grouped into an incident. Which table should the hunter query?",
+ o:[
+  {t:"SecurityAlert",ok:true,x:"SecurityAlert holds one row per alert with ProviderName, ProductName, Entities and ExtendedProperties, independent of incident membership."},
+  {t:"SecurityIncident",ok:false,x:"SecurityIncident has one row per incident state change with AlertIds, but not the alert's own entities or payload."},
+  {t:"AlertEvidence",ok:false,x:"AlertEvidence is the Defender XDR advanced hunting table of evidence entities; it requires streaming XDR tables and is not where Sentinel stores alert payloads."},
+  {t:"DeviceAlertEvents",ok:false,x:"That table no longer exists in advanced hunting; alert data moved to AlertInfo and AlertEvidence."}
+ ],
+ w:"SecurityAlert = per-alert rows with Entities JSON; SecurityIncident = per-incident rows with AlertIds. In advanced hunting the pair is AlertInfo and AlertEvidence."},
+{id:"a040",d:1,obj:"1.2.1",cat:"sentplat",t:"series",
+ scenario:"Fabrikam's Microsoft Sentinel workspace is in resource group RG-Sentinel. A Consumption Logic App playbook named PB-Notify-Teams, using the Microsoft Sentinel incident trigger, is in resource group RG-SOC-Automation. Microsoft Sentinel's service identity already holds Microsoft Sentinel Automation Contributor on RG-SOC-Automation. An analyst named Priya holds only the Microsoft Sentinel Responder role on RG-Sentinel. You need to ensure that Priya can run PB-Notify-Teams manually from an incident. Proposed solutions follow. Does the solution meet the goal?",
+ solutions:[
+  {s:"Solution: You assign Priya the Microsoft Sentinel Playbook Operator role on resource group RG-SOC-Automation.",ok:true,x:"Playbook Operator on the playbook or its resource group is the built-in role that lets a user list, view and manually run playbooks. Combined with Responder for incident access and the service identity's existing grant, the Run playbook action works."},
+  {s:"Solution: You assign Priya the Microsoft Sentinel Automation Contributor role on resource group RG-SOC-Automation.",ok:false,x:"Automation Contributor is designed for the Microsoft Sentinel service identity so automation rules can run playbooks; it is not intended for users and does not give Priya the manual run permission."},
+  {s:"Solution: You assign Priya the Microsoft Sentinel Contributor role on resource group RG-Sentinel.",ok:false,x:"Contributor on the workspace resource group adds rule and workbook authoring but includes no Logic Apps rights, and the playbook lives in a different resource group entirely."},
+  {s:"Solution: You assign Priya the Microsoft Sentinel Reader role on resource group RG-SOC-Automation.",ok:false,x:"Reader has no permission to run Logic App triggers, so Priya can see the playbook listed but cannot execute it."}
+ ],
+ w:"Manual playbook runs need three things: incident access (Responder), Playbook Operator where the playbook lives, and Automation Contributor for Sentinel's own identity on the playbook's resource group."}
+];

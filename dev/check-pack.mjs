@@ -19,7 +19,7 @@ const types = new Set(simTypes());
 
 const m = (await import(pathToFileURL(path.join(root, `packs/${id}/pack.js`)))).default;
 const c = await m.load();
-const OBJ = /^[1-9]\.[1-9][0-9]?$/;
+const OBJ = m.objPattern ? new RegExp(m.objPattern) : /^[1-9]\.[1-9][0-9]?$/;   /* packs with multi-level objective ids (Microsoft skills bullets) declare objPattern */
 const cats = new Set(Object.keys(m.cats));
 const doms = new Set(m.sections.map(s => s.d));
 
@@ -66,10 +66,10 @@ function checkPbq(p, where) {
   if (p.type === "scenario" && (!p.q || !Array.isArray(p.opts) || p.opts.length !== 4 || !p.why)) bad(`${where} PBQ ${p.id} scenario malformed`);
 }
 (c.lab || []).forEach(p => checkPbq(p, "lab")); (c.generators || []).forEach(p => checkPbq(p, "gen"));
-Object.entries(c.pbqs || {}).forEach(([x, list]) => { if (list.length !== (m.exam.pbqCount || 5)) bad(`exam ${x} has ${list.length} PBQs, expected ${m.exam.pbqCount || 5}`); list.forEach(p => checkPbq(p, "exam " + x)); });
+Object.entries(c.pbqs || {}).forEach(([x, list]) => { if (list.length !== (m.exam.pbqCount ?? 5)) bad(`exam ${x} has ${list.length} PBQs, expected ${m.exam.pbqCount || 5}`); list.forEach(p => checkPbq(p, "exam " + x)); });
 
 /* exam banks */
-const nQ = m.exam.count - (m.exam.pbqCount || 5);
+const nQ = m.exam.count - (m.exam.pbqCount ?? 5);
 Object.entries(c.banks || {}).forEach(([x, bank]) => {
   if (bank.length !== nQ) bad(`bank ${x} has ${bank.length} questions, expected ${nQ}`);
   const byD = {}; let ms = 0, ex = 0;
@@ -88,7 +88,8 @@ Object.entries(c.banks || {}).forEach(([x, bank]) => {
     if (stems.has(q.q)) bad(`bank ${q.id} duplicate stem`); stems.add(q.q);
   });
   for (const d in m.exam.mixQuota) if ((byD[d] || 0) !== m.exam.mixQuota[d]) bad(`bank ${x} domain ${d}: ${byD[d] || 0} questions, quota ${m.exam.mixQuota[d]}`);
-  if (ms < 8) bad(`bank ${x} has ${ms} multi-select (<8)`); if (ex < 10) bad(`bank ${x} has ${ex} exhibits (<10)`);
+  const minMs = m.exam.minMs ?? 8, minEx = m.exam.minEx ?? 10;
+  if (ms < minMs) bad(`bank ${x} has ${ms} multi-select (<${minMs})`); if (ex < minEx) bad(`bank ${x} has ${ex} exhibits (<${minEx})`);
 });
 
 /* objective coverage summary */

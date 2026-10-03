@@ -1,0 +1,164 @@
+{
+  "exam": "SC-200",
+  "title": "Microsoft Security Operations Analyst",
+  "skillsAsOf": "2026-10-21",
+  "source": "https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/sc-200",
+  "fetched": "2026-10-02",
+  "format": {
+    "durationMin": 100,
+    "seatMin": 120,
+    "passScore": 700,
+    "scaleMax": 1000,
+    "questionRange": [40, 60],
+    "learnPane": true,
+    "itemTypes": ["mc", "ms", "order", "build", "hot", "case", "series"],
+    "formatSource": "https://learn.microsoft.com/en-us/credentials/support/exam-duration-exam-experience"
+  },
+  "domains": [
+    {
+      "d": 1,
+      "name": "Manage a security operations environment",
+      "weight": [40, 45],
+      "groups": [
+        {
+          "g": "1.1",
+          "name": "Configure automation for Microsoft Defender XDR and Microsoft Sentinel",
+          "bullets": {
+            "1.1.1": "Configure email notifications in Microsoft Defender XDR, including incidents, actions, and threat analytics",
+            "1.1.2": "Configure alert notifications in Microsoft Defender XDR, including tuning, suppression, and correlation",
+            "1.1.3": "Configure Microsoft Defender for Endpoint advanced features",
+            "1.1.4": "Configure rules settings in Microsoft Defender for Endpoint",
+            "1.1.5": "Configure custom data collection in Microsoft Defender for Endpoint",
+            "1.1.6": "Configure security policies for Microsoft Defender for Endpoint, including attack surface reduction (ASR) rules",
+            "1.1.7": "Manage automated investigation and response capabilities in Microsoft Defender XDR",
+            "1.1.8": "Configure automatic attack disruption in Microsoft Defender XDR",
+            "1.1.9": "Configure and manage device groups, permissions, and automation levels in Microsoft Defender for Endpoint",
+            "1.1.10": "Create and configure automation rules in Microsoft Sentinel",
+            "1.1.11": "Create and configure Microsoft Sentinel playbooks"
+          }
+        },
+        {
+          "g": "1.2",
+          "name": "Configure the Microsoft Sentinel SIEM and platform",
+          "bullets": {
+            "1.2.1": "Specify Microsoft Sentinel roles",
+            "1.2.2": "Manage data retention for XDR and Microsoft Sentinel tables, including Analytics, Data lake, and XDR tiers",
+            "1.2.3": "Create and configure Microsoft Sentinel workbooks",
+            "1.2.4": "Optimize the Microsoft Sentinel platform, including SOC optimization recommendations"
+          }
+        },
+        {
+          "g": "1.3",
+          "name": "Ingest data into the Microsoft Sentinel SIEM and platform",
+          "bullets": {
+            "1.3.1": "Select data connectors based on data source requirements, including Windows logs and security events",
+            "1.3.2": "Configure collection of Windows Security events by using Windows Security Events via AMA, including data collection rules",
+            "1.3.3": "Plan and configure collection of Windows Security events by using Windows Event Forwarding (WEF)",
+            "1.3.4": "Plan and configure Syslog via AMA and Common Event Format (CEF) via AMA connectors",
+            "1.3.5": "Configure collection of Azure activity logs by using Azure Policy and resource diagnostic settings",
+            "1.3.6": "Ingest threat indicators into Microsoft Sentinel",
+            "1.3.7": "Create custom log tables in the workspace to store ingested data"
+          }
+        },
+        {
+          "g": "1.4",
+          "name": "Configure detections",
+          "bullets": {
+            "1.4.1": "Create custom detection rules by using Advanced Hunting in Microsoft Defender XDR",
+            "1.4.2": "Manage custom detection rules in Microsoft Defender XDR",
+            "1.4.3": "Configure and manage analytics rules in Microsoft Sentinel SIEM, including scheduled, near-real time (NRT), threat intelligence, and machine learning",
+            "1.4.4": "Analyze attack vector coverage by using the MITRE ATT&CK matrix",
+            "1.4.5": "Configure anomalies in Microsoft Sentinel"
+          }
+        }
+      ]
+    },
+    {
+      "d": 2,
+      "name": "Respond to security incidents",
+      "weight": [35, 40],
+      "groups": [
+        {
+          "g": "2.1",
+          "name": "Respond to alerts and incidents in Microsoft Defender XDR",
+          "bullets": {
+            "2.1.1": "Investigate and remediate threats by using Microsoft Defender for Office 365, including automatic attack disruption",
+            "2.1.2": "Investigate and remediate threats or compromised entities identified by Microsoft Purview",
+            "2.1.3": "Investigate and remediate alerts and incidents identified by Microsoft Defender for Cloud workload protections",
+            "2.1.4": "Investigate and remediate security risks identified by Microsoft Defender for Cloud Apps",
+            "2.1.5": "Investigate and remediate compromised identities that are identified by Microsoft Entra ID",
+            "2.1.6": "Investigate and remediate security alerts from Microsoft Defender for Identity",
+            "2.1.7": "Investigate and remediate alerts and incidents identified by Microsoft Sentinel",
+            "2.1.8": "Investigate incidents by using agentic AI, including embedded Microsoft Security Copilot",
+            "2.1.9": "Investigate complex attacks, such as multi-stage, multi-domain, and lateral movement",
+            "2.1.10": "Manage security incidents by using case management"
+          }
+        },
+        {
+          "g": "2.2",
+          "name": "Respond to alerts and incidents in Microsoft Defender for Endpoint",
+          "bullets": {
+            "2.2.1": "Investigate device timelines",
+            "2.2.2": "Perform actions on the device, including live response and collecting investigation packages",
+            "2.2.3": "Perform evidence and entity investigation",
+            "2.2.4": "Investigate and remediate incidents identified by automatic attack disruption"
+          }
+        },
+        {
+          "g": "2.3",
+          "name": "Investigate Microsoft 365 activities to identify threats",
+          "bullets": {
+            "2.3.1": "Investigate threats by using Microsoft Purview Audit",
+            "2.3.2": "Investigate threats by using Content search in Microsoft Purview eDiscovery",
+            "2.3.3": "Investigate threats by using Microsoft Graph activity logs"
+          }
+        }
+      ]
+    },
+    {
+      "d": 3,
+      "name": "Perform threat hunting",
+      "weight": [20, 25],
+      "groups": [
+        {
+          "g": "3.1",
+          "name": "Detect threats by using Microsoft Defender XDR",
+          "bullets": {
+            "3.1.1": "Identify the appropriate table to use in a KQL query",
+            "3.1.2": "Identify threats by using Kusto Query Language (KQL)",
+            "3.1.3": "Create Advanced Hunting queries",
+            "3.1.4": "Interpret threat analytics in Microsoft Defender XDR",
+            "3.1.5": "Create hunting graphs, including blast radius",
+            "3.1.6": "Analyze relationships between entities by using Sentinel Graph"
+          }
+        },
+        {
+          "g": "3.2",
+          "name": "Detect threats by using the Microsoft Sentinel platform",
+          "bullets": {
+            "3.2.1": "Create and monitor hunting queries",
+            "3.2.2": "Create and manage KQL jobs in Data lake",
+            "3.2.3": "Create and manage Summary rule tables for querying",
+            "3.2.4": "Hunt for threats by using Notebooks, including connection to the Sentinel MCP Server"
+          }
+        }
+      ]
+    }
+  ],
+  "categories": {
+    "xdrauto":  {"d": 1, "name": "Defender XDR automation & notifications", "groups": ["1.1"], "bullets": ["1.1.1","1.1.2","1.1.7","1.1.8"]},
+    "dfecfg":   {"d": 1, "name": "Defender for Endpoint configuration", "groups": ["1.1"], "bullets": ["1.1.3","1.1.4","1.1.5","1.1.6","1.1.9"]},
+    "sentauto": {"d": 1, "name": "Sentinel automation rules & playbooks", "groups": ["1.1"], "bullets": ["1.1.10","1.1.11"]},
+    "sentplat": {"d": 1, "name": "Sentinel platform: roles, retention, workbooks, SOC optimization", "groups": ["1.2"], "bullets": ["1.2.1","1.2.2","1.2.3","1.2.4"]},
+    "ingest":   {"d": 1, "name": "Data ingestion: connectors, AMA, DCR, WEF, Syslog/CEF, TI, custom tables", "groups": ["1.3"], "bullets": ["1.3.1","1.3.2","1.3.3","1.3.4","1.3.5","1.3.6","1.3.7"]},
+    "detect":   {"d": 1, "name": "Detections: custom detections, analytics rules, MITRE, anomalies", "groups": ["1.4"], "bullets": ["1.4.1","1.4.2","1.4.3","1.4.4","1.4.5"]},
+    "xdrresp":  {"d": 2, "name": "Respond in Defender XDR (DfO365, Purview, DfC, DfCA, Entra, DfI, Sentinel, Copilot, cases)", "groups": ["2.1"], "bullets": ["2.1.1","2.1.2","2.1.3","2.1.4","2.1.5","2.1.6","2.1.7","2.1.8","2.1.9","2.1.10"]},
+    "dferesp":  {"d": 2, "name": "Respond in Defender for Endpoint (timeline, live response, packages, evidence, disruption)", "groups": ["2.2"], "bullets": ["2.2.1","2.2.2","2.2.3","2.2.4"]},
+    "m365inv":  {"d": 2, "name": "Investigate M365: Purview Audit, eDiscovery content search, Graph activity logs", "groups": ["2.3"], "bullets": ["2.3.1","2.3.2","2.3.3"]},
+    "kql":      {"d": 3, "name": "KQL & Advanced Hunting (tables, operators, queries)", "groups": ["3.1"], "bullets": ["3.1.1","3.1.2","3.1.3"]},
+    "xdrhunt":  {"d": 3, "name": "XDR hunting: threat analytics, hunting graphs, Sentinel graph", "groups": ["3.1"], "bullets": ["3.1.4","3.1.5","3.1.6"]},
+    "senthunt": {"d": 3, "name": "Sentinel hunting: hunting queries, KQL jobs, summary rules, notebooks/MCP", "groups": ["3.2"], "bullets": ["3.2.1","3.2.2","3.2.3","3.2.4"]}
+  },
+  "cardTargets": {"xdrauto": 32, "dfecfg": 36, "sentauto": 22, "sentplat": 22, "ingest": 30, "detect": 28, "xdrresp": 80, "dferesp": 38, "m365inv": 24, "kql": 46, "xdrhunt": 18, "senthunt": 24},
+  "bankQuota": {"1": 21, "2": 19, "3": 10}
+}

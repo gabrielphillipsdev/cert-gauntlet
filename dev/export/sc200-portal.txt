@@ -1,0 +1,688 @@
+# SC-200 portal navigation deck (hot-area)
+# '*' marks the click target. Flag any path or label that does not match the current portal.
+
+[p001] portal=defender obj=1.1.1 (Configure email notifications in Microsoft Defender XDR, including incidents, actions, and threat analytics)
+Q: Where do you create a rule that emails the on-call analyst whenever a new high-severity incident appears?
+PATH: Settings > Microsoft Defender XDR > Email notifications
+TARGET: The 'Incidents' tab, then 'Add incident notification rule'
+  * Incidents
+    Actions
+    Threat analytics
+    Email notifications
+    Alert tuning
+WHY: Incident, response-action and threat-analytics mail rules each live on their own tab of the same Email notifications page. People pick 'Actions' by mistake; that tab only fires when a remediation action needs approval or completes, not when an incident is created.
+
+[p002] portal=defender obj=1.1.2 (Configure alert notifications in Microsoft Defender XDR, including tuning, suppression, and correlation)
+Q: Where do you start a rule that automatically resolves a recurring benign alert for one device group?
+PATH: Settings > Microsoft Defender XDR > Alert tuning
+TARGET: The 'Add new rule' button at the top of the Alert tuning list
+  * Add new rule
+    Alert tuning
+    Email notifications
+    Automated response
+    Permissions
+WHY: Alert tuning replaced the older suppression list and is scoped per service source with conditions. It is a Defender XDR setting, not an Endpoints setting, so it sits beside Email notifications and Automated response rather than under Settings > Endpoints.
+
+[p003] portal=defender obj=1.1.3 (Configure Microsoft Defender for Endpoint advanced features)
+Q: Where do you turn on the ability to open a remote shell to onboarded workstations?
+PATH: Settings > Endpoints > Advanced features
+TARGET: The 'Enable live response' toggle
+  * Enable live response
+    Enable live response for servers
+    Allow unsigned script execution in live response
+    Enable EDR in block mode
+    Enable tamper protection
+WHY: Live response has three related toggles in a row on the Advanced features page: the base feature, a separate switch for server operating systems, and a third that allows unsigned scripts. A stem about Windows Server hosts needs the second toggle as well as the first.
+
+[p004] portal=defender obj=1.1.3 (Configure Microsoft Defender for Endpoint advanced features)
+Q: Where do you stop local admins from disabling Defender Antivirus real-time protection on every onboarded device?
+PATH: Settings > Endpoints > Advanced features
+TARGET: The 'Enable tamper protection' toggle
+  * Enable tamper protection
+    Enable EDR in block mode
+    Automatically resolve alerts
+    Enable device discovery
+    Enable live response
+WHY: The tenant-wide tamper protection switch lives among the Advanced features toggles. It is distinct from a per-device Intune antivirus policy; the portal toggle is the quick answer when the stem says 'for all devices in the tenant' rather than 'for a device group'.
+
+[p005] portal=defender obj=1.1.3 (Configure Microsoft Defender for Endpoint advanced features)
+Q: Where do you let Defender for Endpoint block malicious behavior on devices whose primary antivirus is a non-Microsoft product?
+PATH: Settings > Endpoints > Advanced features
+TARGET: The 'Enable EDR in block mode' toggle
+  * Enable EDR in block mode
+    Enable tamper protection
+    Configure custom network indicators
+    Restrict correlation to within scoped device groups
+    Enable device discovery
+WHY: EDR in block mode only matters when Defender Antivirus is in passive mode behind a third-party AV; it lets the EDR sensor remediate what the other product missed. Stems mentioning 'passive mode' or a third-party antivirus are the signal for this toggle, not tamper protection.
+
+[p006] portal=defender obj=1.1.4 (Configure rules settings in Microsoft Defender for Endpoint)
+Q: Where do you block a known-bad SHA256 across all devices without waiting for an alert?
+PATH: Settings > Endpoints > Indicators
+TARGET: The 'File hashes' tab, then 'Add item'
+  * File hashes
+    IP addresses
+    URLs/Domains
+    Certificates
+    Import
+WHY: Indicators are organized by type into tabs, and each tab supports a single Add item or a bulk Import of a CSV. Hash and certificate indicators are enforced by Defender Antivirus, while URL and IP indicators need the network protection prerequisite, so the tab you pick also implies the prerequisite you need.
+
+[p007] portal=defender obj=1.1.4 (Configure rules settings in Microsoft Defender for Endpoint)
+Q: Where do you start a policy that blocks gambling sites for one device group but not the others?
+PATH: Settings > Endpoints > Web content filtering
+TARGET: The 'Add policy' button above the policy list
+  * Add policy
+    Web content filtering
+    Indicators
+    Device groups
+    Advanced features
+WHY: Web content filtering policies block categories, not individual URLs; a single site exception is an Indicator on the URLs/Domains tab instead. The policy wizard scopes by device group on its Scope page, which is why Device groups sits beside it in the Endpoints settings list.
+
+[p008] portal=defender obj=1.1.9 (Configure and manage device groups, permissions, and automation levels in Microsoft Defender for Endpoint)
+Q: Where do you carve the Finance laptops into their own set so a different automation level and RBAC scope apply to them?
+PATH: Settings > Endpoints > Device groups
+TARGET: The 'Add device group' button
+  * Add device group
+    Device groups
+    Indicators
+    Web content filtering
+    Advanced features
+WHY: Device groups are the unit for both automation level and role scoping in Defender for Endpoint, so this page is where both questions resolve. A device tag is only a label used in the membership rule; the group, not the tag, carries the remediation level.
+
+[p009] portal=defender obj=1.1.9, 1.1.7 (Configure and manage device groups, permissions, and automation levels in Microsoft Defender for Endpoint)
+Q: In the device group wizard, which remediation level lets automated investigation clean up threats on any folder without an analyst approving each action?
+PATH: Settings > Endpoints > Device groups > Add device group
+TARGET: The 'Full - remediate threats automatically' option in the Remediation level list on the General tab
+  * Full - remediate threats automatically
+    Semi - require approval for all folders
+    Semi - require approval for core folders remediation
+    Semi - require approval for non-temp folders remediation
+    No automated response
+WHY: The three Semi levels differ only in which folders need approval, and 'No automated response' turns AIR off for the group. Full remediation is also what automatic attack disruption prefers, which is why attack-disruption stems route you back to this same dropdown.
+
+[p010] portal=defender obj=1.1.9 (Configure and manage device groups, permissions, and automation levels in Microsoft Defender for Endpoint)
+Q: When building a custom Defender XDR role for tier-1 analysts who only triage incidents and alerts, which permission group do you open?
+PATH: Permissions > Microsoft Defender XDR > Roles > Create custom role > Choose permissions
+TARGET: The 'Security operations' permission group
+  * Security operations
+    Security posture
+    Authorization and settings
+    Data operations
+    Assign users and data sources
+WHY: Unified RBAC groups permissions into Security operations (incidents, alerts, response, hunting), Security posture (exposure and vulnerability data) and Authorization and settings (roles and system settings). 'Data operations' is not a permission group. Analysts who should not touch settings never need anything outside Security operations.
+
+[p011] portal=defender obj=1.1.6 (Configure security policies for Microsoft Defender for Endpoint, including attack surface reduction (ASR) rules)
+Q: Where do you build a policy that puts ASR rules into Block mode on devices managed straight from the Defender portal, without opening Intune?
+PATH: Endpoints > Configuration management > Endpoint security policies > Create new policy
+TARGET: The 'Attack surface reduction (ASR) rules' template in the policy template list
+  * Attack surface reduction (ASR) rules
+    Microsoft Defender Antivirus
+    Endpoint detection and response (EDR)
+    Microsoft Defender Firewall
+    Device control
+    Defender update controls
+WHY: The Endpoint security policies page in the Defender portal mirrors the Intune endpoint security node for devices enrolled through security settings management. Antivirus and ASR are separate templates; a stem about Office child processes or credential theft is ASR, not Antivirus.
+
+[p012] portal=intune obj=1.1.6 (Configure security policies for Microsoft Defender for Endpoint, including attack surface reduction (ASR) rules)
+Q: In the Intune admin center, which profile do you choose so a Windows policy can set 'Block Office applications from creating child processes'?
+PATH: Endpoint security > Attack surface reduction > Create Policy
+TARGET: The 'Attack Surface Reduction Rules' profile
+  * Attack Surface Reduction Rules
+    Device Control
+    Exploit Protection
+    App and browser isolation
+    Application control
+    Web protection (Microsoft Edge Legacy)
+WHY: The Attack surface reduction node holds several unrelated profiles that share the name. Device Control is USB and peripheral rules, Exploit Protection is the per-process mitigations, and App and browser isolation is Application Guard; only the Attack Surface Reduction Rules profile exposes the per-rule Audit, Block and Warn settings.
+
+[p013] portal=defender obj=1.1.7 (Manage automated investigation and response capabilities in Microsoft Defender XDR)
+Q: Where do you approve the quarantine actions that semi-automated investigations are waiting on?
+PATH: Actions & submissions > Action center
+TARGET: The 'Pending' tab
+  * Pending
+    History
+    Export
+    Submissions
+    Action center
+WHY: The Action center splits into Pending (waiting on an approval) and History (already taken, with Undo where supported). Semi-automation levels generate Pending entries; Full remediation never does, which is a common trick in stems that ask why nothing shows up on this tab.
+
+[p014] portal=defender obj=1.1.8 (Configure automatic attack disruption in Microsoft Defender XDR)
+Q: Where is the tenant-level switch that lets Defender XDR contain devices and disable users during an in-progress attack?
+PATH: Settings > Endpoints > Advanced features
+TARGET: The 'Configure automatic attack disruption' toggle
+  * Configure automatic attack disruption
+    Enable live response
+    Enable EDR in block mode
+    Enable tamper protection
+    Enable device discovery
+WHY: Attack disruption is governed in three places: this toggle, the device group remediation level, and the exclusion lists under Settings > Microsoft Defender XDR > Automated response. The toggle is the on/off; the exclusions decide who is spared; the device group level decides whether approval is needed.
+
+[p015] portal=defender obj=1.1.8 (Configure automatic attack disruption in Microsoft Defender XDR)
+Q: Where do you stop attack disruption from ever disabling the break-glass admin account?
+PATH: Settings > Microsoft Defender XDR > Automated response > Identities
+TARGET: The 'Add user exclusion' button
+  * Add user exclusion
+    Identities
+    Devices
+    Remove
+    Alert tuning
+WHY: User exclusions for attack disruption live on the Identities tab of the Automated response settings, separate from device exclusions on the Devices tab. Excluding a user here does not suppress alerts about that user; it only prevents the automatic disable-user response.
+
+[p016] portal=defender obj=1.1.8 (Configure automatic attack disruption in Microsoft Defender XDR)
+Q: Where do you keep attack disruption from containing anything on the data-center management subnet?
+PATH: Settings > Microsoft Defender XDR > Automated response > Devices
+TARGET: The 'Exclude IP' button on the Policy application tab
+  * Exclude IP
+    Policy application
+    Device groups
+    Create rule
+    Identities
+WHY: The Devices side of Automated response has a Device groups tab (set the automation level per group) and a Policy application tab (IP exclusions and tag-based policy rules). A subnet is an IP exclusion; a named server set is handled through a device group or a tag rule instead.
+
+[p017] portal=defender obj=1.1.10 (Create and configure automation rules in Microsoft Sentinel)
+Q: Where do you begin a rule that auto-assigns every new Sentinel incident tagged Fabrikam-Prod to the night-shift queue?
+PATH: Microsoft Sentinel > Configuration > Automation > Create
+TARGET: The 'Automation rule' entry in the Create menu
+  * Automation rule
+    Playbook with incident trigger
+    Playbook with alert trigger
+    Playbook with entity trigger
+    Blank playbook
+WHY: The Create menu on the Automation page mixes automation rules with the playbook starters. Assigning owners, changing status, adding tags and tasks are native automation-rule actions and need no Logic App; only when the stem asks for an external action (ticket, email, API call) do you pick a playbook.
+
+[p018] portal=defender obj=1.1.10 (Create and configure automation rules in Microsoft Sentinel)
+Q: In the Create new automation rule pane, which trigger do you pick so the rule fires when an analyst changes an incident's severity?
+PATH: Microsoft Sentinel > Configuration > Automation > Create > Automation rule
+TARGET: The 'When incident is updated' option in the Trigger dropdown
+  * When incident is updated
+    When incident is created
+    When alert is created
+    Conditions
+    Actions
+    Rule expiration
+WHY: Three triggers exist: incident created, incident updated, and alert created. Updated-incident rules can condition on which field changed and by whom, which is what a severity-change stem needs. Alert-created rules can only run playbooks, not assign or tag incidents.
+
+[p019] portal=defender obj=1.1.11 (Create and configure Microsoft Sentinel playbooks)
+Q: Where do you start a playbook that analysts will run on demand against a single suspicious account from the entity pane?
+PATH: Microsoft Sentinel > Configuration > Automation > Create
+TARGET: The 'Playbook with entity trigger' entry in the Create menu
+  * Playbook with entity trigger
+    Playbook with incident trigger
+    Playbook with alert trigger
+    Automation rule
+    Blank playbook
+WHY: The trigger you choose at creation decides where the playbook can later be launched: incident-trigger playbooks run from incidents and automation rules, alert-trigger ones from alerts, and entity-trigger ones from a user, host, IP or other entity. Blank playbook creates a Standard Logic App with no Sentinel trigger yet.
+
+[p020] portal=azure obj=1.2.1 (Specify Microsoft Sentinel roles)
+Q: Which built-in role do you assign to an analyst who must assign and close incidents but must not edit analytics rules?
+PATH: Access control (IAM) > Add > Add role assignment
+TARGET: The 'Microsoft Sentinel Responder' row on the Role tab
+  * Microsoft Sentinel Responder
+    Microsoft Sentinel Reader
+    Microsoft Sentinel Contributor
+    Microsoft Sentinel Playbook Operator
+    Microsoft Sentinel Automation Contributor
+    Job function roles
+WHY: Sentinel roles are Azure RBAC roles assigned on the workspace or resource group through Access control (IAM). Reader views, Responder manages incidents, Contributor also edits content, Playbook Operator may run playbooks, and Automation Contributor is granted to the Sentinel service identity, not to people.
+
+[p021] portal=azure obj=1.2.2 (Manage data retention for XDR and Microsoft Sentinel tables, including Analytics, Data lake, and XDR tiers)
+Q: Where do you extend how long a single table's data stays queryable to two years without changing the whole workspace?
+PATH: Log Analytics workspaces > Tables > Manage table
+TARGET: The 'Interactive retention' (analytics retention) setting in the Data retention settings section
+  * Interactive retention
+    Total retention
+    Analytics
+    Basic
+    Auxiliary
+WHY: Manage table exposes the plan (Analytics, Basic or Auxiliary) and two retention values. Interactive (analytics) retention is the window in which data stays queryable, up to two years; Total retention adds the long-term, lower-cost period after it. Stems about 'queryable' or 'searchable' are about the first number; 'kept for compliance' is the second.
+
+[p022] portal=defender obj=1.2.3 (Create and configure Microsoft Sentinel workbooks)
+Q: Where do you build a visualization from scratch instead of saving a solution's template?
+PATH: Microsoft Sentinel > Threat management > Workbooks
+TARGET: The 'Add workbook' button
+  * Add workbook
+    Templates
+    My workbooks
+    Save
+    View saved workbook
+WHY: The Workbooks page has two tabs: Templates (installed from Content hub, saved with 'Save') and My workbooks (yours). Add workbook starts an empty one. Workbooks are the reporting surface; notebooks, the frequent distractor, are for Python-driven hunting and live under a different menu.
+
+[p023] portal=defender obj=1.2.4 (Optimize the Microsoft Sentinel platform, including SOC optimization recommendations)
+Q: Where do you review the SOC optimization recommendations you previously set aside?
+PATH: SOC optimization > Overview
+TARGET: The 'Optimization status' view, filtered to Status = Dismissed
+  * Optimization status
+    Completed
+    Overview
+    Coverage
+    Data value
+WHY: SOC optimization sorts recommendations into Coverage (threat-scenario gaps) and Data value (unused or costly tables). Each one can be completed, marked in progress or dismissed; the Optimization status view lists them by status, so filtering it to Dismissed shows the set-aside ones, which can be reactivated, the answer to 'bring it back'.
+
+[p024] portal=defender obj=1.3.1 (Select data connectors based on data source requirements, including Windows logs and security events)
+Q: Where do you add the Syslog solution so its AMA connector and rules become available?
+PATH: Microsoft Sentinel > Content management > Content hub
+TARGET: The 'Install' button on the selected solution
+  * Install
+    Manage
+    Create
+    View details
+    Repositories
+    Community
+WHY: Since connectors ship inside solutions, the Content hub is step zero for most ingestion stems; a connector missing from Data connectors usually means its solution was never installed. Manage opens an installed solution's items, Repositories is for CI/CD from your own Git repo.
+
+[p025] portal=defender obj=1.3.2 (Configure collection of Windows Security events by using Windows Security Events via AMA, including data collection rules)
+Q: On the Collect tab of the Windows Security Events via AMA rule, which choice keeps only the smallest event set?
+PATH: Microsoft Sentinel > Configuration > Data connectors > Windows Security Events via AMA > Open connector page > +Add data collection rule > Collect
+TARGET: The 'Minimal' option
+  * Minimal
+    Common
+    All Security Events
+    Custom
+    Basics
+    Resources
+WHY: All Security Events, Common, Minimal and Custom are the four collection sets; Custom is where an XPath filter goes when the stem names specific event IDs. The same wizard's Resources tab is where you pick the VMs or Arc servers, which is what installs the Azure Monitor Agent.
+
+[p026] portal=azure obj=1.3.2 (Configure collection of Windows Security events by using Windows Security Events via AMA, including data collection rules)
+Q: When creating a DCR directly in Azure Monitor, which data source type do you add to capture the Security log from Windows servers?
+PATH: Monitor > Data Collection Rules > Create > Collect and deliver
+TARGET: The 'Windows events' data source type
+  * Windows events
+    Performance counters
+    Syslog
+    Text log
+    JSON log
+    IIS logs
+WHY: A DCR built here is the generic Azure Monitor path; the Sentinel connector pages build the same object with the filter already pointed at the Security channel. Syslog is the Linux counterpart, and Text or JSON log is the custom-table route rather than event-log collection.
+
+[p027] portal=defender obj=1.3.4 (Plan and configure Syslog via AMA and Common Event Format (CEF) via AMA connectors)
+Q: Which connector do you open to receive firewall logs that arrive in ArcSight-style key=value format over a Linux forwarder?
+PATH: Microsoft Sentinel > Configuration > Data connectors
+TARGET: The 'Common Event Format (CEF) via AMA' connector tile
+  * Common Event Format (CEF) via AMA
+    Syslog via AMA
+    Windows Security Events via AMA
+    Windows Forwarded Events
+    Threat Intelligence - TAXII
+WHY: CEF and Syslog share the forwarder and agent but land in different tables: CEF via AMA parses into CommonSecurityLog, Syslog via AMA stores raw lines in Syslog. Pick by format the appliance emits, not by transport. Windows Forwarded Events is the WEF collector connector, not a Linux one.
+
+[p028] portal=azure obj=1.3.5 (Configure collection of Azure activity logs by using Azure Policy and resource diagnostic settings)
+Q: When assigning the Azure Activity policy, where do you make existing subscriptions start streaming immediately rather than only new ones?
+PATH: Policy > Assignments > Assign policy
+TARGET: The 'Remediation' tab, 'Create a remediation task' checkbox
+  * Remediation
+    Basics
+    Parameters
+    Non-compliance messages
+    Review + create
+WHY: The Azure Activity connector hands off to an Azure Policy assignment so every subscription in scope gets a diagnostic setting. DeployIfNotExists policies only touch resources created after assignment unless a remediation task is created, which is why the Remediation tab is the trap.
+
+[p029] portal=defender obj=1.3.6 (Ingest threat indicators into Microsoft Sentinel)
+Q: Where do you hand-enter a single malicious domain as a STIX indicator the TI analytics rules can match on?
+PATH: Threat intelligence > Intel management > Add new
+TARGET: The 'TI object' entry in the Add new menu
+  * TI object
+    TI relationship
+    Export
+    Add tags
+    Ingestion rules
+WHY: Intel management is where manual indicators, threat actors and relationships are created; bulk feeds come in through the TAXII and upload connectors instead. Ingestion rules act on incoming objects (tag, drop, change confidence) and are the distractor when the stem says 'before indicators are stored'.
+
+[p030] portal=azure obj=1.3.6 (Ingest threat indicators into Microsoft Sentinel)
+Q: On the TAXII connector page, which field controls how often Sentinel pulls from the server collection?
+PATH: Configuration > Data connectors > Threat Intelligence - TAXII > Open connector page
+TARGET: The 'Polling frequency' dropdown
+  * Polling frequency
+    Friendly name
+    API root URL
+    Collection ID
+    Username
+    Password
+WHY: A TAXII 2.x connection needs an API root URL and a Collection ID, with optional credentials; each collection is its own entry. Polling frequency is the only schedule control. The uploaded-indicators and Defender TI connectors have no polling field, which helps separate them in stems.
+
+[p031] portal=azure obj=1.3.7 (Create custom log tables in the workspace to store ingested data)
+Q: While creating a DCR-based custom table, where do you add the TimeGenerated column and reshape the uploaded JSON sample?
+PATH: Log Analytics workspaces > Tables > Create > New custom log (DCR based)
+TARGET: The 'Transformation editor' link in the sample-data step
+  * Transformation editor
+    Run
+    Apply
+    Next
+    Create
+WHY: The custom-table wizard generates the _CL table and binds it to a DCR and data collection endpoint. Every table must carry TimeGenerated, so the transformation editor is where a KQL extend adds it from a source timestamp. Run previews the result; Apply commits it to the schema.
+
+[p032] portal=defender obj=1.4.1 (Create custom detection rules by using Advanced Hunting in Microsoft Defender XDR)
+Q: After a hunting query returns the activity you want alerted on, where do you turn it into a recurring custom detection?
+PATH: Hunting > Advanced hunting
+TARGET: The 'Create detection rule' button above the query editor
+  * Create detection rule
+    Take actions
+    Guided mode
+    Advanced mode
+    Hunting graph
+WHY: Create detection rule opens the wizard that needs a Timestamp column and a reportable ID in the query results. Take actions remediates the rows you have now; it does not persist. The hunting graph is a separate visual exploration mode, not a detection path.
+
+[p033] portal=defender obj=1.4.2 (Manage custom detection rules in Microsoft Defender XDR)
+Q: Where do you pause a noisy custom detection for a week without deleting its query or history?
+PATH: Hunting > Custom detection rules
+TARGET: The 'Turn off' action on the selected rule
+  * Turn off
+    Run
+    Edit
+    Modify query
+    Delete
+WHY: The Custom detection rules list is the management surface: Run forces an immediate execution, Edit changes alert details and actions, Modify query reopens the KQL, and Turn off disables it reversibly. Deleting loses the triggered-alert history, which stems about 'keep the record' rule out.
+
+[p034] portal=defender obj=1.4.3 (Configure and manage analytics rules in Microsoft Sentinel SIEM, including scheduled, near-real time (NRT), threat intelligence, and machine learning)
+Q: Which Create option gives an analytics rule that fires within about a minute of the event instead of on a schedule?
+PATH: Microsoft Sentinel > Configuration > Analytics > Create
+TARGET: The 'NRT query rule' entry in the Create menu
+  * NRT query rule
+    Scheduled query rule
+    Microsoft incident creation rule
+    Threat intelligence
+    Active rules
+    Rule templates
+WHY: Near-real-time rules run every minute with a one-minute lookback and support only a subset of KQL, so they trade flexibility for speed. Microsoft incident creation rules promote alerts from other Microsoft products; Threat intelligence rules match indicators. Templates and Anomalies are tabs, not create options.
+
+[p035] portal=defender obj=1.4.3 (Configure and manage analytics rules in Microsoft Sentinel SIEM, including scheduled, near-real time (NRT), threat intelligence, and machine learning)
+Q: In the analytics rule wizard, which tab holds the setting that rolls alerts from the same rule into one incident?
+PATH: Microsoft Sentinel > Configuration > Analytics > Create > Scheduled query rule
+TARGET: The 'Incident settings' tab (Alert grouping section)
+  * Incident settings
+    General
+    Set rule logic
+    Automated response
+    Review and create
+WHY: Alert grouping is an incident-settings concern, not rule logic: it decides whether multiple alerts become one incident and over what window. Event grouping on the Set rule logic tab decides how many alerts a single run creates, and the two are swapped in nearly every distractor.
+
+[p036] portal=defender obj=1.4.3 (Configure and manage analytics rules in Microsoft Sentinel SIEM, including scheduled, near-real time (NRT), threat intelligence, and machine learning)
+Q: Where do you tell a scheduled rule which query column is the account so the incident shows a user entity?
+PATH: Microsoft Sentinel > Configuration > Analytics > Create > Scheduled query rule > Set rule logic
+TARGET: The 'Entity mapping' section under Alert enhancement
+  * Entity mapping
+    Rule query
+    Custom details
+    Alert details
+    Query scheduling
+    Alert threshold
+WHY: Entity mapping is what lets incidents list accounts, hosts and IPs and lets automation rules and playbooks act on them. Custom details surfaces extra columns in the alert, and Alert details overrides the alert name and description; neither creates an entity.
+
+[p037] portal=azure obj=1.4.4 (Analyze attack vector coverage by using the MITRE ATT&CK matrix)
+Q: Where do you see which ATT&CK techniques your active rules and hunting queries already cover?
+PATH: Microsoft Sentinel > Threat management
+TARGET: The 'MITRE ATT&CK (Preview)' entry in the Threat management menu
+  * MITRE ATT&CK (Preview)
+    Incidents
+    Workbooks
+    Hunting
+    Notebooks
+    Threat intelligence
+WHY: The MITRE page overlays active analytics rules and hunting queries on the matrix and can simulate coverage from templates not yet enabled. Workbooks can chart the same data but only after a rule's tactics are set in its General tab, which is the link stems expect you to know.
+
+[p038] portal=defender obj=1.4.5 (Configure anomalies in Microsoft Sentinel)
+Q: Where do you adjust the sensitivity of a built-in anomaly rule without editing the Microsoft-owned original?
+PATH: Microsoft Sentinel > Configuration > Analytics > Anomalies
+TARGET: The 'Duplicate' option in the rule's context menu
+  * Duplicate
+    Edit
+    Enable
+    Flighting
+    Production
+WHY: Anomaly rules are enabled by default and can only be tuned on a copy: Duplicate creates a customizable version in Flighting mode, you edit its thresholds, then promote it to Production, which disables the original. Edit on the Microsoft copy only exposes a limited set of parameters.
+
+[p039] portal=defender obj=2.1.1 (Investigate and remediate threats by using Microsoft Defender for Office 365, including automatic attack disruption)
+Q: Where do you list every credential-harvesting message delivered to Fabrikam mailboxes in the last seven days?
+PATH: Email & collaboration > Explorer
+TARGET: The 'Phish' view
+  * Phish
+    All email
+    Malware
+    Campaigns
+    Content malware
+    URL clicks
+WHY: Threat Explorer's views are pre-filtered slices of the same mail data. Campaigns groups related phish by sender infrastructure, Content malware covers SharePoint, OneDrive and Teams files, and URL clicks shows Safe Links verdicts. Plan 1 tenants get Real-time detections with fewer views.
+
+[p040] portal=defender obj=2.1.1 (Investigate and remediate threats by using Microsoft Defender for Office 365, including automatic attack disruption)
+Q: Where do you send Microsoft a phishing message that the filters let through so the verdict gets corrected?
+PATH: Actions & submissions > Submissions
+TARGET: The 'Emails' tab, then 'Submit to Microsoft for analysis'
+  * Emails
+    Teams messages
+    Email attachments
+    URLs
+    Files
+    User reported
+WHY: Admin submissions are split by object type; a missed phish is an Emails submission, a lone attachment or hash belongs on Email attachments or Files. User reported is the inbound queue of messages employees flagged with the Report button, which admins can then escalate from the same page.
+
+[p041] portal=defender obj=2.1.4 (Investigate and remediate security risks identified by Microsoft Defender for Cloud Apps)
+Q: Which policy type do you create so externally shared files containing card numbers are quarantined in Woodgrove's SharePoint?
+PATH: Cloud apps > Policies > Policy templates
+TARGET: The 'File policy' template
+  * File policy
+    Activity policy
+    Session policy
+    Access policy
+    App discovery policy
+    OAuth app policy
+WHY: File policies scan content at rest in connected apps and can quarantine or remove sharing. Session policies act inline on uploads and downloads during a proxied session, and activity policies watch events such as mass download. App discovery and OAuth app policies are about shadow IT and consent, not content.
+
+[p042] portal=entra obj=2.1.5 (Investigate and remediate compromised identities that are identified by Microsoft Entra ID)
+Q: Where do you tell Entra ID that a flagged account really was taken over so its risk goes to High and policies kick in?
+PATH: Protection > Identity Protection > Risky users
+TARGET: The 'Confirm compromised' action on the selected user
+  * Confirm compromised
+    Dismiss user risk
+    Reset password
+    Risky sign-ins
+    Risk detections
+WHY: Risky users aggregates per-account risk, while Risky sign-ins and Risk detections list the events behind it. Confirming compromise feeds the ML model and raises risk; Dismiss clears it. Reset password or a self-service password change with MFA is what actually remediates the risk.
+
+[p043] portal=azure obj=2.1.7 (Investigate and remediate alerts and incidents identified by Microsoft Sentinel)
+Q: Where do you add a checklist item the analyst must complete before closing a Sentinel incident?
+PATH: Microsoft Sentinel > Threat management > Incidents > View full details
+TARGET: The 'Tasks' button in the top bar, then '+ Add task'
+  * Tasks
+    Activity log
+    Logs
+    Incident actions
+    Overview
+    Entities
+WHY: Incident tasks can be added by hand, by an automation rule or by a playbook, and the Tasks panel shows which. Activity log holds the audit trail and comments, Logs opens a query window scoped to the incident, and Incident actions holds Run playbook and Create automation rule.
+
+[p044] portal=defender obj=2.1.8 (Investigate incidents by using agentic AI, including embedded Microsoft Security Copilot)
+Q: After new alerts merge into an incident you are already working, where do you get Copilot to rebuild its summary?
+PATH: Incidents & alerts > Incidents > Copilot pane
+TARGET: The 'Regenerate' control on the incident summary card
+  * Regenerate
+    See prompts
+    Generate
+    Open in Security Copilot
+    Cancel
+WHY: The embedded Copilot pane auto-generates a summary when an incident opens; Regenerate refreshes it, Generate is for incidents that did not get one automatically, and Open in Security Copilot hands the session to the standalone portal for prompt-driven investigation.
+
+[p045] portal=defender obj=2.1.9 (Investigate complex attacks, such as multi-stage, multi-domain, and lateral movement)
+Q: Where do you view the alerts of a multi-stage incident on one timeline with the entity graph beside it?
+PATH: Incidents & alerts > Incidents
+TARGET: The 'Attack story' tab of the incident page
+  * Attack story
+    Alerts
+    Assets
+    Investigations
+    Evidence and Response
+    Summary
+WHY: Attack story is the first tab and combines the alert timeline, the incident graph and the selected alert's details. Alerts is the flat list, Assets groups devices, users, mailboxes and apps, Investigations shows AIR runs and Evidence and Response lists every entity with its verdict.
+
+[p046] portal=defender obj=2.2.1 (Investigate device timelines)
+Q: From a suspicious row on a device's timeline, where do you pivot into advanced hunting for related events?
+PATH: Assets > Devices > Timeline
+TARGET: The 'Hunt for related events' action
+  * Hunt for related events
+    Flagged events
+    Export
+    Customize columns
+    Timeline
+    Overview
+WHY: The device timeline is the chronological event feed for one device, filterable by data type and MITRE technique. Flagging keeps rows for later; Export pulls a CSV. Hunt for related events builds a prefilled advanced hunting query from the selected event rather than only filtering the timeline.
+
+[p047] portal=defender obj=2.2.2 (Perform actions on the device, including live response and collecting investigation packages)
+Q: Where do you open a remote shell on a compromised device to pull a file with getfile?
+PATH: Assets > Devices
+TARGET: The 'Initiate live response session' action on the device page
+  * Initiate live response session
+    Initiate automated investigation
+    Collect investigation package
+    Run antivirus scan
+    Manage tags
+    Isolate device
+WHY: The response-action bar on the device page is where every manual action starts. Live response is interactive; Collect investigation package is a one-shot forensic bundle you download from Action center; Initiate automated investigation hands the device to AIR instead of an analyst.
+
+[p048] portal=defender obj=2.2.2 (Perform actions on the device, including live response and collecting investigation packages)
+Q: Where do you cut a device off the network while keeping its connection to the Defender service?
+PATH: Assets > Devices
+TARGET: The 'Isolate device' action on the device page
+  * Isolate device
+    Contain device
+    Restrict app execution
+    Run antivirus scan
+    Collect investigation package
+    Action center
+WHY: Isolate device works on onboarded endpoints and offers Full or Selective isolation. Contain device is for unmanaged or discovered devices and makes onboarded machines block traffic to it. Restrict app execution leaves networking alone and only blocks unsigned executables.
+
+[p049] portal=defender obj=2.2.2 (Perform actions on the device, including live response and collecting investigation packages)
+Q: Where do you reverse a file quarantine that an automated investigation carried out yesterday?
+PATH: Actions & submissions > Action center
+TARGET: The 'History' tab, then 'Undo' on the action
+  * History
+    Pending
+    Export
+    Submissions
+    Action center
+WHY: History is the tenant-wide audit of completed response actions, both automated and manual, and is where Undo appears for reversible actions such as quarantine or isolation. Pending only lists actions still waiting for approval, so a completed quarantine never shows there.
+
+[p050] portal=purview obj=2.3.1 (Investigate threats by using Microsoft Purview Audit)
+Q: In the audit search form, where do you enter the raw operation name such as New-InboxRule rather than its display name?
+PATH: Audit > Search
+TARGET: The 'Activities - operations names' field
+  * Activities - operations names
+    Activities - friendly names
+    Date and time range (UTC)
+    Keyword Search
+    Record types
+    Users
+WHY: Audit search has two activity pickers: friendly names for the curated list and operations names for the exact cmdlet or API operation string. Record types narrows by workload schema. Searches run as jobs and results are read from the job dashboard, not inline.
+
+[p051] portal=purview obj=2.3.2 (Investigate threats by using Content search in Microsoft Purview eDiscovery)
+Q: In an eDiscovery search, where do you switch from the condition builder to typing a raw query?
+PATH: eDiscovery > Cases > Searches > Create a search
+TARGET: The 'Keyword Query Language (KeyQL)' tab in the query area
+  * Keyword Query Language (KeyQL)
+    Condition builder
+    Run query
+    Save as draft
+    Generate statistics
+    Draft a query with Copilot
+WHY: In the current eDiscovery, Content search is itself a case that holds searches, so the same search page applies. Condition builder composes filters visually; the KeyQL tab accepts the query string directly. Generate statistics estimates hits before any export or review set is created.
+
+[p052] portal=entra obj=2.3.3 (Investigate threats by using Microsoft Graph activity logs)
+Q: Where do you start streaming every Microsoft Graph API call made against the tenant into the Sentinel workspace?
+PATH: Entra ID > Monitoring & health > Diagnostic settings > + Add diagnostic setting
+TARGET: The 'MicrosoftGraphActivityLogs' category checkbox
+  * MicrosoftGraphActivityLogs
+    AuditLogs
+    SignInLogs
+    ProvisioningLogs
+    RiskyUsers
+    Send to Log Analytics workspace
+WHY: Graph activity logs are an Entra diagnostic-setting category, not a Purview feature, and land in the MicrosoftGraphActivityLogs table. AuditLogs records directory changes and SignInLogs records authentications; only the Graph category shows which app or user called which endpoint.
+
+[p053] portal=defender obj=3.1.3 (Create Advanced Hunting queries)
+Q: Where do you switch from the point-and-click query builder to writing KQL yourself?
+PATH: Hunting > Advanced hunting
+TARGET: The 'Advanced mode' switch above the editor
+  * Advanced mode
+    Guided mode
+    Create detection rule
+    Take actions
+    Hunting graph
+WHY: Guided mode builds a query from dropdowns and never shows KQL; Advanced mode is the editor with schema, functions and shared queries. Both run against the same tables. Custom detection rules require a query, so guided-mode results can still become a detection once converted.
+
+[p054] portal=defender obj=3.1.4 (Interpret threat analytics in Microsoft Defender XDR)
+Q: In a threat analytics report, where do you read Microsoft's narrative on the actor's tooling and tradecraft?
+PATH: Threat analytics > High-impact threats
+TARGET: The 'Analyst report' tab of the opened report
+  * Analyst report
+    Overview
+    Related incidents
+    Impacted assets
+    Endpoints exposure
+    Recommended actions
+WHY: Each report has the same tab layout. Overview is the scorecard, Analyst report is the written intelligence, Related incidents and Impacted assets map the threat to your tenant, Endpoints exposure shows patch status and Recommended actions lists mitigations with their state.
+
+[p055] portal=defender obj=3.1.5 (Create hunting graphs, including blast radius)
+Q: Which predefined hunting-graph scenario shows every route an attacker could take to a domain admin account?
+PATH: Hunting > Advanced hunting > Create new > Hunting graph
+TARGET: The 'Paths to domain admins' scenario
+  * Paths to domain admins
+    Entity relationship map
+    Paths between two entities
+    Attack paths to critical asset
+    Potential data exfiltration by device
+    Least privilege access
+WHY: The hunting graph renders predefined scenarios over the Sentinel graph rather than returning rows. Attack paths to critical asset starts from an asset you name, while Paths to domain admins starts from the privileged group; the blast-radius view is reached from an entity, not from this list.
+
+[p056] portal=defender obj=3.1.6, 3.1.5 (Analyze relationships between entities by using Sentinel Graph)
+Q: Which hunting-graph scenario do you run to see how a compromised workstation connects to a particular file server through intermediate identities?
+PATH: Hunting > Advanced hunting > Create new > Hunting graph
+TARGET: The 'Paths between two entities' scenario
+  * Paths between two entities
+    Entity relationship map
+    Paths to domain admins
+    Attack paths to critical asset
+    Access to key vaults
+    Service accounts with RDP to critical devices
+WHY: Paths between two entities takes a source and a destination and traces the relationship chain, which is the Sentinel graph answer to lateral-movement stems. Entity relationship map shows one entity's neighborhood without a target, and the critical-asset scenarios start from asset criticality tags.
+
+[p057] portal=defender obj=3.2.1 (Create and monitor hunting queries)
+Q: Where do you execute every out-of-the-box hunting query at once to see which ones return results today?
+PATH: Microsoft Sentinel > Threat management > Hunting > Queries
+TARGET: The 'Run all queries' button
+  * Run all queries
+    Run selected queries
+    New hunt
+    Hunts
+    Queries
+    Bookmarks
+WHY: The Hunting page has Hunts, Queries and Bookmarks tabs; livestream is no longer offered there. Run all queries populates the result-count column so you can sort by hits, Run selected limits that to checked rows, and New hunt opens a container that groups queries and bookmarks for one investigation.
+
+[p058] portal=defender obj=3.2.2 (Create and manage KQL jobs in Data lake)
+Q: After testing a query against data lake tier data, where do you schedule it to write results into an analytics-tier table?
+PATH: Microsoft Sentinel > Data lake exploration > KQL queries
+TARGET: The 'Create job' button in the query editor
+  * Create job
+    Run query
+    New query
+    Export
+    Query history
+    Async Queries
+WHY: KQL jobs are the data lake way to promote long-term data into a queryable analytics table on a schedule or once. Run query only returns interactive results; Export writes a CSV. Jobs are then managed from the Jobs page in the same Data lake exploration menu.
+
+[p059] portal=defender obj=3.2.3 (Create and manage Summary rule tables for querying)
+Q: In the summary rule wizard, where do you name the custom table that will hold the hourly aggregates?
+PATH: Microsoft Sentinel > Configuration > Summary rules > + Create
+TARGET: The 'Destination table' field on the Basics tab
+  * Destination table
+    Name
+    Description
+    Set summary logic
+    Review + create
+WHY: Summary rules aggregate verbose data, including Auxiliary or data lake tables, into a _CL table that analytics rules can query. The destination is chosen on Basics; the query and its run frequency live on Set summary logic. Unlike a KQL job, a summary rule always runs on a recurring schedule.
+
+[p060] portal=azure obj=3.2.4 (Hunt for threats by using Notebooks, including connection to the Sentinel MCP Server)
+Q: Where do you browse the prebuilt guided-hunting notebooks before copying one into your workspace?
+PATH: Microsoft Sentinel > Threat management > Notebooks
+TARGET: The 'Templates' tab
+  * Templates
+    My notebooks
+    Launch notebook
+    Create from template
+WHY: Templates lists the Microsoft-provided notebooks; Create from template copies one into My notebooks, and Launch notebook opens it in an Azure Machine Learning workspace. Notebooks run Python with MSTICPy against the workspace, which is what separates them from workbooks.
