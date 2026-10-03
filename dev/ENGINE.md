@@ -24,6 +24,9 @@ core/
   sims/appanel.js     wireless AP configuration panel
   sims/hardening.js   endpoint hardening panel
   exam/runner.js      full exam: picker, item rendering, review grid, scoring, results, review, drill. Rules from manifest.exam.
+  exam/msitems.js     Microsoft item types (order · build · hot · series · case-study tabs), section locking, flattenBank(), "hotarea" sim (+ msitems.css)
+  exam/learnpane.js   open-book Learn pane: opens learn.microsoft.com beside the exam, logs lookup time per question, results readout
+  sims/kql/           KQL interpreter (kql.js API · lexer · parser · interp · funcs · values), seeded sample tables (tables.js), "kql" drill sim (drill.js + kql.css)
   ui/keyrow.js        symbol key row for typed modules on phones (KQL_KEYS, IOS_KEYS presets)
   views/picker.js     cert picker (launch screen)
   views/home.js       today's set, readiness, quick links, decks  (exports todaySet, labItems)
@@ -109,6 +112,16 @@ Order sims accept `eq: [[i, j], ...]` — step indexes that are interchangeable 
 - Result record: `{id, t, x, fresh, practice, raw, scaled, pass, gate, dom:{d:[pts,max]}, conf, secs, pauses, timedOut, miss[], guess[], flags[], detail[]}`.
 - Layout: phone = single column; ≥1024px = sticky question-grid rail + question pane (`.xm-wrap`).
 
+## Microsoft-format exams (SC-200; Chat 6)
+
+Set on `manifest.exam`: `caseFirst`, `seriesLast`, `learnPane`, `itemTypes: ["mc","ms","order","build","hot","case","series"]`, optional `minMs` / `minEx` for the validator. Banks are shipped **flattened** by the pack's `load()` through `flattenBank()` (core/exam/msitems.js): a `case` unit becomes its 6–9 questions carrying `caseId/caseTitle/tabs/caseN/caseOf`, a `series` unit becomes 4 `t:"series"` questions (`id` = `unitId-n`, `s`, `ok`, `scenario`). The runner then: puts the case study first and the series last (`arrangeBank`, or `mixPick` for Random mix — one whole case + one whole series + standalone to `mixQuota`), locks the case study once the candidate leaves it (`XS.caseLocked`), and runs the series with no Back, no grid and no flag (`XS.midLocked`). Item state reuses `it.ans`: option indexes for mc/ms/hot, pool indexes in chosen order for order/build, `[1]`/`[0]` for Yes/No. Scoring is all-or-nothing per item (`order` accepts `alt` sequences; `build` with `ordered:false` is graded as a set). Per-item Learn lookups live in `it.lk = {n, ms}` and the result record gains `learn: {n, secs, right, pctUsed, pctRest, items[]}`. The mc/ms/PBQ path is unchanged, so CompTIA packs behave exactly as before.
+
+The two new modules inject their own stylesheets (`core/exam/msitems.css`, `core/sims/kql/kql.css`) because Chat 6 was scoped away from `core/styles.css`; Chat 1 may fold them in.
+
+## KQL Lab (core/sims/kql)
+
+`runKql(query, db, {maxRows})` → `{cols:[{name,type}], rows:[[…]], warnings[]}`; throws `KqlError` whose message reads like the Log Analytics editor (`'where' operator: Failed to resolve scalar expression named 'X'`, `Query could not be parsed at 'summarise' on line [1,13]`, `Cannot compare values of types string and long. Try adding explicit casts`). `db = {tables, now}`; the lab pins `now()` to `LAB_NOW` (2026-11-15 09:00Z) so `ago()` is reproducible. `sameResult(a, b, {ordered, names, strict})` grades drills by result set so any correct query passes. Sim type `kql` (`item.mode` write | fix | predict; schema in packs/sc200/kql-drills.js) attaches the phone key row itself. Conformance: `node dev/tests/kql.test.mjs`; drills: `node dev/check-kql-drills.mjs`.
+
 ## Key row (typed modules)
 
 `attachKeyRow(scopeEl, keys)` from `core/ui/keyrow.js` shows a fixed symbol bar above the on-screen keyboard when an input inside `scopeEl` has focus and inserts at the caret. Presets `KQL_KEYS`, `IOS_KEYS`. Hidden on fine-pointer tablets/laptops. Inputs that must not trigger it: `data-keyrow="off"`.
@@ -119,4 +132,4 @@ Order sims accept `eq: [[i, j], ...]` — step indexes that are interchangeable 
 - No HTML from content: content strings are plain text; `esc()` everything. Diagrams are the one exception (trusted SVG strings in the pack).
 - CSS: use tokens; new components get their own section in styles.css; phone first, then `@media(min-width:768px)` / `1024px`.
 - `VERSION` in `core/app.js` and `sw.js` move together when a deploy should invalidate caches.
-- Validate before PR: `node dev/tests/merge.test.mjs && node dev/check-pack.mjs <pack> && python3 dev/tests/e2e.py` (serve the repo on :8765 first).
+- Validate before PR: `node dev/tests/merge.test.mjs && node dev/check-pack.mjs <pack> && python3 dev/tests/e2e.py` (serve the repo on :8765 first). SC-200 adds `node dev/tests/kql.test.mjs && node dev/check-kql-drills.mjs && python3 dev/tests/e2e-sc200.py`.

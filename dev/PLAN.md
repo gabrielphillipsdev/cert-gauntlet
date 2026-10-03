@@ -5,6 +5,7 @@
 > Repo conventions: one branch per chat (`chat-N/short-name`), one PR per chat, squash-merged by Gabe. A chat touches only the folders its row in §6 names. If a chat needs a change to `/core` APIs, it stops and says so; Chat 1 (the engine chat) makes the change and updates ENGINE.md.
 >
 > Status log (newest first):
+> - 2026-10-03 · Chat 6 merged: KQL interpreter (227-query suite), 12 seeded sample tables, KQL Lab with 60 drills, SC-200 exam mode (case study first/locked, middle with review, solution series last/no backtrack, drag-drop, build list, hot area, Learn-pane timing + readout), banks A/B/C wired, portal deck playable as hot-area items. Still open: portal screenshots (`img`), second-model review of the banks, `VERSION` bump for the service worker (core/app.js + sw.js, Chat 1).
 > - 2026-10-02 · Chat 3 (PR open): diagram placement, wireless AP panel and endpoint hardening sims + shared sim UI (sticky task pane with calculator, pointer drag); 15 lab sims and 8 exam sims authored, exam PBQs re-mixed (match/order exam PBQs retired — the lab has the same content), 4.2/4.9 bank items added, `dev/tests/sims.test.mjs`, `dev/export-secplus.mjs`. Waiting on Chat 2 for console/firewall-editor exam items, the drag-drop conversion of the 25 legacy lab items, and the last of the ~24 lab sims.
 > - 2026-10-02 · Chat 1 merged: engine extracted, per-record Gist sync, service worker, iPad layouts, Sec+ pack ported with the four fixes and objective IDs on all 830 items. Validator found objective 4.2 has no exam-bank items and 4.9 only PBQs — Chat 3 adds those.
 

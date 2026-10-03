@@ -63,7 +63,7 @@ registerSim("kql", {
     if (ctx.reveal) {
       let refHtml = "";
       try { const r = run(item.ref); refHtml = `<div class="kq-keyh">Reference query</div><pre class="kq-q">${esc(item.ref)}</pre><div class="kq-sum">${summaryLine(r)}</div>${tableHtml(r, 12)}`; } catch (e) { refHtml = errorHtml(e); }
-      html += `<div class="kq-key">${refHtml}${item.why ? `<div class="kq-why">${esc(item.why)}</div>` : ""}</div>`;
+      html += `<div class="kq-key">${refHtml}</div>`;   /* the explanation (item.why) is shown by the host's feedback panel */
     }
     html += `</div>`;
     el.innerHTML = html;

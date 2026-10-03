@@ -5,7 +5,7 @@ export default {
   id: "sc200", name: "Security Operations Analyst", short: "SC-200", code: "SC-200", color: "#B48CFF", status: "ready",
   tagline: "Sentinel, Defender XDR, KQL — Nov 9 → sit by Dec 18",
   examDateDefault: "2026-12-18",
-  blurb: "SC-200 as Microsoft tests it: Defender XDR, Defender for Endpoint, Sentinel SIEM and data lake, Purview, Entra ID Protection and KQL everywhere. Cards and twins are live now; the Microsoft-format exam (case study, solution series, drag-drop, build list, hot area) lands with Chat 6.",
+  blurb: "SC-200 as Microsoft tests it: Defender XDR, Defender for Endpoint, Sentinel SIEM and data lake, Purview, Entra ID Protection and KQL everywhere. Cards, twins, three Microsoft-format exams (case study first, solution series last, drag-drop, build list, hot area, open-book Learn timer), a KQL Lab with a real interpreter, and the portal-navigation deck.",
   objectivesDoc: "dev/specs/skills-sc200.json",
   objPattern: "^[1-3]\\.[1-4]\\.[0-9]{1,2}$",
   validator: "dev/check-sc200.js",
@@ -40,27 +40,40 @@ export default {
   },
 
   /* Real SC-200 rules (verified Oct 2, 2026 — dev/specs/sc200.md §1): 40–60 items, 100 min, 700/1000 passes, case study first (locked once left),
-     solution series last (no backtrack), Learn pane allowed with the clock running. The engine's runner handles mc/ms today; the Microsoft item types
-     (order, build, hot, case, series) and the Learn-pane timer are Chat 6. Banks stay out of load() until then so the current runner never meets them. */
+     solution series last (no backtrack), Learn pane allowed with the clock running. Chat 6 added the Microsoft item types
+     (order, build, hot, case, series — core/exam/msitems.js) and the Learn-pane timer (core/exam/learnpane.js); banks are wired below. */
   exam: {
     count: 50, minutes: 100, pass: 700, scaleMin: 0, scaleMax: 1000,
     pbqFirst: false, backtrack: true, pbqPts: 0, pbqCount: 0,
     caseFirst: true, seriesLast: true, learnPane: true, itemTypes: ["mc", "ms", "order", "build", "hot", "case", "series"],
     gate: { all: 80, dom: 70 },
     mixQuota: { 1: 21, 2: 19, 3: 10 },
-    banks: {},   /* Chat 6: a/b/c from bank-a.js, bank-b.js, bank-c.js (SC200_BANK_A/B/C) once the runner supports the item types above */
+    minMs: 6, minEx: 8,
+    banks: {
+      a: { name: "Exam A", sub: "Fabrikam SIEM migration case study · ingestion, detection engineering, Sentinel platform" },
+      b: { name: "Exam B", sub: "Incident response heavy · Defender XDR, DfE live response, Purview" },
+      c: { name: "Exam C", sub: "Hunting heavy · KQL, advanced hunting, custom detections, Sentinel data lake" },
+    },
   },
   sprints: [],
 
   async load() {
-    const [c1, c2, c3, t, p] = await Promise.all([
+    const [c1, c2, c3, t, p, ba, bb, bc, kd, flat] = await Promise.all([
       import("./cards-d1.js"), import("./cards-d2.js"), import("./cards-d3.js"), import("./twins.js"), import("./portal.js"),
+      import("./bank-a.js"), import("./bank-b.js"), import("./bank-c.js"), import("./kql-drills.js"),
+      import("../../core/exam/msitems.js"),           /* flattenBank + registers the "hotarea" sim */
+      import("../../core/sims/kql/drill.js"),          /* registers the "kql" sim (KQL Lab) */
     ]);
+    const domOf = obj => +String(obj).split(".")[0];
+    const portal = p.SC200_PORTAL.map(x => ({ ...x, type: "hotarea", title: x.q, d: domOf(x.obj), cat: "portal" }));
     return {
       cards: [...c1.SC200_CARDS_D1, ...c2.SC200_CARDS_D2, ...c3.SC200_CARDS_D3],
-      exq: [], twins: t.SC200_TWINS, lab: [], generators: [],
-      banks: {}, pbqs: {}, diagrams: {}, acronyms: [], reference: [],
-      portal: p.SC200_PORTAL,   /* 60 "where do you…" hot-area items; rendered by Chat 6's hot-area component (img:null until screenshots) */
+      exq: [], twins: t.SC200_TWINS,
+      lab: [...kd.SC200_KQL_DRILLS, ...portal],     /* KQL Lab (60 drills) + portal-navigation hot-area deck (60) in the PBQ Lab */
+      generators: [],
+      banks: { a: flat.flattenBank(ba.SC200_BANK_A), b: flat.flattenBank(bb.SC200_BANK_B), c: flat.flattenBank(bc.SC200_BANK_C) },   /* 50 units → 50 scored questions each: case ×8 + 38 + series ×4 */
+      pbqs: {}, diagrams: {}, acronyms: [], reference: [],
+      portal: p.SC200_PORTAL,
     };
   },
 };
