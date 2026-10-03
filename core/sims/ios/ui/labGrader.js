@@ -80,8 +80,15 @@ export function buildLab(item) {
   for (const [name, o] of Object.entries(item.topology.devices)) { const { x, y, console: _c, ...rest } = o; devices[name] = rest; }
   return createLab({ devices, links: item.topology.links, configs: item.configs || {} });
 }
+/* The simulator should never throw, but a few inputs do (see dev/CHAT8-NOTES.md → simulator gaps). A throw must not
+   kill the lab UI or a replay, so every student line goes through safeExec. */
+export const SIM_ERR = "% Internal simulator error — this command is not supported here.";
+export function safeExec(session, line) {
+  try { return session.exec(line); }
+  catch (e) { session.pending = null; return { out: SIM_ERR, prompt: session.prompt(), error: e.message }; }
+}
 export function replay(lab, log) {
-  for (const [dev, lines] of Object.entries(log || {})) { const s = lab.cli(dev); for (const l of lines) s.exec(l); }
+  for (const [dev, lines] of Object.entries(log || {})) { const s = lab.cli(dev); for (const l of lines) safeExec(s, l); }
   lab.topo.converge();
   return lab;
 }
@@ -245,7 +252,7 @@ export const CHECKS = {
   runningConfigMatches(c, k) { const re = new RegExp(k.re, k.flags || "m"); return R(re.test(c.rc(k.device)), `${k.device} running-config ${re.test(c.rc(k.device)) ? "contains" : "lacks"} /${k.re}/`); },
   runningConfigNotMatches(c, k) { const re = new RegExp(k.re, k.flags || "m"); return R(!re.test(c.rc(k.device)), `${k.device} running-config ${re.test(c.rc(k.device)) ? "contains" : "lacks"} /${k.re}/`); },
   /* scratch session so the student's own terminal mode is untouched */
-  cmd(c, k) { const s = makeSession(c.dev(k.device), c.topo); s.enter("priv"); const out = s.exec(k.line).out; const ok = new RegExp(k.re, k.flags || "m").test(out); return R(ok, `${k.device}# ${k.line} → ${ok ? "matches" : "does not match"} /${k.re}/`); },
+  cmd(c, k) { const s = makeSession(c.dev(k.device), c.topo); s.enter("priv"); const out = safeExec(s, k.line).out; const ok = new RegExp(k.re, k.flags || "m").test(out); return R(ok, `${k.device}# ${k.line} → ${ok ? "matches" : "does not match"} /${k.re}/`); },
 };
 
 /* ---------- grading ---------- */

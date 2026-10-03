@@ -10,7 +10,7 @@ import { esc } from "../../../util.js";
 import { injectCss } from "../../ui.js";
 import { attachKeyRow, IOS_KEYS } from "../../../ui/keyrow.js";
 import { parseIfName } from "../index.js";
-import { buildLab, gradeLab, isBlocked, BLOCKED_MSG } from "./labGrader.js";
+import { buildLab, gradeLab, isBlocked, BLOCKED_MSG, safeExec } from "./labGrader.js";
 
 /* ---------- live simulator per state object (never serialized) ---------- */
 const LIVE = new WeakMap();
@@ -20,7 +20,7 @@ function live(item, st) {
   const lab = buildLab(item);
   const scroll = {}; const names = devNames(item);
   for (const n of names) scroll[n] = [];
-  for (const n of names) { const s = lab.cli(n); for (const line of st.log?.[n] || []) { const ps = s.prompt(); const r = s.exec(line); scroll[n].push({ ps, c: r.echo === false ? "" : line, o: r.out, help: !!r.help }); } }
+  for (const n of names) { const s = lab.cli(n); for (const line of st.log?.[n] || []) { const ps = s.prompt(); const r = safeExec(s, line); scroll[n].push({ ps, c: r.echo === false ? "" : line, o: r.out, help: !!r.help }); } }
   lab.topo.converge();
   L = { lab, scroll, dev: names[0], tab: "tasks", view: "tasks", hist: Object.fromEntries(names.map(n => [n, (st.log?.[n] || []).length])) };
   LIVE.set(st, L);
@@ -120,7 +120,7 @@ registerSim("ccna-lab", {
     const run = text => {
       const s = sess(); const psNow = s.prompt();
       if (!s.pending && isBlocked(item, text)) { append({ ps: psNow, c: text, o: BLOCKED_MSG }); return; }
-      const r = s.exec(text); (st.log[L.dev] ||= []).push(text); L.hist[L.dev] = st.log[L.dev].length;
+      const r = safeExec(s, text); (st.log[L.dev] ||= []).push(text); L.hist[L.dev] = st.log[L.dev].length;
       append({ ps: psNow, c: r.echo === false ? "" : text, o: r.out, help: !!r.help }); ctx.onChange();
       L.lab.topo.dirty && L.lab.topo.dirty();
     };
@@ -133,7 +133,7 @@ registerSim("ccna-lab", {
       if (ev.key === "ArrowUp") { ev.preventDefault(); histUp(); }
       else if (ev.key === "ArrowDown") { ev.preventDefault(); if (L.hist[L.dev] < h.length - 1) { L.hist[L.dev]++; inp.value = h[L.hist[L.dev]]; } else { L.hist[L.dev] = h.length; inp.value = ""; } }
       else if (ev.key === "Tab") { ev.preventDefault(); if (!sess().pending) inp.value = sess().complete(inp.value); }
-      else if (ev.key === "?" && !sess().pending) { ev.preventDefault(); const s = sess(); const q = inp.value + "?"; const psNow = s.prompt(); if (isBlocked(item, inp.value + " x")) { append({ ps: psNow, c: q, o: BLOCKED_MSG }); return; } const r = s.exec(q); append({ ps: psNow, c: q, o: r.out, help: true }); }
+      else if (ev.key === "?" && !sess().pending) { ev.preventDefault(); const s = sess(); const q = inp.value + "?"; const psNow = s.prompt(); if (isBlocked(item, inp.value + " x")) { append({ ps: psNow, c: q, o: BLOCKED_MSG }); return; } const r = safeExec(s, q); append({ ps: psNow, c: q, o: r.out, help: true }); }
       else if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "l") { ev.preventDefault(); L.scroll[L.dev] = []; out.innerHTML = ""; }
       else if (ev.ctrlKey && ev.key.toLowerCase() === "z") { ev.preventDefault(); if (sess().mode.startsWith("config")) { inp.value = ""; run("end"); } }
       else if (ev.ctrlKey && ev.key.toLowerCase() === "c" && sess().pending) { ev.preventDefault(); sess().pending = null; append({ ps: ps.textContent, c: "^C", o: "" }); }
@@ -148,7 +148,7 @@ registerSim("ccna-lab", {
   },
   answered: (item, st) => Object.values(st.log || {}).some(l => l.length > 0) || Object.values(st.answers || {}).some(v => v && v.trim()),
   score(item, st) {
-    const L = live(item, st); L.lab.topo.converge();
+    const L = live(item, st); try { L.lab.topo.converge(); } catch { /* graded below; checks catch their own errors */ }
     const r = gradeLab(item, L.lab, st.answers || {});
     const notes = r.tasks.map((t, i) => `Task ${i + 1}: ${t.earned}/${t.max}${t.earned === t.max ? " ✓" : " — " + t.checks.filter(c => !c.pass).map(c => c.detail).join("; ")}`);
     r.guidelines.filter(g => !g.pass).forEach(g => notes.push(`Guideline broken (−${g.points}): ${g.text} — ${g.detail}`));
