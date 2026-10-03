@@ -147,7 +147,7 @@ function renderItem() {
   const canBack = msExam ? nav.back : (r.backtrack !== false && XS.i > 0);
   html += `<div class="xm-nav">${r.backtrack === false || inSeries ? "" : `<button id="xmprev" ${canBack ? "" : "disabled"}>Back</button>`}${nav.flag && !linear() ? `<button class="flag ${it.fl ? "on" : ""}" id="xmflag" title="Flag for review">⚑</button>` : ""}${XS.i === n - 1 ? `<button class="submit" id="xmnext">Finish &amp; submit</button>` : `<button class="next" id="xmnext">Next</button>`}</div></div>`;
   A.el.innerHTML = `<div class="xm-wrap ${inSeries ? "single" : ""}">${inSeries ? "" : railHtml()}<div class="xm-pane">${html}</div></div>`;   /* linear exams get a read-only progress rail */
-  A.el.scrollTop = 0;
+  A.el.scrollTop = 0; window.scrollTo(0, 0);   /* each item opens at its top (a tall previous item otherwise hides a lab's header on phones) */
   $("#xmleave").onclick = () => { if (mode === "drill") drillDone(); else leave(); };
   const gb = $("#xmgridbtn"); if (gb) gb.onclick = () => renderGrid();
   const prev = $("#xmprev"); if (prev) prev.onclick = () => { if (XS.i > 0 && canBack) { XS.i--; save(); renderItem(); } };

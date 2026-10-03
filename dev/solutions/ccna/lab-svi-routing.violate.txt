@@ -1,0 +1,5 @@
+! device SW1
+conf t
+int g1/0/3
+shutdown
+end

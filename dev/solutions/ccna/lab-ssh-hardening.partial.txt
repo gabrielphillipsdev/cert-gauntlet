@@ -1,0 +1,11 @@
+! device R1
+en
+conf t
+ip domain-name ccna.lab
+crypto key generate rsa modulus 1024
+username netadmin secret Ne7Adm!n
+line vty 0 4
+login local
+exit
+enable secret Pr1vEx3c
+end

@@ -1,0 +1,12 @@
+! device SW1
+en
+conf t
+int range g0/1 - 2
+channel-group 1 mode active
+end
+! device SW2
+en
+conf t
+int range g0/1 - 2
+channel-group 1 mode passive
+end

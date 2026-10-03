@@ -1,0 +1,25 @@
+! device R3
+en
+conf t
+int g0/0
+ip ospf 1 area 0
+int g0/1
+ip ospf 1 area 0
+int g0/2
+ip ospf 1 area 0
+router ospf 1
+router-id 3.3.3.3
+passive-interface default
+no passive-interface g0/1
+no passive-interface g0/2
+end
+! device R1
+en
+conf t
+ip route 0.0.0.0 0.0.0.0 203.0.113.1
+router ospf 1
+router-id 1.1.1.1
+network 10.0.0.0 0.255.255.255 area 0
+passive-interface g0/0
+default-information originate
+end

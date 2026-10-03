@@ -1,4 +1,5 @@
 """End-to-end test for the CCNA pack (Chat 9): study views and a full no-backtrack exam on iPhone and iPad.
+  · the exam's 4 IOS lab items (Chat 8) are solved by typing their primary solutions into the exam terminal
 Run:  python3 -m http.server 8765  (from the repo root)   then   python3 dev/tests/e2e-ccna.py
 Drives the app in Chromium at 390×844 (iPhone) and 1024×1366 (iPad) with touch enabled:
   · opens the CCNA pack: flashcards, twins, a mask speed round, the reference sheet
@@ -59,8 +60,32 @@ def study(pg, name):
             pg.screenshot(path=f"{OUT}/ccna-{name}-sprint.png")
         home(pg)
 
+SOL = os.path.join(os.path.dirname(__file__), "..", "solutions", "ccna")
+def solution(lab_id, kind="primary"):
+    import re
+    dev, out = None, []
+    for line in open(os.path.join(SOL, f"{lab_id}.{kind}.txt")):
+        line = line.rstrip("\n"); m = re.match(r"^!\s*device\s+(\S+)", line)
+        if m: dev = m.group(1); continue
+        if line.strip() and not line.startswith("!"): out.append((dev, line))
+    return out
+
+def solve_lab(pg, src, name):
+    """type a lab's primary solution into the exam's lab terminal (device tabs on iPad; Topology → device on iPhone)"""
+    pg.wait_for_selector(".cl-in input", state="attached", timeout=8000)
+    inp = pg.locator(".cl-in input"); cur = None
+    for dev, line in solution(src):
+        if dev != cur:
+            if pg.locator(".cl-seg").is_visible():
+                pg.click('.cl-seg button[data-v="topo"]'); pg.click(f'.cl-dev[data-dev="{dev}"]')
+            else:
+                pg.click(f'.cl-dtab[data-dev="{dev}"]')
+            check(pg.locator(".cl-dtab.on").inner_text().endswith(dev), f"exam lab {src}: terminal switched to {dev}") if cur is None else None
+            cur = dev
+        inp.fill(line); inp.press("Enter")
+
 def cur_item(pg):
-    return pg.evaluate("(() => { const x = JSON.parse(localStorage.getItem('cg-exam-inprogress'))['ccna']; return {i: x.i, n: x.items.length, id: x.items[x.i].id, k: x.items[x.i].k}; })()")
+    return pg.evaluate("(() => { const x = JSON.parse(localStorage.getItem('cg-exam-inprogress'))['ccna']; const it = x.items[x.i]; return {i: x.i, n: x.items.length, id: it.id, k: it.k}; })()")
 
 def exam(pg, name, sabotage):
     print(f"[{name}] Exam A in exam mode — {'three deliberate all-or-nothing misses' if sabotage else 'every item from the key'}")
@@ -69,13 +94,26 @@ def exam(pg, name, sabotage):
     check("No going back" in lead and "120 minutes" in lead, "picker states the no-backtrack rule and 120 minutes")
     bank = pg.evaluate("import('./packs/ccna/bank-a.js').then(m => m.CCNA_BANK_A)")
     Q = {q["id"]: q for q in bank}
+    labsrc = pg.evaluate("import('./packs/ccna/pack.js').then(m => m.default.load()).then(c => Object.fromEntries(c.pbqs.a.map(p => [p.id, p.src])))")
+    labdom = pg.evaluate("import('./packs/ccna/pack.js').then(m => m.default.load()).then(c => Object.fromEntries(c.pbqs.a.map(p => [p.id, p.d])))")
+    check(len(labsrc) == 4, f"Exam A carries 4 lab items ({labsrc})")
+    N = 100 + len(labsrc); labs_seen = []
     pg.click(".deck[data-x=a]"); pg.wait_for_selector(".xm-nav")
-    check("1 / 100" in pg.inner_text(".xm-count"), "100 items in the sitting (lab slots empty until Chat 8)")
+    check(f"1 / {N}" in pg.inner_text(".xm-count"), f"{N} items in the sitting (100 questions + 4 labs)")
     pg.screenshot(path=f"{OUT}/ccna-{name}-exam-first.png")
-    missed_on_purpose = []; ms_sab = 0; dd_sab = 0; resumed = False; seen_types = set(); dd_shot = False
-    for step in range(100):
-        it = cur_item(pg); q = Q[it["id"]]; seen_types.add(q["t"])
-        check(it["i"] == step, f"item {step + 1}: store index matches") if step in (0, 50, 99) else None
+    missed_on_purpose = []; ms_sab = 0; dd_sab = 0; resumed = False; railed = False; seen_types = set(); dd_shot = False
+    for step in range(N):
+        it = cur_item(pg)
+        if it["id"] in labsrc:
+            src = labsrc[it["id"]]; labs_seen.append((step, src))
+            check(pg.locator("#xmprev").count() == 0 and pg.locator("#xmgridbtn").count() == 0, f"lab {src} at item {step + 1}: no Back / Review")
+            solve_lab(pg, src, name)
+            if len(labs_seen) == 1: pg.screenshot(path=f"{OUT}/ccna-{name}-exam-lab.png")
+            before = len(pg.dialogs); pg.click("#xmnext")
+            if step < N - 1: pg.wait_for_function(f"document.querySelector('.xm-count') && document.querySelector('.xm-count').textContent.startsWith('{step + 2} /')")
+            continue
+        q = Q[it["id"]]; seen_types.add(q["t"])
+        check(it["i"] == step, f"item {step + 1}: store index matches") if step in (0, 50, N - 1) else None
         if step < 3 or step % 25 == 0:
             check(pg.locator("#xmprev").count() == 0, f"item {step + 1}: no Back button")
             check(pg.locator("#xmgridbtn").count() == 0, f"item {step + 1}: no Review button")
@@ -89,23 +127,24 @@ def exam(pg, name, sabotage):
             if sabotage and q["t"] == "order" and dd_sab < 1: order = order[1:] + order[:1]; dd_sab += 1; missed_on_purpose.append(q["id"])
             for i in order: pg.click(f".dnd .pool .dnd-item[data-i='{i}']")
             if not dd_shot: pg.screenshot(path=f"{OUT}/ccna-{name}-exam-dragdrop.png"); dd_shot = True
-        if step == 10 and pg.locator(".xm-rail").is_visible():
+        if step >= 10 and not railed and pg.locator(".xm-rail").is_visible():
+            railed = True
             check(pg.locator(".xm-rail .xm-grid button:not([disabled])").count() == 0, "iPad rail: every number is disabled (progress only)")
             pg.locator(".xm-rail .xm-grid button").nth(2).click(force=True)
-            check(cur_item(pg)["i"] == 10, "iPad rail: clicking an earlier number does not move")
+            check(cur_item(pg)["i"] == step, "iPad rail: clicking an earlier number does not move")
             pg.screenshot(path=f"{OUT}/ccna-{name}-exam-rail.png")
-        if step == 30 and not resumed:
+        if step >= 30 and not resumed:
             pg.click("#xmleave"); pg.wait_for_selector("#xmresume")
             check("clock has kept running" in pg.inner_text("#xmresume"), "leaving keeps the clock running")
             pg.click("#xmresume"); pg.wait_for_selector(".xm-nav"); resumed = True
-            check(cur_item(pg)["i"] == 30 and "31 / 100" in pg.inner_text(".xm-count"), "resume lands on the same item")
+            check(cur_item(pg)["i"] == step and f"{step + 1} / {N}" in pg.inner_text(".xm-count"), "resume lands on the same item")
             # answers survive: re-select is idempotent for mc (single) — re-click the keyed options only if nothing is selected
             if pg.locator("#xmopts .sel, .dnd .ans .placed").count() == 0:
                 if q["t"] in ("mc", "ms"):
                     for i in [i for i, o in enumerate(q["o"]) if o["ok"]]: pg.click(f"#xmopts .xm-opt[data-i='{i}']")
         before = len(pg.dialogs)
         pg.click("#xmnext")
-        if step < 99:
+        if step < N - 1:
             pg.wait_for_function(f"document.querySelector('.xm-count') && document.querySelector('.xm-count').textContent.startsWith('{step + 2} /')")
             msg = pg.dialogs[before] if len(pg.dialogs) > before else ""
             if step < 3 or step % 20 == 0: check("Next is final" in msg, f"item {step + 1}: Next asks for confirmation ('{msg[:40]}…')")
@@ -114,9 +153,12 @@ def exam(pg, name, sabotage):
     check("last item" in pg.dialogs[-1], "last Next asks to submit (no review screen)")
     st = pg.evaluate("JSON.parse(localStorage.getItem('cg-state-v2'))")
     h = st["packs"]["ccna"]["examHist"][-1]
-    check(len(h["detail"]) == 100, "100 detail rows")
+    check(len(labs_seen) == 4 and len({s for s, _ in labs_seen}) == 4, f"all 4 labs appeared, mixed among the questions at {[s + 1 for s, _ in labs_seen]}")
+    check(len(h["detail"]) == N, f"{N} detail rows")
     check(h["fresh"] and not h["practice"], "fresh exam-mode attempt")
-    check(len(h["dom"]) == 6 and sorted(v[1] for v in h["dom"].values()) == [10, 10, 15, 20, 20, 25], f"domain maxima follow the blueprint {h['dom']}")
+    quota = {"1": 20, "2": 20, "3": 25, "4": 10, "5": 15, "6": 10}          # bank items per domain (manifest mixQuota)
+    for d in labdom.values(): quota[str(d)] += 3                              # each lab item is worth exam.pbqPts = 3 in its domain
+    check(len(h["dom"]) == 6 and {k: v[1] for k, v in h["dom"].items()} == quota, f"domain maxima = blueprint quota + 3 per lab {h['dom']} vs {quota}")
     if sabotage:
         check(sorted(h["miss"]) == sorted(missed_on_purpose), f"exactly the sabotaged items are missed (all-or-nothing): {h['miss']} vs {missed_on_purpose}")
         check(h["raw"] == 97 and h["gate"], f"raw 97% still clears the 85% gate ({h['raw']}, gate={h['gate']})")

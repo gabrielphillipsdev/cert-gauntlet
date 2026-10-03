@@ -1,0 +1,18 @@
+! device SW1
+enable
+configure terminal
+interface gigabitethernet 0/1
+switchport mode trunk
+end
+! device R1
+enable
+configure terminal
+interface gigabitethernet 0/0.10
+encapsulation dot1q 10
+ip address 10.1.10.1 255.255.255.0
+interface gigabitethernet 0/0.20
+encapsulation dot1q 20
+ip address 10.1.20.1 255.255.255.0
+interface gigabitethernet 0/0
+no shutdown
+end

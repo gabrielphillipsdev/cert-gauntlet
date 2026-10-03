@@ -18,10 +18,9 @@ import { readdirSync } from "node:fs";
 for (const f of readdirSync(path.join(root, "core/sims")).filter(f => f.endsWith(".js") && !["registry.js", "ui.js"].includes(f)).sort()) await import(pathToFileURL(path.join(root, "core/sims", f)));
 await import(pathToFileURL(path.join(root, "core/sims/kql/drill.js")));     /* KQL Lab sim (Chat 6) */
 await import(pathToFileURL(path.join(root, "core/exam/msitems.js")));      /* hot-area sim + Microsoft exam item types (Chat 6) */
-const types = new Set(simTypes());
-
 const m = (await import(pathToFileURL(path.join(root, `packs/${id}/pack.js`)))).default;
 const c = await m.load();
+const types = new Set(simTypes());   /* read after load(): packs may import sim modules from subfolders (CCNA: core/sims/ios/ui) */
 const OBJ_RE = m.objPattern ? new RegExp(m.objPattern) : /^[1-9]\.[1-9][0-9]?$/;   /* packs with multi-level objective ids (Microsoft skills bullets) declare objPattern */
 const OBJ = { test: o => Array.isArray(o) ? o.length > 0 && o.every(x => OBJ_RE.test(x)) : OBJ_RE.test(o || "") };   /* an item may span two bullets: obj = ["1.1.9", "1.1.7"], first is primary */
 const primary = o => Array.isArray(o) ? o[0] : o;
@@ -93,6 +92,8 @@ function checkPbq(p, where) {
   if (types.has(p.type) && !sim(p.type).generated) { try { const st = sim(p.type).create(p); const r = sim(p.type).score(p, st); if (typeof r.f !== "number" || r.f !== 0) bad(`${where} PBQ ${p.id} blank attempt scores ${r.f}, expected 0`); } catch (e) { bad(`${where} PBQ ${p.id} create/score threw: ${e.message}`); } }
 }
 (c.lab || []).forEach(p => checkPbq(p, "lab")); (c.generators || []).forEach(p => checkPbq(p, "gen"));
+/* exams with lab slots must actually get their labs — fillLabSlots() silently drops a bank it cannot fill */
+if (m.exam.labSlots) Object.keys(m.exam.banks || {}).forEach(x => { if (!(c.pbqs || {})[x]) bad(`exam ${x} has no lab items: a LAB_SLOTS topic has no matching lab (check each lab's \`topic\`)`); });
 Object.entries(c.pbqs || {}).forEach(([x, list]) => {
   if (list.length !== (m.exam.pbqCount ?? 5)) bad(`exam ${x} has ${list.length} PBQs, expected ${m.exam.pbqCount || 5}`);
   list.forEach(p => { checkPbq(p, "exam " + x); if (p.d === undefined) bad(`exam ${x} PBQ ${p.id} needs d for domain scoring`); });

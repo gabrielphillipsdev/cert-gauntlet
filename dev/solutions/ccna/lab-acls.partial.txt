@@ -1,0 +1,11 @@
+! device R1
+en
+conf t
+access-list 10 deny host 10.1.10.12
+access-list 10 permit any
+access-list 110 deny tcp 10.1.20.0 0.0.0.255 host 10.1.99.10 eq 80
+int g0/2
+ip access-group 10 out
+int g0/1
+ip access-group 110 in
+end

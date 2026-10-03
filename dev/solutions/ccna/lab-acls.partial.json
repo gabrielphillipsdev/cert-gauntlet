@@ -1,0 +1,1 @@
+{"f": 0.636, "note": "missing permit on the extended ACL: 443 and ICMP from the guest LAN die on the implicit deny, and replies from PC3 to PC2 break guideline 2"}

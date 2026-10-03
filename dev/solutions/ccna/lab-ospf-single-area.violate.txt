@@ -1,0 +1,6 @@
+! device R2
+enable
+conf t
+router ospf 1
+passive-interface g0/2
+end

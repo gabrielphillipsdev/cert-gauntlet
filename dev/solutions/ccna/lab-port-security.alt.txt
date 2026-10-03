@@ -1,0 +1,16 @@
+! device SW1
+en
+conf t
+int range f0/4 - 24
+shut
+sw acc vlan 999
+int f0/2
+sw port-security mac-address 00e0.4c00.0301
+sw port-security
+int f0/1
+sw port-security violation restrict
+sw port-security mac-address sticky
+sw port-security max 2
+sw port-security
+do show port-security
+end

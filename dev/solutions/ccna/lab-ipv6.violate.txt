@@ -1,0 +1,5 @@
+! device R1
+conf t
+int g0/0
+ip address 10.1.1.1 255.255.255.0
+end

@@ -1,0 +1,4 @@
+! device R1
+conf t
+no username backup
+end

@@ -1,0 +1,5 @@
+! device R1
+conf t
+int g0/0
+ip access-group 10 in
+end

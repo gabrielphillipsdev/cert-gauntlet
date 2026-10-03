@@ -1,9 +1,9 @@
 /* CCNA — lab-item slots for the three exam banks (Chat 9). The labs themselves are Chat 8's (packs/ccna/labs/).
-   Contract with Chat 8 (dev/specs/ccna.md §6): packs/ccna/labs/index.js exports LABS — PBQ Lab sim items
+   Contract with Chat 8 (dev/specs/ccna.md §7): packs/ccna/labs.js exports LABS — PBQ Lab sim items
    {id, type, title, prompt?, task?, topic, d, obj, …} — and registers the sim type(s) they use when imported.
    `topic` is one of the keys used below. Each slot names the topic it wants; the first LABS entry with that topic fills it,
    cloned under an exam id (pa1…pc4) so lab practice and exam attempts keep separate records.
-   Until Chat 8 merges there is no labs/index.js: slots stay empty and each exam is the 100 bank questions alone. */
+   A slot that cannot be filled leaves its exam without labs; dev/check-pack.mjs FAILs on that (exam.labSlots set). */
 
 export const LAB_TOPICS = {
   vlan: "VLANs + trunking", intervlan: "Inter-VLAN routing (router-on-a-stick / SVI)", static: "Static and default routes",
@@ -36,12 +36,15 @@ export function fillLabSlots(labs) {
   return out;
 }
 
-/* Chat 8 flips this to true in the same PR that adds packs/ccna/labs/index.js (a flag instead of a probing import,
-   so the app never requests a file that does not exist yet — no 404 in the console, nothing odd cached offline). */
-export const LABS_READY = false;
+/* Chat 8's PBQ Lab content (packs/ccna/labs.js · pbq.js · reader.js). Importing the ui modules registers the sim types
+   (ccna-lab, show-reader, ccna-order, diagram). Lab items carry `topic`, so fillLabSlots() can place 4 per exam. */
+export const LABS_READY = true;
 
 export async function loadLabs() {
-  if (!LABS_READY) return [];
-  try { const m = await import("./labs/index.js"); return Array.isArray(m.LABS) ? m.LABS : []; }
-  catch (e) { console.warn("CCNA labs failed to load", e); return []; }
+  const [l, p, r] = await Promise.all([
+    import("./labs.js"), import("./pbq.js"), import("./reader.js"),
+    import("../../core/sims/ios/ui/labItem.js"), import("../../core/sims/ios/ui/showReader.js"),
+    import("../../core/sims/ios/ui/configOrder.js"), import("../../core/sims/diagram.js"),
+  ]);
+  return [...l.LABS, ...p.PBQ_ORDER, ...p.PBQ_TOPO, ...r.READER];
 }

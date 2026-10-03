@@ -1,0 +1,14 @@
+! device R1
+en
+conf t
+ip access-list standard NO-PC2
+deny 10.1.10.12 0.0.0.0
+permit any
+exit
+access-list 110 deny tcp 10.1.20.0 0.0.0.255 host 10.1.99.10 eq www
+access-list 110 permit ip any any
+int g0/1
+ip access-group 110 in
+int g0/2
+ip access-group NO-PC2 out
+end

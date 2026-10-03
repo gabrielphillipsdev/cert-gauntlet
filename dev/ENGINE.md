@@ -26,6 +26,9 @@ core/
   sims/ios/           IOS CLI simulator engine (CCNA subset): index.js createLab/Topology/Session · device.js · topology.js (converge, ping) ·
                       cli.js (parser, modes, help, completion) · commands.js · show.js · config.js (running-config). No DOM; Chat 8 builds the lab UI.
                       Spec + out-of-scope list: dev/specs/ccna.md. Test: node dev/tests/ios-conformance.mjs
+  sims/ios/ui/        Chat 8 — CCNA item types on top of the simulator: labGrader.js (buildLab/replay/gradeLab/safeExec, end-state check library) ·
+                      labItem.js ("ccna-lab": Tasks/Guidelines/Topology + tabbed terminals) · showReader.js ("show-reader") · configOrder.js ("ccna-order",
+                      graded by replaying the order). Imported by packs/ccna/pack.js load(). Tests: dev/tests/ccna-labs.test.mjs, ccna-pbq.test.mjs, ccna-e2e.py
   exam/runner.js      full exam: picker, item rendering, review grid, scoring, results, review, drill. Rules from manifest.exam (backtrack:false = Cisco linear mode).
   exam/msitems.js     Microsoft item types (order · build · hot · series · case-study tabs), section locking, flattenBank(), "hotarea" sim (+ msitems.css)
   exam/learnpane.js   open-book Learn pane: opens learn.microsoft.com beside the exam, logs lookup time per question, results readout
@@ -142,4 +145,5 @@ The two new modules inject their own stylesheets (`core/exam/msitems.css`, `core
 - No HTML from content: content strings are plain text; `esc()` everything. Diagrams are the one exception (trusted SVG strings in the pack).
 - CSS: use tokens; new components get their own section in styles.css; phone first, then `@media(min-width:768px)` / `1024px`.
 - `VERSION` in `core/app.js` and `sw.js` move together when a deploy should invalidate caches.
-- Validate before PR: `node dev/tests/merge.test.mjs && node dev/check-pack.mjs <pack> && python3 dev/tests/e2e.py` (serve the repo on :8765 first). SC-200 adds `node dev/tests/kql.test.mjs && node dev/check-kql-drills.mjs && python3 dev/tests/e2e-sc200.py`. Sec+ sims: also `node dev/tests/sims.test.mjs && node dev/tests/sims-lab.test.mjs` (`python3 dev/tests/sims-e2e.py` for the Chat 2 sims). Anything under `core/sims/ios/`: also `node dev/tests/ios-conformance.mjs`. CCNA: `node dev/check-ccna.mjs all && python3 dev/tests/e2e-ccna.py`. Sec+ exam PBQs: `node dev/tests/secplus-exam-pbqs.test.mjs`.
+- Validate before PR: `node dev/tests/merge.test.mjs && node dev/check-pack.mjs <pack> && python3 dev/tests/e2e.py` (serve the repo on :8765 first). SC-200 adds `node dev/tests/kql.test.mjs && node dev/check-kql-drills.mjs && python3 dev/tests/e2e-sc200.py`. Sec+ sims: also `node dev/tests/sims.test.mjs && node dev/tests/sims-lab.test.mjs` (`python3 dev/tests/sims-e2e.py` for the Chat 2 sims). Anything under `core/sims/ios/`: also `node dev/tests/ios-conformance.mjs`. CCNA: `node dev/check-ccna.mjs all && node dev/tests/ccna-labs.test.mjs && node dev/tests/ccna-pbq.test.mjs && python3 dev/tests/e2e-ccna.py && python3 dev/tests/ccna-e2e.py`. Sec+ exam PBQs: `node dev/tests/secplus-exam-pbqs.test.mjs`.
+`dev/check-pack.mjs` reads the sim registry *after* `pack.load()`, so a pack may import sim modules from subfolders inside `load()` (Chat 8).

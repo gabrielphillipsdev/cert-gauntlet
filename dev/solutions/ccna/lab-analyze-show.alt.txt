@@ -1,0 +1,5 @@
+! answer a1 sw2
+! answer a2 sw3 GigabitEthernet0/1
+! answer a3 Area mismatch: R2 is in area 1
+! answer a4  10.0.12.2 
+! answer a5 VLAN 99

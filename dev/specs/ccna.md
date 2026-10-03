@@ -95,7 +95,7 @@ Drag-and-drop uses the engine's Microsoft-format item renderers (`core/exam/msit
 
 `exam.pbqCount = 4`, `exam.pbqPts = 3`. `exam-labs.js` holds `LAB_SLOTS` (4 topics per exam, all 12 lab topics covered across A/B/C) and fills each slot with the first Chat 8 lab whose `topic` matches, cloned under an exam id (`pa1`…`pc4`, `src` = the lab's own id).
 
-Chat 8's side: `packs/ccna/labs/index.js` exports `LABS` — every PBQ Lab item (labs, show-output reader, config-order and topology PBQs) — and imports the module that registers their sim types. Each lab item carries `topic` (one of `vlan intervlan static ospf acl nat etherchannel dhcp portsec ssh ipv6 showread`), `d`, `obj`. In the same PR, set `LABS_READY = true` in `exam-labs.js`. Nothing else in `packs/ccna/` needs to change: the PBQ Lab lists `LABS`, each exam gets its 4 labs, and the runner places them among the 100 questions at random positions (the real exam does not group them). Until then each exam is the 100 bank questions and the picker says so.
+Chat 8's side (as merged): `loadLabs()` in `exam-labs.js` imports `labs.js` (`LABS`), `pbq.js` (`PBQ_ORDER`, `PBQ_TOPO`) and `reader.js` (`READER`) plus the `core/sims/ios/ui/` modules that register their sim types. Each of the 13 `ccna-lab` items carries `topic` (one of `vlan intervlan static ospf acl nat etherchannel dhcp portsec ssh ipv6 showread`), `d`, `obj`. `dev/check-pack.mjs` FAILs if any exam's slots cannot be filled. Nothing else in `packs/ccna/` needs to change: the PBQ Lab lists `LABS`, each exam gets its 4 labs, and the runner places them among the 100 questions at random positions (the real exam does not group them).
 
 ---
 
@@ -179,3 +179,57 @@ Timers and counters: `show` output that carries uptime/age/dead-time uses consta
 - End state: `lab.state(name)` returns the configuration snapshot (`hostname`, `interfaces[...].ip/switchport/portsec/acl/nat/...`, `vlans`, `routes`, `ospf`, `acls`, `nat`, `dhcp`, `lines`, `users`, `startup`). Runtime (`rt`) is excluded so graders assert on configuration, and use `lab.topo.ping(...)`/`converge()` + `lab.topo.get(name).rt` for *effects* (neighbors, routes, STP roles, translations).
 - "Any method accepted": grade effects (does `PC1` reach `SRV`? is `Gi0/1` trunking with native 99? is `R2` in `show ip ospf neighbor`?) rather than exact commands.
 - Partial credit: one check per sub-task; the sim never throws on bad input, it returns IOS-style errors.
+
+---
+
+## Lab item fidelity (Chat 8) — what the UI copies and where the facts come from
+
+Source: Cisco Learning blog, *New Performance-Based Lab Exam Items Build Opportunities* (https://blogs.cisco.com/learning/new-performance-based-lab-exam-items-build-opportunities), fetched 2026-10-03. Facts taken from it, verbatim where quoted:
+
+- Layout: "horizontal split screen". "The left panel has three top tabs for easy navigation between the **Tasks** (instructions on the tasks at hand and requirements for each step), **Guidelines** (things candidates should not change), and the **Topology** (a network diagram for tasks). The right panel is a web-based terminal with tabs for each device."
+- Terminals: candidates "navigate between terminal tabs using keyboard shortcuts and may manually reorder terminal tabs, but they cannot split the right panel to see two or more terminals at the same time."
+- Time: "designed to give candidates 5-7 minutes to complete."
+- Grading: candidates "are often free to use their preferred configuration options, as long as they produce the expected outcome" — graded on outcome, "far beyond their respective 'running configuration'". → end-state checks, any method accepted.
+- Navigation: "Candidates can skip any item and move to the next item, but they cannot go back to a previous item." (no-backtrack is Chat 9's exam-runner job; the lab UI itself has no Previous.)
+- Exam shape (PLAN.md §1, verified Oct 2 2026): ~100–120 items, 120 min, 3–4 lab items, partial credit.
+
+Exam topics: Cisco *200-301 CCNA v1.1 exam topics* PDF (https://learningcontent.cisco.com/documents/marketing/exam-topics/200-301-CCNA-v1.1.pdf), fetched 2026-10-03. Every lab/reader/PBQ item carries `obj` = a topic number from it (`2.1`, `3.3.d`, …); the pack manifest declares `objPattern: "^[1-6]\\.\\d{1,2}(\\.[a-z])?$"` for the validator.
+
+What the simulated lab item does NOT copy (and why): no draggable tab reordering (keyboard shortcut switching is there); the timer shows the 5–7 minute target rather than enforcing it (the exam has one clock for the whole test); a per-item **Reset** exists because the PBQ Lab offers it on every sim (Cisco's lab item does not advertise one — the real-exam "no Reset, no going back" behaviour belongs to Chat 9's exam mode).
+
+## Lab item schema (`packs/ccna/labs.js`, sim type `ccna-lab`)
+
+```js
+{ id: "lab-vlans-trunking", type: "ccna-lab", obj: "2.1", d: 2, title, timeTargetMin: 6,
+  topology: { devices: { SW1: { type: "switch", x, y }, R1: { type: "router", x, y }, PC1: { host: true, ip, mask, gw, x, y } },
+              links: [["SW1", "g0/1", "SW2", "g0/1"], ["SW1", "f0/1", "PC1"]] },      // same shapes createLab() takes, plus x/y for the diagram (viewBox 480×300)
+  configs: { SW1: ["enable", "configure terminal", ...] },                           // pre-config typed as CLI (hidden from the student)
+  blocked: ["show running-config", "show startup-config"],                           // analyze lab: prefixes refused with "% This command is disabled in this lab"
+  tasks: [{ id: "t1", text: "..." }],                                               // Tasks tab (numbered)
+  guidelines: ["Do not change ..."],                                                // Guidelines tab
+  answers: [{ id: "a1", prompt: "...", accept: ["Gi0/2", "g0/2"] }],                // analyze lab: text answers graded with the checks
+  checks: [{ id, task: "t1", points: 1, type: "vlanExists", device: "SW1", vlan: 10, name: "SALES" },
+           { id, guideline: 0, points: 1, type: "runningConfigMatches", device: "SW1", re: "^hostname SW1$" }],  // guideline checks are penalties when they FAIL
+  why: "one paragraph shown after grading" }
+```
+Check types and their fields are documented at the top of `core/sims/ios/ui/labGrader.js`. Scoring: `earned = Σ points of passing task checks`, `penalty = Σ points of failing guideline checks`, `f = clamp((earned − penalty) / Σ task points, 0, 1)`. Solutions (never shipped) live in `dev/solutions/ccna/<id>.{primary,alt,partial}.txt`; `node dev/tests/ccna-labs.test.mjs` proves fresh = 0, primary = alt = 1, partial = its declared score, and that a guideline violation costs points.
+
+## Show-output reader (`packs/ccna/reader.js`, sim type `show-reader`) — Chat 8
+
+GENERATED: `node dev/tools/gen-reader.mjs` builds each scenario in `dev/tools/reader-scenarios.mjs`, runs the show command, stores the exact output, and derives the key from simulator state (generation fails if the key is missing from the options or equals a distractor). Never hand-edit `reader.js`; edit the generator and regenerate.
+```js
+{ id: "rd-route-1", type: "show-reader", obj: "3.2", d: 3, title, device: "HQ", command: "show ip route", output, q, opts: [4 strings], ans: 0..3, why }
+```
+Quotas: ≥40 items, ≥3 per command (ip route, ip interface brief, spanning-tree, vlan brief, ip ospf neighbor, ip ospf interface, interfaces trunk, access-lists, ip nat translations, mac address-table, etherchannel summary). Validator: `node dev/validate-ccna-reader.mjs` (also runs `gen-reader --check`).
+
+## Config-order PBQs (`packs/ccna/pbq.js` → `PBQ_ORDER`, sim type `ccna-order`) — Chat 8
+```js
+{ id: "po-ssh", type: "ccna-order", obj, d, title, prompt, task: [≥2], device: "router"|"switch"|"l3switch", pre?: [cli], steps: [lines, canonical working order], why }
+```
+Steps are typed from global configuration mode. Graded by `core/sims/ios/ui/configOrder.js`: the student's order is replayed on a fresh device; identical running-config to the canonical order = 100 %, otherwise partial credit for lines in their canonical position (by text). No `eq` list is needed — any working order passes, which `dev/tests/ccna-pbq.test.mjs` checks for every single-line move.
+
+## Topology-label PBQs (`PBQ_TOPO`, core sim type `diagram`) — Chat 8
+Reuses Chat 3's diagram placement sim with CCNA palettes (`devices: {root:{n,s}, …}`, `reuse: true` where a label repeats). Keys are read from the simulator in `dev/tools/gen-pbq.mjs` (STP port roles, OSPF interface state, `topo.lookup()` next hops, NAT translation fields, interface NAT roles of a configuration proven to work). Validator: `node dev/validate-ccna-pbq.mjs`; proofs + `--check`: `node dev/tests/ccna-pbq.test.mjs`.
+
+## Tests for this pack
+`node dev/tests/ccna-labs.test.mjs && node dev/tests/ccna-pbq.test.mjs && node dev/validate-ccna-reader.mjs && node dev/validate-ccna-pbq.mjs && node dev/check-pack.mjs ccna && node dev/tests/ios-conformance.mjs`, then `python3 dev/tests/ccna-e2e.py` with the repo served on :8765. Preview page: `dev/pages/ccna-lab.html`.

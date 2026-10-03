@@ -1,0 +1,22 @@
+! device R2
+en
+conf t
+int g0/0
+ip helper-address 10.0.12.1
+end
+! device R1
+en
+conf t
+ip dhcp pool B
+network 10.1.20.0 /24
+dns-server 10.1.10.5
+default-router 10.1.20.1
+ip dhcp pool A
+network 10.1.10.0 /24
+dns-server 10.1.10.5
+default-router 10.1.10.1
+exit
+ip dhcp excluded-address 10.1.20.1 10.1.20.10
+ip dhcp excluded-address 10.1.10.1 10.1.10.10
+do show ip dhcp binding
+end
