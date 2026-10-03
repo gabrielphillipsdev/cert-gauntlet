@@ -1,6 +1,6 @@
 # Sec+ pack — content spec (SY0-701)
 
-Pack: `packs/secplus/`. Manifest: `pack.js`. Objectives for tagging: `dev/specs/secplus-objectives.md`. Validate with `node dev/check-pack.mjs secplus` until PASS. Fidelity checklist: `dev/FIDELITY-secplus.md`.
+Pack: `packs/secplus/`. Manifest: `pack.js`. Objectives for tagging: `dev/specs/secplus-objectives.md`. Validate with `node dev/check-pack.mjs secplus` and `node dev/tests/sims.test.mjs` until PASS. Export for review: `node dev/export-secplus.mjs`. Fidelity checklist: `dev/FIDELITY-secplus.md`.
 
 All text original (never copy Dion, Messer, CompTIA samples or any published practice exam). Every fact must be correct for SY0-701. Neutral tone, no real company names, RFC 5737/1918 addresses. Escape `"` inside strings; no HTML (content is escaped on render). Every item carries `obj:"n.n"` — the single objective it tests.
 
@@ -10,9 +10,10 @@ All text original (never copy Dion, Messer, CompTIA samples or any published pra
 | `cards-d12.js`, `cards-d34.js`, `cards-d45.js` | `CARDS_D12/D34/D45` | 398 cards, 16 categories |
 | `exq.js` | `EXQ` | 92 exam-style questions |
 | `twins.js` | `TWINS` | 45 confusable pairs |
-| `lab.js` | `LAB_PBQS` | 25 PBQ Lab items (match/order/scenario today; Chat 2–3 add sims) |
+| `lab.js` | `LAB_PBQS` | 25 PBQ Lab items (match/order/scenario; Chat 2 converts match/order to drag-drop) |
+| `sims.js` | `LAB_SIMS` | 15 PBQ Lab sims: 5 `diagram`, 5 `appanel`, 5 `hardening` (Chat 2 adds console/fweditor/logview) |
 | `bank-a.js`, `bank-b.js`, `bank-c.js` | `EXAM_BANK_A/B/C` | 85 questions each |
-| `pbqs.js` | `EXAM_PBQS` `{a,b,c}` | 5 PBQs per exam |
+| `pbqs.js` | `EXAM_PBQS` `{a,b,c}` | 5 PBQs per exam (`d` required) — mix rule below |
 | `extras.js` | `DIAGRAMS`, `ACRONYMS`, `REFERENCE` | 16 SVG diagrams, 79 acronyms, 12 reference tables |
 
 Generated PBQs (hashid, fwrule, risk) are declared in `pack.js` → `generators`.
@@ -55,9 +56,14 @@ Common: `{id, obj, type, title, prompt|setup, d?, cat?, why?}`. `d` is required 
 | `exhibit` | `setup, out (monospace), qs:[{q, o:[4, first correct], x}]` | multi-part |
 | `scenario` | `setup, out?, q, opts:[4, first correct], why, no:[3]` | lab only |
 | `hashid` / `fwrule` / `risk` | none (generated) | declared in pack.js `generators`; exam PBQs reference the type |
-| Chat 2–3 types | see their sim definitions in `core/sims/` and update this table | console, fweditor, logview, dragmatch, diagram, appanel, hardening |
+| `diagram` | `nodes:[{id,label,x,y,k?,w?,h?}]`, `links:[[a,b]]`, `slots:[{id,label,x,y,want,why?}] (≥3)`, `palette:[device ids]`, `w?,h? (viewBox, default 480×300)`, `reuse?`, `devices?:{id:{n,s}}`, `task:[…]` | `want` = device id or `[alternatives]`; every want must be in the palette; palette carries distractors. Device ids: see `DEVICES` in `core/sims/diagram.js`. Per-slot credit |
+| `appanel` | `start:{field…}`, `want:{field: value \| [alts] \| {re,label}}`, `fieldWhy?:{field: text}`, `device?`, `deviceSub?`, `task:[…]` | Fields: ssid hidden band mode psk eap radiusHost radiusPort radiusSecret pmf wps macFilter isolation mgmtWifi adminDefault (see `FIELDS`). Every scored field must differ from `start` (blank = 0). Unscored fields changed = −½ each; fields hidden by the final mode are ignored |
+| `hardening` | `host:{name,os,role}`, `groups:[{id,label}]`, `controls:[{id,g,l,d?,t:"toggle"\|"select",o?,on?,off?,start,want?,crit?,why?}]`, `task:[…]` | `want` → scored (+1). No `want` → must stay: `crit:true` = breaks the business function (−1), else unnecessary change (−½). Toggle `start` is boolean; select `start`/`want` must be in `o` |
+| Chat 2 types | `console`, `fweditor`, `logview`, `dragmatch` — see their sim definitions in `core/sims/` and extend this table | |
 
-Exam PBQ mix per bank (target after Chat 3): ≥1 console, ≥1 firewall editor, the rest from the other sims; no two generated sims of the same type in one exam.
+Exam PBQ mix per bank: ≥1 console, ≥1 firewall editor (enforced via `exam.pbqMust` once those types exist; swap plan in `dev/FIDELITY-secplus.md`), the rest from the other sims; no two generated sims of the same type in one exam (validator enforces). Every exam PBQ carries `d`.
+
+Sim items of the Chat 3 types carry `task:[…]` (2+ lines) for the Task pane; `prompt` stays one line. Validator: `node dev/check-pack.mjs secplus` (schema, blank attempt = 0) and `node dev/tests/sims.test.mjs` (grader behaviour on every item).
 
 ## Objective tags
 Tag maps used for the initial pass are in `dev/tags/*.json` (cards keyed `c|q`, questions by id, twins `a|b`, pbqs by id). New items: tag inline when authoring. Validator rejects untagged items and tags whose domain disagrees with `d`.

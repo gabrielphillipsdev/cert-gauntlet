@@ -1,6 +1,7 @@
 /* Content validator for any pack. Run: node dev/check-pack.mjs secplus
    Checks: schema, every item carries an objective id (obj), category keys exist, card shorts are unique per category,
-   exam bank sizes and domain quotas match the manifest, PBQ sim types are registered, order PBQ eq classes are valid. */
+   exam bank sizes and domain quotas match the manifest, PBQ sim types are registered, order PBQ eq classes are valid,
+   Chat 3 sim schemas (diagram/appanel/hardening) are well-formed and a blank attempt scores 0, exam PBQ mix rules (manifest exam.pbqMust). */
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 
@@ -12,9 +13,9 @@ const bad = (m) => problems.push(m);
 /* a DOM-free sim registry so we can import the sim modules and ask which types exist */
 globalThis.document = { createElement: () => ({ addEventListener() { }, appendChild() { }, classList: { add() { } }, style: {} }), addEventListener() { }, body: { appendChild() { } } };
 globalThis.window = { addEventListener() { } };
-const { simTypes } = await import(pathToFileURL(path.join(root, "core/sims/registry.js")));
-await import(pathToFileURL(path.join(root, "core/sims/basic.js")));
-await import(pathToFileURL(path.join(root, "core/sims/generators.js")));
+const { simTypes, sim } = await import(pathToFileURL(path.join(root, "core/sims/registry.js")));
+import { readdirSync } from "node:fs";
+for (const f of readdirSync(path.join(root, "core/sims")).filter(f => f.endsWith(".js") && !["registry.js", "ui.js"].includes(f)).sort()) await import(pathToFileURL(path.join(root, "core/sims", f)));
 const types = new Set(simTypes());
 
 const m = (await import(pathToFileURL(path.join(root, `packs/${id}/pack.js`)))).default;
@@ -64,9 +65,38 @@ function checkPbq(p, where) {
   if (p.type === "order") { if (!Array.isArray(p.steps) || p.steps.length < 3) bad(`${where} PBQ ${p.id} needs ≥3 steps`); (p.eq || []).forEach(g => g.forEach(i => { if (i < 0 || i >= p.steps.length) bad(`${where} PBQ ${p.id} eq index ${i} out of range`); })); }
   if (p.type === "exhibit") { if (!Array.isArray(p.qs) || !p.qs.length) bad(`${where} PBQ ${p.id} needs qs`); (p.qs || []).forEach((sq, i) => { if (!sq.q || !Array.isArray(sq.o) || sq.o.length !== 4 || !sq.x) bad(`${where} PBQ ${p.id} sub ${i} malformed`); }); }
   if (p.type === "scenario" && (!p.q || !Array.isArray(p.opts) || p.opts.length !== 4 || !p.why)) bad(`${where} PBQ ${p.id} scenario malformed`);
+  /* Chat 3 sims */
+  if (["diagram", "appanel", "hardening"].includes(p.type) && (!Array.isArray(p.task) || p.task.length < 2)) bad(`${where} PBQ ${p.id} needs task:[≥2 lines] for the task pane`);
+  if (p.type === "diagram") {
+    if (!Array.isArray(p.nodes) || !Array.isArray(p.slots) || p.slots.length < 3 || !Array.isArray(p.palette)) bad(`${where} PBQ ${p.id} diagram needs nodes, ≥3 slots, palette`);
+    else {
+      const ids = new Set([...p.nodes.map(n => n.id), ...p.slots.map(s => s.id)]);
+      (p.links || []).forEach(([a, b]) => { if (!ids.has(a) || !ids.has(b)) bad(`${where} PBQ ${p.id} link ${a}-${b} references an unknown id`); });
+      p.slots.forEach(sl => { const w = Array.isArray(sl.want) ? sl.want : [sl.want]; if (!w.length || !w.some(x => p.palette.includes(x))) bad(`${where} PBQ ${p.id} slot ${sl.id} wants ${w.join("/")} which is not in the palette`); });
+      const wants = p.slots.map(sl => Array.isArray(sl.want) ? sl.want[0] : sl.want); if (!p.reuse && new Set(wants).size !== wants.length) bad(`${where} PBQ ${p.id} two slots want the same device without reuse:true`);
+      const W = p.w || 480, H = p.h || 300; [...p.nodes, ...p.slots].forEach(n => { if (n.x < 0 || n.x > W || n.y < 0 || n.y > H) bad(`${where} PBQ ${p.id} ${n.id} is outside the viewBox`); });
+    }
+  }
+  if (p.type === "appanel") {
+    if (!p.want || !Object.keys(p.want).length) bad(`${where} PBQ ${p.id} appanel needs want`);
+    else Object.keys(p.want).forEach(k => { if (!["ssid", "hidden", "band", "mode", "psk", "eap", "radiusHost", "radiusPort", "radiusSecret", "pmf", "wps", "macFilter", "isolation", "mgmtWifi", "adminDefault"].includes(k)) bad(`${where} PBQ ${p.id} appanel unknown field ${k}`); });
+  }
+  if (p.type === "hardening") {
+    if (!Array.isArray(p.controls) || !p.controls.some(c => c.want !== undefined)) bad(`${where} PBQ ${p.id} hardening needs controls with want`);
+    else { const ids = new Set(); const gs = new Set((p.groups || [{ id: "all" }]).map(g => g.id)); p.controls.forEach(c => { if (ids.has(c.id)) bad(`${where} PBQ ${p.id} duplicate control ${c.id}`); ids.add(c.id); if (!gs.has(c.g || "all")) bad(`${where} PBQ ${p.id} control ${c.id} in unknown group ${c.g}`); if (c.t === "select" && (!Array.isArray(c.o) || !c.o.includes(c.start) || (c.want !== undefined && !c.o.includes(c.want)))) bad(`${where} PBQ ${p.id} control ${c.id} start/want not in options`); if (c.t === "toggle" && typeof c.start !== "boolean") bad(`${where} PBQ ${p.id} control ${c.id} toggle start must be boolean`); }); }
+  }
+  /* every sim type must grade a blank attempt at 0 and not throw on its own key (deeper checks live in dev/tests/sims.test.mjs) */
+  if (types.has(p.type) && !sim(p.type).generated) { try { const st = sim(p.type).create(p); const r = sim(p.type).score(p, st); if (typeof r.f !== "number" || r.f !== 0) bad(`${where} PBQ ${p.id} blank attempt scores ${r.f}, expected 0`); } catch (e) { bad(`${where} PBQ ${p.id} create/score threw: ${e.message}`); } }
 }
 (c.lab || []).forEach(p => checkPbq(p, "lab")); (c.generators || []).forEach(p => checkPbq(p, "gen"));
-Object.entries(c.pbqs || {}).forEach(([x, list]) => { if (list.length !== (m.exam.pbqCount ?? 5)) bad(`exam ${x} has ${list.length} PBQs, expected ${m.exam.pbqCount || 5}`); list.forEach(p => checkPbq(p, "exam " + x)); });
+Object.entries(c.pbqs || {}).forEach(([x, list]) => {
+  if (list.length !== (m.exam.pbqCount ?? 5)) bad(`exam ${x} has ${list.length} PBQs, expected ${m.exam.pbqCount || 5}`);
+  list.forEach(p => { checkPbq(p, "exam " + x); if (p.d === undefined) bad(`exam ${x} PBQ ${p.id} needs d for domain scoring`); });
+  const gen = list.filter(p => types.has(p.type) && sim(p.type).generated).map(p => p.type); if (new Set(gen).size !== gen.length) bad(`exam ${x} has two generated PBQs of the same type`);
+  (m.exam.pbqMust || []).forEach(t => { if (!list.some(p => p.type === t)) (types.has(t) ? bad : (msg => console.log("WARN " + msg)))(`exam ${x} has no ${t} PBQ (required by manifest exam.pbqMust${types.has(t) ? "" : "; type not built yet"})`); });
+});
+const allPbqIds = [...(c.lab || []), ...(c.generators || []), ...Object.values(c.pbqs || {}).flat()].map(p => p.id);
+allPbqIds.forEach((id, i) => { if (allPbqIds.indexOf(id) !== i) bad(`duplicate PBQ id ${id}`); });
 
 /* exam banks */
 const nQ = m.exam.count - (m.exam.pbqCount ?? 5);

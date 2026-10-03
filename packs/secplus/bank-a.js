@@ -523,15 +523,15 @@ export const EXAM_BANK_A = [
   {t:"Guideline",ok:false,x:"Guidelines are optional recommendations; the on-call steps here are mandatory and prescriptive."}
  ],
  w:"Policy (why/what, mandatory, high-level) > standard (measurable requirements) > procedure/playbook (step-by-step how) > guideline (recommended, optional)."},
-{id:"a057",obj:"4.6",d:4,cat:"iam",t:"mc",
- q:"A hospital wants nurses to open patient charts only when they are assigned to that patient's unit, only from devices on the clinical network, and only during their scheduled shift. Roles alone cannot express this. Which of the following access control models BEST fits?",
+{id:"a057",obj:"4.2",d:4,cat:"ops",t:"mc",
+ q:"A hospital is replacing 40 ultrasound carts whose internal drives hold patient images. The vendor will take the old carts as trade-ins next week. Which of the following should the hospital require BEFORE the carts leave the building?",
  o:[
-  {t:"Attribute-based access control",ok:true,x:"ABAC evaluates multiple attributes of the subject, object, and environment (unit assignment, device network, time of shift) at request time, which roles alone cannot capture."},
-  {t:"Role-based access control",ok:false,x:"RBAC grants permissions by job role; a 'nurse' role cannot by itself restrict access by patient unit, device location, and shift time."},
-  {t:"Discretionary access control",ok:false,x:"DAC lets the data owner assign permissions to individuals; it has no way to evaluate device or time conditions dynamically."},
-  {t:"Mandatory access control",ok:false,x:"MAC compares fixed security labels and clearances; it does not account for unit assignment, network location, or shift schedule."}
+  {t:"Sanitize each drive with a documented method and file a certificate of sanitization against the asset record",ok:true,x:"Decommissioning means the data is verifiably gone (wipe, cryptographic erase, degauss or destroy), the method is recorded, and a certificate proves it later. That closes the asset's lifecycle properly."},
+  {t:"Delete the image folders and empty the recycle bin on each cart",ok:false,x:"Deletion only removes directory entries; the images are trivially recoverable with forensic tools. It is not sanitization."},
+  {t:"Have the vendor sign an NDA covering any data remaining on the carts",ok:false,x:"An agreement shifts liability on paper but leaves protected health information readable on hardware the hospital no longer controls."},
+  {t:"Mark the carts as disposed in the asset inventory",ok:false,x:"Tracking is part of asset management, but updating a record does nothing to the data on the drives."}
  ],
- w:"RBAC = permissions by role. ABAC = decisions from attributes and context (who, what, where, when). MAC = labels and clearances. DAC = owner decides. Rule-based = fixed rules like time-of-day."},
+ w:"Disposal/decommissioning = sanitize (or destroy), document, certify. Deleting, reformatting and NDAs are not sanitization."},
 {id:"a058",obj:"1.2",d:1,cat:"controls",t:"mc",
  q:"A software company's server room has no windows. Security wants an alarm if anyone moves inside the room after hours, but the HVAC blows air across the room and there are metal racks that might cause false alarms with some sensor types. Which of the following sensors is the MOST appropriate choice?",
  o:[
@@ -673,15 +673,16 @@ export const EXAM_BANK_A = [
   {t:"Packet-filtering router ACLs",ok:false,x:"Router ACLs are stateless and see only headers, offering none of the application, identity, or TLS inspection capabilities."}
  ],
  w:"L4 = ports and state. NGFW = application, user, and content awareness plus IPS. WAF = HTTP-specific protection for your web apps. UTM = all-in-one bundle for smaller sites."},
-{id:"a073",obj:"4.5",d:4,cat:"ops",t:"mc",
- q:"A school district allows student-owned laptops on the classroom wireless network but wants to ensure that only devices with current antivirus and operating system patches can reach the learning platform, while non-compliant devices are sent to a remediation page. Which of the following should be implemented?",
+{id:"a073",obj:"4.9",d:4,cat:"ops",t:"mc",
+ q:"A school district finds that a teacher's account changed several students' grades late on a Friday night. The student information system's audit log and the VPN log are shown. Which data source should the analyst examine NEXT to determine whether someone other than the teacher used the account?",
+ ex:"SIS audit log\n2026-09-19 23:41:07  user=t.nguyen  action=GRADE_UPDATE  student=S-10422  old=C  new=A   src=10.8.44.19\n2026-09-19 23:41:35  user=t.nguyen  action=GRADE_UPDATE  student=S-10431  old=D  new=A   src=10.8.44.19\n2026-09-19 23:42:02  user=t.nguyen  action=GRADE_UPDATE  student=S-10406  old=C  new=B+  src=10.8.44.19\n\nVPN log\n2026-09-19 23:39:50  LOGIN OK  user=t.nguyen  src=203.0.113.9  assigned=10.8.44.19  mfa=none",
  o:[
-  {t:"Network access control with posture assessment",ok:true,x:"NAC checks each connecting device's health (patches, antivirus, configuration) and places it on the production or remediation network accordingly."},
-  {t:"A web application firewall in front of the learning platform",ok:false,x:"A WAF inspects HTTP requests for attacks; it cannot determine whether the connecting laptop is patched."},
-  {t:"MAC address filtering on the access points",ok:false,x:"MAC filtering only checks an easily spoofed hardware address; it knows nothing about the device's patch or antivirus status."},
-  {t:"Endpoint detection and response agents on district servers",ok:false,x:"EDR on servers monitors those servers; it does not evaluate student devices before granting network access."}
+  {t:"The identity provider's authentication log: the login's location, device, and whether MFA was ever enrolled",ok:true,x:"The application log already ties the changes to the account and the VPN log shows the session came from an external IP with no MFA. The identity provider log answers who actually authenticated: device, location, history of that source address."},
+  {t:"The firewall log for outbound connections from 10.8.44.19",ok:false,x:"Outbound traffic from the VPN-assigned address does not tell you who held the credentials; the question is about the login, not what the host browsed."},
+  {t:"The most recent vulnerability scan of the SIS server",ok:false,x:"A scan lists weaknesses in the server; the evidence shows a valid account making changes, not an exploit."},
+  {t:"A SIEM dashboard of total failed logins for the district",ok:false,x:"Aggregate dashboards show trends, not the specifics of one account's session. The investigation needs the raw authentication events."}
  ],
- w:"NAC = admission control based on identity and device posture, with quarantine or remediation VLANs for failures. Often paired with 802.1X for authentication."},
+ w:"Investigations chain data sources: application logs show what happened, VPN/network logs show from where, identity logs show who really authenticated. Pick the source that answers the open question."},
 {id:"a074",obj:"2.3",d:2,cat:"attacks",t:"mc",
  q:"During a review of a hospital's Linux reporting server, an administrator finds the file below, which is run by a nightly cron job. A junior analyst asks what an attacker could do with it. Which of the following is the MOST accurate answer?",
  ex:"$ ls -l /opt/reports/rotate.sh\n-rwsrwxrwx 1 root root 1184 Mar  3 02:10 /opt/reports/rotate.sh\n$ id\nuid=1007(labtech) gid=1007(labtech)",

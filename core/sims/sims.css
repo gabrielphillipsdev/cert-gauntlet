@@ -1,0 +1,97 @@
+/* Cert Gauntlet — styles for simulation components (loaded by core/sims/ui.js). Uses the tokens from core/styles.css. */
+
+/* ---------- task pane (sticky, minimizable) + calculator ---------- */
+.stask{position:sticky;top:calc(58px + var(--sat));z-index:12;background:#152238;border:1px solid var(--line-2);border-left:4px solid var(--amber);border-radius:12px;padding:8px 10px;margin:0 0 12px;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.stask.min{padding:6px 10px;cursor:pointer}
+.stask-h{display:flex;align-items:center;gap:8px}
+.stask-t{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--amber)}
+.stask .sp{flex:1}
+.stask-b{border:1px solid var(--line-2);background:var(--panel);color:var(--ink);border-radius:8px;min-width:30px;height:26px;padding:0 9px;font-size:12px;font-weight:800;line-height:1}
+.stask-l{margin:8px 0 2px;padding-left:20px;font-size:13.5px;line-height:1.45;font-weight:600}
+.stask-l li{margin-bottom:3px}
+.stask-n{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4}
+.scalc{margin-top:8px;border-top:1px dashed var(--line);padding-top:8px;max-width:260px}
+.scalc-d{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:18px;font-weight:700;text-align:right;overflow:hidden;white-space:nowrap;margin-bottom:6px;min-height:38px}
+.scalc-k{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.scalc-k button{height:36px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;font-size:15px;font-weight:700}
+.scalc-k button.op{background:var(--panel-2);color:var(--amber)}
+.scalc-k button:active{background:var(--line)}
+
+/* ---------- diagram placement ---------- */
+.sdg-box{background:#0A1017;border:1px solid var(--line);border-radius:12px;padding:6px;margin-bottom:10px;touch-action:pan-y pinch-zoom}
+.sdg{width:100%;height:auto;display:block;font-family:inherit}
+.sdg text{fill:#E8EEF6;font-size:11px;font-weight:700;pointer-events:none}
+.sdg-zone{fill:rgba(79,163,255,.06);stroke:#34465C;stroke-width:1.5;stroke-dasharray:6 4}
+.sdg-zl{fill:#8FA1B8!important;font-size:10px!important;font-weight:800!important;letter-spacing:.04em;text-transform:uppercase}
+.sdg-ln{stroke:#5F6F85;stroke-width:2}
+.sdg-n rect{fill:#1B2838;stroke:#8FA1B8;stroke-width:1.5}
+.sdg-n.cloud rect{stroke:#4FA3FF;fill:#132033}
+.sdg-n.srv rect,.sdg-n.pc rect{stroke:#7FD1AE}
+.sdg-n.rtr rect,.sdg-n.sw rect{stroke:#C9B8FF}
+.sdg-slot rect{fill:rgba(255,180,84,.08);stroke:#FFB454;stroke-width:1.5;stroke-dasharray:5 3;cursor:pointer;transition:fill .12s}
+.sdg-slot.filled rect{fill:rgba(255,180,84,.22);stroke-dasharray:none}
+.sdg-slot.ready rect{fill:rgba(255,180,84,.18)}
+.sdg-slot.over rect{fill:rgba(67,217,123,.3);stroke:#43D97B;stroke-width:2.5}
+.sdg-slot.ok rect{stroke:#43D97B;fill:rgba(67,217,123,.16);stroke-dasharray:none}
+.sdg-slot.bad rect{stroke:#FF5D52;fill:rgba(255,93,82,.16);stroke-dasharray:none}
+.sdg-sl{fill:#FFB454!important;font-size:9.5px!important;font-weight:800!important}
+.sdg-sd{font-size:11.5px!important;font-weight:850!important}
+.sdg-sd.empty{fill:#8FA1B8!important;font-size:9px!important;font-weight:600!important}
+.sdg-key{fill:#43D97B!important;font-size:9px!important;font-weight:800!important}
+.spal{background:var(--panel);border-radius:12px;padding:10px;margin-bottom:10px}
+.spal-h{font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.4;margin-bottom:8px}
+.spal-h b{color:var(--amber)}
+.spal-c{display:flex;flex-wrap:wrap;gap:8px}
+.spal-i{border:2px solid var(--line-2);background:var(--bg);color:var(--ink);border-radius:10px;padding:9px 11px;font-size:13px;font-weight:750;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.spal-i.sel{border-color:var(--amber);color:var(--amber)}
+.spal-i.used{opacity:.35;cursor:default;text-decoration:line-through}
+.spal-i.dragging{opacity:.4}
+.sdrag-ghost{position:fixed;z-index:60;pointer-events:none;opacity:.95;box-shadow:0 10px 24px rgba(0,0,0,.5);transform:translate(0,0)}
+
+/* ---------- config panels (AP + hardening) ---------- */
+.scfg{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:10px}
+.scfg-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:10px 14px;background:#0F1A2B;border-bottom:1px solid var(--line)}
+.scfg-dev{font-weight:850;font-size:15px}
+.scfg-sub{font-size:12px;color:var(--muted);font-weight:600}
+.scfg-g{padding:4px 0 2px}
+.scfg-gl{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:8px 14px 2px}
+.scfg-r{display:flex;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid rgba(39,54,73,.6)}
+.scfg-l{flex:1;min-width:0;font-size:13.5px;font-weight:650;line-height:1.3}
+.scfg-d{display:block;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:2px;line-height:1.35}
+.scfg-c{flex:none;display:flex;align-items:center;max-width:55%}
+.scfg-in,.scfg-sel{background:var(--bg);border:2px solid var(--line);border-radius:9px;padding:8px 10px;color:var(--ink);font-size:14px;outline:none;width:168px;max-width:100%}
+.scfg-in:focus,.scfg-sel:focus{border-color:var(--amber)}
+.scfg-sel{appearance:none;-webkit-appearance:none;padding-right:26px;background-image:linear-gradient(45deg,transparent 50%,#8FA1B8 50%),linear-gradient(135deg,#8FA1B8 50%,transparent 50%);background-position:calc(100% - 15px) 55%,calc(100% - 10px) 55%;background-size:5px 5px;background-repeat:no-repeat}
+.stog{display:inline-flex;align-items:center;gap:8px;border:none;background:none;padding:4px 0;color:var(--muted);font-size:12.5px;font-weight:800;min-width:78px;justify-content:flex-end}
+.stog-k{width:40px;height:24px;border-radius:12px;background:var(--line-2);position:relative;transition:background .15s;flex:none}
+.stog-k::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#E8EEF6;transition:transform .15s}
+.stog.on{color:var(--green)}
+.stog.on .stog-k{background:var(--green)}
+.stog.on .stog-k::after{transform:translateX(16px)}
+.stog:disabled{opacity:.9;cursor:default}
+.scfg-r.ok{background:rgba(67,217,123,.08)}
+.scfg-r.bad{background:rgba(255,93,82,.1)}
+.scfg-r.warn{background:rgba(255,180,84,.1)}
+.scfg-tag{display:inline-block;font-size:11px;font-weight:800;margin-left:8px;padding:1px 7px;border-radius:8px;vertical-align:middle}
+.scfg-tag.ok{color:var(--green);background:rgba(67,217,123,.15)}
+.scfg-tag.bad{color:var(--red);background:rgba(255,93,82,.15)}
+.scfg-tag.warn{color:var(--amber);background:rgba(255,180,84,.15)}
+
+@media(max-width:420px){
+  .scfg-r{flex-wrap:wrap}
+  .scfg-c{max-width:100%;width:100%;justify-content:flex-start}
+  .scfg-in,.scfg-sel{width:100%}
+  .stog{justify-content:flex-start;min-width:0}
+}
+@media(min-width:768px){
+  .scfg-in,.scfg-sel{width:220px}
+  .sdg-box{padding:10px}
+}
+@media(min-width:1024px){
+  .stask{top:calc(64px + var(--sat))}
+  .scalc{max-width:280px}
+}
+@media(max-width:767px){
+  .stask:not(.min) .stask-l{max-height:26vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .scalc{max-width:100%}
+}

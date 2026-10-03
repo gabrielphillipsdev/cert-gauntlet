@@ -18,6 +18,11 @@ core/
   sims/registry.js    registerSim(type, def) — shared by PBQ Lab and the exam runner
   sims/basic.js       match · order (with equivalence classes) · exhibit · scenario
   sims/generators.js  hashid · fwrule · risk (fresh problem each attempt; generator output lives in state.g)
+  sims/ui.js          shared sim UI: ensureCss() · taskPane() (sticky task list + calculator) · dragify() (pointer drag + tap fallback) · valOk()/fmtWant()
+  sims/sims.css       styles for the sim components (loaded by ui.js, so core/styles.css is untouched)
+  sims/diagram.js     network diagram placement (palette → slots on an SVG topology)
+  sims/appanel.js     wireless AP configuration panel
+  sims/hardening.js   endpoint hardening panel
   exam/runner.js      full exam: picker, item rendering, review grid, scoring, results, review, drill. Rules from manifest.exam.
   ui/keyrow.js        symbol key row for typed modules on phones (KQL_KEYS, IOS_KEYS presets)
   views/picker.js     cert picker (launch screen)
@@ -87,6 +92,10 @@ registerSim("mytype", {
   score(item, state)                -> { f: 0..1, notes: [string], why: string }   // partial credit = f
 });
 ```
+Sim modules beyond basic/generators are imported by the pack that uses them (`packs/secplus/pack.js` → `import("../../core/sims/diagram.js")` inside `load()`), so adding a sim type never touches `core/app.js`. The validator imports every file in `core/sims/`.
+
+Items may carry `task: ["step", …]` — the sticky Task pane (`taskPane(el, item, ctx)` from `sims/ui.js`) renders it with a minimize button and a calculator; the exam runner strips `prompt` but leaves `task`, so put the one-line prompt in `prompt` and the checklist in `task`.
+
 Rules: render must be re-entrant (called again with `reveal:true` after scoring to show the key); call `ctx.onChange()` after every user change (the exam runner persists state); never read globals — everything comes from `item`, `state`, `ctx`. Reset = `create()` again (generated sims keep `state.g`). Touch and mouse both. The exam runner shows `item.title`, `item.prompt` and a Reset button itself; sims render the body.
 Sim items may carry `d` (domain, used in exam scoring) and `obj`.
 

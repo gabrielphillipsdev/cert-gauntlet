@@ -424,16 +424,15 @@ export const EXAM_BANK_B = [
  ],
  w:"Differential = changes since the last full (restore full + latest diff). Incremental = changes since the last backup of any kind (restore full + every incremental in order)."},
 
-{id:"b042",obj:"4.6",d:4,cat:"iam",t:"mc",
- q:"A brokerage wants its trading platform to allow order entry only when the user holds the trader role, is connecting from a managed device, is inside a trading floor location, and it is within market hours. Which of the following access control models BEST supports evaluating all of these conditions together?",
+{id:"b042",obj:"4.2",d:4,cat:"ops",t:"mc",
+ q:"A cloud startup discovers that an engineer who left six months ago still has a company laptop, and that several production-adjacent cloud VMs were created under a personal account for an unapproved project. Which of the following practices would MOST directly have prevented both findings?",
  o:[
-  {t:"Attribute-based access control",ok:true,x:"ABAC evaluates policies over many attributes of the subject, resource, and environment, such as role, device state, location, and time, in a single decision."},
-  {t:"Role-based access control",ok:false,x:"RBAC grants permissions by role membership alone; it cannot by itself consider device posture, location, or the time of day."},
-  {t:"Discretionary access control",ok:false,x:"DAC lets resource owners grant access at their discretion; it is not policy-driven and does not evaluate contextual conditions."},
-  {t:"Mandatory access control",ok:false,x:"MAC compares clearance labels to classification labels; it has no notion of market hours or device health."}
+  {t:"An asset inventory that assigns every hardware and cloud asset to an owner and is reconciled at offboarding and on a schedule",ok:true,x:"Assignment and ongoing monitoring/tracking are the core of asset management: the laptop would have been recovered at offboarding and the unowned VMs would have surfaced at the next reconciliation."},
+  {t:"Full-disk encryption on all company laptops",ok:false,x:"Encryption protects the data on the missing laptop but does not get the laptop back or address the shadow cloud resources."},
+  {t:"Requiring MFA on the cloud console",ok:false,x:"MFA hardens logins; it does not stop an authorized engineer from creating untracked resources or catch a laptop that was never returned."},
+  {t:"Shredding drives at end of life",ok:false,x:"Destruction is the final disposal step; neither finding is about a retired asset."}
  ],
- w:"When a decision depends on multiple contextual attributes (who, what device, where, when), ABAC is the model. RBAC handles the 'who' only."},
-
+ w:"Asset management is acquisition → assignment/ownership → monitoring/tracking → disposal. Untracked assets (physical or cloud) are the gap that offboarding and inventory reconciliation close."},
 {id:"b043",obj:"2.1",d:2,cat:"actors",t:"mc",
  q:"Over 18 months, a plant's engineering network is quietly accessed by an actor using custom implants that mimic legitimate PLC vendor tools. Nothing is damaged; only proprietary process designs and control logic are copied. Which of the following actor types and motivations is MOST likely?",
  o:[
@@ -709,16 +708,15 @@ export const EXAM_BANK_B = [
  ],
  w:"Non-compliance consequences: fines, sanctions, reputational damage, loss of license, and contractual impacts. Identify which one the scenario actually describes."},
 
-{id:"b070",obj:"4.8",d:4,cat:"ir",t:"mc",
- q:"After recovering from an outage caused by a malicious script on a plant's engineering server, the IR team wants to determine the underlying reason the attacker was able to place the script, rather than just the sequence of events. Which of the following activities is this?",
+{id:"b070",obj:"4.9",d:4,cat:"ops",t:"mc",
+ q:"A plant SOC suspects the historian server pushed several gigabytes to an external host overnight. The firewall log shows the connections were allowed but records no byte counts, full packet capture is not retained, and the SIEM ingests only authentication events. Which data source would BEST quantify how much data left and when?",
  o:[
-  {t:"Root cause analysis",ok:true,x:"RCA digs past the immediate trigger to the underlying condition, such as an unmonitored shared account or missing allow list, that made the incident possible, so it can be fixed permanently."},
-  {t:"Threat hunting",ok:false,x:"Threat hunting proactively searches for undetected adversaries using hypotheses; it is not a post-incident causal review."},
-  {t:"Tabletop exercise",ok:false,x:"A tabletop is a discussion-based rehearsal of a hypothetical incident, not analysis of a real one."},
-  {t:"Chain of custody documentation",ok:false,x:"Chain of custody tracks who handled evidence; it preserves admissibility but does not explain why the incident occurred."}
+  {t:"NetFlow/IPFIX records from the core router, which keep per-connection metadata including bytes transferred",ok:true,x:"Flow records are network metadata: source, destination, ports, start/end times and byte counts for every conversation, retained far longer than packet captures. They answer 'how much, to where, when'."},
+  {t:"The historian's most recent vulnerability scan report",ok:false,x:"A scan describes weaknesses that might have been exploited; it contains nothing about traffic volume or timing."},
+  {t:"The antivirus log on the historian",ok:false,x:"Antivirus records detections, not network transfer sizes, and a tool that missed the activity has nothing to show."},
+  {t:"A SIEM dashboard of failed logins for the plant",ok:false,x:"The SIEM only holds authentication events here; failed logins say nothing about data leaving the network."}
  ],
- w:"Lessons learned reviews the response; root cause analysis explains why the incident was possible. Both feed back into preparation."},
-
+ w:"When packet captures are not available, flow data (NetFlow/IPFIX/sFlow) is the metadata source for volumes, endpoints and timing. Firewall logs show allow/deny; flows show how much."},
 {id:"b071",obj:"2.3",d:2,cat:"vulns",t:"ms",pick:2,
  q:"A plant issues tablets to maintenance technicians for viewing equipment manuals. An audit finds several tablets have been jailbroken and have apps installed from package files downloaded off the internet. Which TWO of the following are direct security consequences of these findings?",
  o:[

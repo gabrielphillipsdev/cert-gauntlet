@@ -1,0 +1,795 @@
+# Security+ SY0-701 — PBQ Lab (40 items + 3 generators)
+# Export for second-model review. '*' marks the keyed answer. Report any item where you believe the key, a distractor explanation, or a sim grading key is wrong for CompTIA Security+ SY0-701, citing the objective bullet.
+
+[dg-screened] sim=diagram domain=3 obj=3.2 (Given a scenario, apply security principles to secure enterprise infrastructure)
+TITLE: Build the screened subnet
+PROMPT: Place each security device where it belongs on the topology. Not every palette item is used.
+TASK:
+    1. Put the device that separates the Internet from every internal zone at slot A.
+    2. Protect web01 against HTTP-layer attacks (SQLi, XSS) with the device that understands HTTP, at slot B.
+    3. Administrators must reach DMZ servers only by first logging in to a hardened host inside the DMZ (slot C).
+    4. Slot D receives a mirrored copy of core-switch traffic and must never be able to drop a packet.
+TOPOLOGY NODES: inet="Internet" (cloud), core="Core switch" (sw), dmz="DMZ" (zone), web="web01" (srv), lan="Internal LAN" (zone), users="Users" (pc), fs="File server" (srv)
+LINKS: inet—A, A—core, core—B, B—web, core—C, core—users, core—D
+PALETTE: firewall=Firewall, waf=Web application firewall, jump=Jump box, ids=IDS (passive), ips=IPS (inline), proxy=Forward proxy, lb=Load balancer, vpn=VPN concentrator
+SLOTS (key):
+    A · Edge  →  firewall | ngfw   // The boundary device is a firewall; the screened subnet is the zone it creates between its external and internal interfaces.
+    B · Before web01  →  waf   // Only a web application firewall parses HTTP and blocks injection and scripting payloads; a network firewall sees ports, not SQL.
+    C · Admin hop  →  jump | bastion   // A jump box (bastion) in the DMZ is the single hardened entry point for administration; admins never connect straight to the servers.
+    D · SPAN copy  →  ids   // A device fed from a SPAN/mirror port is out of band: it can only detect and alert. That is an IDS; an IPS must be inline to block.
+TAKEAWAY: Firewall at the boundary, WAF in front of the web tier, jump box for administration, IDS on a mirror port (passive) vs IPS inline (active). The slot's position tells you active-vs-passive before you even read the label.
+
+[dg-segments] sim=diagram domain=3 obj=3.2 (Given a scenario, apply security principles to secure enterprise infrastructure)
+TITLE: Name the segment by its job
+PROMPT: Each segment behind the firewall has a job. Drop the device or zone type that provides it onto the matching slot.
+TASK:
+    1. Segment 1 hosts the public web server and the mail relay that outside users must reach.
+    2. Segment 2 is where remote employees' encrypted tunnels terminate before they touch the LAN.
+    3. Segment 3 is the single exit point for all employee web browsing, with URL filtering and caching.
+    4. Segment 4 spreads incoming requests across three identical web servers and checks their health.
+TOPOLOGY NODES: inet="Internet" (cloud), fw="Firewall" (box), core="Core" (sw), s1="web01 · smtp-relay public-facing" (srv), s2="Remote staff (laptops at home)" (pc), s3="Employee browsing exits here" (pc), s4="web01 · web02 · web03 identical farm" (srv)
+LINKS: inet—fw, fw—core, core—1, 1—s1, core—2, 2—s2, core—3, 3—s3, core—4, 4—s4
+PALETTE: dmz=DMZ / screened subnet, vpn=VPN concentrator, proxy=Forward proxy, lb=Load balancer, firewall=Firewall, ids=IDS (passive), jump=Jump box, waf=Web application firewall
+SLOTS (key):
+    Segment 1  →  dmz   // Public-facing servers live in a DMZ / screened subnet so a compromise there cannot reach the internal LAN directly.
+    Segment 2  →  vpn   // Remote-access tunnels end on a VPN concentrator; the firewall then controls what the decrypted traffic may reach.
+    Segment 3  →  proxy | webfilter   // A forward proxy (or web filter) is the one place outbound browsing is inspected, filtered and cached.
+    Segment 4  →  lb   // A load balancer distributes requests across identical servers and health-checks them; a proxy or firewall does not.
+TAKEAWAY: DMZ = public servers; VPN concentrator = tunnel endpoint; forward proxy = outbound browsing control; load balancer = distribute + health check. Read the job, not the position.
+
+[dg-inline] sim=diagram domain=3 obj=3.2 (Given a scenario, apply security principles to secure enterprise infrastructure)
+TITLE: Inline or out of band?
+PROMPT: Place the monitoring and detection devices. The link each slot sits on tells you whether it can block.
+TASK:
+    1. Slot A sits directly on the path between the firewall and the core switch and must stop known attacks in real time.
+    2. Slot B hangs off the core switch's mirror (SPAN) port and must analyze every packet without ever becoming a point of failure.
+    3. Slot C receives syslog and event feeds from the firewall, the core switch and the servers for correlation and alerting.
+    4. Slot D is a deliberately exposed decoy host on the server VLAN that should generate an alert on any connection.
+TOPOLOGY NODES: inet="Internet" (cloud), fw="Firewall" (box), core="Core switch" (sw), users="Users" (pc), srv="Server VLAN" (srv)
+LINKS: inet—fw, fw—A, A—core, core—users, core—srv, core—B, fw—C, core—C, srv—D
+PALETTE: ips=IPS (inline), ids=IDS (passive), siem=SIEM collector, honeypot=Honeypot, tap=Network tap, waf=Web application firewall, proxy=Forward proxy, lb=Load balancer
+SLOTS (key):
+    A · inline  →  ips   // Inline on the traffic path = can drop packets = IPS. An IDS placed here would still only alert.
+    B · SPAN feed  →  ids   // Fed by a mirror port, the device sees a copy; it can detect and alert but cannot block. That is an IDS (passive).
+    C · log feeds  →  siem   // A SIEM aggregates and correlates logs from every source; it is not on the traffic path at all.
+    D · decoy  →  honeypot   // A honeypot is an intentionally vulnerable host with no legitimate users, so any touch is a high-fidelity alert.
+TAKEAWAY: Inline (active) can block: IPS, firewall, WAF. Out of band (passive) only alerts: IDS, sensor, SIEM. A SPAN port or tap feeds the passive devices. Honeypots are deception, not detection, but they alert on any contact.
+
+[dg-remote] sim=diagram domain=3 obj=3.2 (Given a scenario, apply security principles to secure enterprise infrastructure)
+TITLE: Remote access and admin paths
+PROMPT: Place the devices that control how people get in.
+TASK:
+    1. Slot A terminates remote employees' encrypted tunnels behind the firewall.
+    2. Slot B is the only host administrators may connect to before reaching the server VLAN.
+    3. Slot C authenticates wired and wireless users for 802.1X before the access points let them on.
+    4. Slot D is an isolated decoy that alerts the SOC the moment anything scans or connects to it.
+TOPOLOGY NODES: inet="Internet" (cloud), fw="Firewall" (box), core="Core switch" (sw), srv="Server VLAN" (srv), adm="Admin PC" (pc), ap="Wi-Fi AP" (box)
+LINKS: inet—fw, fw—core, fw—A, A—core, adm—B, B—srv, core—srv, core—ap, core—C, ap—C, core—D
+PALETTE: vpn=VPN concentrator, jump=Jump box, radius=RADIUS server, honeypot=Honeypot, proxy=Forward proxy, lb=Load balancer, waf=Web application firewall, ids=IDS (passive)
+SLOTS (key):
+    A · tunnels end  →  vpn   // A VPN concentrator terminates IPsec/TLS tunnels; the firewall then polices the decrypted traffic.
+    B · admin hop  →  jump | bastion   // A jump box (bastion host) is the hardened, logged chokepoint for administration; MFA and session recording live here.
+    C · 802.1X auth  →  radius   // 802.1X supplicants authenticate through the authenticator (switch/AP) to a RADIUS authentication server, usually tied to the directory.
+    D · decoy  →  honeypot   // A honeypot is deception technology: no legitimate traffic should ever reach it, so every hit is worth an alert.
+TAKEAWAY: VPN concentrator for tunnels, jump box for admin access, RADIUS behind 802.1X, honeypot as a tripwire. Port security / 802.1X / EAP are the 3.2 wired-and-wireless access controls.
+
+[dg-webtier] sim=diagram domain=3 obj=3.2 (Given a scenario, apply security principles to secure enterprise infrastructure)
+TITLE: Three-tier web application
+PROMPT: Place the devices that protect and scale the public web application.
+TASK:
+    1. Slot A terminates TLS, health-checks web01 and web02, and spreads client requests across them.
+    2. Slot B inspects every HTTP request for injection, scripting and other OWASP-style attacks before it reaches the web tier.
+    3. Slot C separates the database tier from the web tier and permits only TCP 1433 from the web servers.
+    4. Leave the remaining palette devices unused if the topology does not call for them.
+TOPOLOGY NODES: inet="Internet" (cloud), fw="Edge FW" (box), wt="Web tier" (zone), w1="web01" (srv), w2="web02" (srv), db="db01 (SQL)" (srv)
+LINKS: inet—fw, fw—A, A—B, B—w1, B—w2, w2—C, C—db
+PALETTE: lb=Load balancer, waf=Web application firewall, firewall=Firewall, ids=IDS (passive), proxy=Forward proxy, jump=Jump box, vpn=VPN concentrator, dmz=DMZ / screened subnet
+SLOTS (key):
+    A · spread load  →  lb   // A load balancer distributes across identical servers and removes unhealthy ones from rotation; TLS offload commonly happens here.
+    B · HTTP inspection  →  waf   // A WAF understands HTTP semantics (parameters, cookies, headers) and blocks SQLi/XSS; a packet-filter firewall cannot.
+    C · DB tier boundary  →  firewall | ngfw   // An internal firewall segments tiers so a compromised web server can reach only the database port, nothing else.
+TAKEAWAY: Tiered design: load balancer for availability, WAF for application-layer attacks, internal firewall for tier segmentation. Each device answers a different question: who gets the request, is the request safe, what may this tier talk to.
+
+[ap-corp] sim=appanel domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
+TITLE: Configure the corporate SSID
+PROMPT: Change only what the requirement asks for. Every unnecessary change costs points.
+TASK:
+    1. SSID: CorpSecure, 5 GHz only.
+    2. Use the strongest security mode that authenticates each user individually against the corporate RADIUS server.
+    3. Clients have machine certificates from the internal CA; choose the EAP method that uses them (no passwords).
+    4. RADIUS server 10.0.5.20, port 1812, shared secret Kr9!vault-Ridge.
+    5. Protected management frames must be mandatory. Push-button setup must be off.
+DEVICE: AP-HQ-01 — fields not listed under KEY must stay at their START value (changing them costs ½ point):
+    * SSID (network name): start=Linksys-Setup  →  KEY=CorpSecure
+      Hide SSID (disable broadcast): start=Off
+    * Band: start=2.4 + 5 GHz  →  KEY=5 GHz
+    * Security mode: start=WPA2-Personal  →  KEY=WPA3-Enterprise | WPA3-Enterprise 192-bit   // Per-user authentication against RADIUS is Enterprise mode; WPA3 is the strongest available.
+      Passphrase (pre-shared key): start=password123
+    * EAP method: start=PEAP (MSCHAPv2)  →  KEY=EAP-TLS   // EAP-TLS is the certificate-based, mutual-authentication method; PEAP and EAP-TTLS tunnel a password.
+    * RADIUS server: start=  →  KEY=10.0.5.20
+    * RADIUS authentication port: start=1645  →  KEY=1812
+    * RADIUS shared secret: start=  →  KEY=Kr9!vault-Ridge
+    * Protected management frames (802.11w): start=Optional  →  KEY=Required   // WPA3 requires 802.11w; 'Required' also stops deauthentication/disassociation spoofing.
+    * WPS push-button / PIN setup: start=On  →  KEY=Off   // WPS PINs are brute-forceable in hours; it has no place on a corporate SSID.
+      MAC filtering: start=Off
+      Client isolation (block client-to-client): start=Off
+      Admin interface reachable from wireless clients: start=Off
+      Admin password: start=Changed to a unique strong password
+TAKEAWAY: Enterprise = 802.1X + RADIUS; EAP-TLS = certificates both ways; WPA3 mandates PMF; WPS always off. Hidden SSID, MAC filtering and client isolation were not requested, so leave them alone.
+
+[ap-guest] sim=appanel domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
+TITLE: Set up the guest network
+PROMPT: Build the visitor SSID. Touch only the fields the ticket names.
+TASK:
+    1. SSID: Visitor-WiFi, broadcast on both bands.
+    2. Visitors must not need a passphrase, but the air must still be encrypted so nobody can sniff a neighbor.
+    3. Guests must never be able to reach each other's devices.
+    4. Management frames must be protected for every client.
+    5. The AP's admin page must not be reachable from the guest wireless side.
+DEVICE: AP-LOBBY-02 — fields not listed under KEY must stay at their START value (changing them costs ½ point):
+    * SSID (network name): start=Guest  →  KEY=Visitor-WiFi
+      Hide SSID (disable broadcast): start=Off
+      Band: start=2.4 + 5 GHz
+    * Security mode: start=WPA2-Personal  →  KEY=OWE (Enhanced Open)   // OWE (Wi-Fi Enhanced Open) encrypts each client's session with no passphrase at all; plain Open sends everything in the clear.
+      Passphrase (pre-shared key): start=guest1234
+      EAP method: start=PEAP (MSCHAPv2)
+      RADIUS server: start=
+      RADIUS authentication port: start=1812
+      RADIUS shared secret: start=
+    * Protected management frames (802.11w): start=Disabled  →  KEY=Required   // Enhanced Open and WPA3 both mandate 802.11w; Required also blocks deauthentication spoofing against guests.
+      WPS push-button / PIN setup: start=Off
+      MAC filtering: start=Off
+    * Client isolation (block client-to-client): start=Off  →  KEY=On   // Client isolation blocks client-to-client forwarding on the AP, so a visitor cannot scan or attack other visitors.
+    * Admin interface reachable from wireless clients: start=On  →  KEY=Off   // Management interfaces belong on a wired admin VLAN; never expose them to untrusted clients.
+      Admin password: start=Changed to a unique strong password
+TAKEAWAY: Open-but-encrypted is OWE. Guest networks get client isolation and no path to management. Hidden SSID and MAC filtering were not asked for, and would not help a guest network anyway.
+
+[ap-clinic] sim=appanel domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
+TITLE: One SSID for old scanners and new laptops
+PROMPT: Meet the ticket for a mixed fleet without locking out the legacy devices.
+TASK:
+    1. Six handheld scanners support only WPA2 with a passphrase; the new laptops support WPA3. Everyone must share one SSID named ClinicOps.
+    2. Pick the strongest security mode that every listed device can still join.
+    3. Set the passphrase from the ticket: Sun-Harbor-Maple-77.
+    4. Management-frame protection must stay compatible with the scanners (they do not support 802.11w).
+    5. Disable the push-button setup feature.
+DEVICE: AP-CLINIC-01 — fields not listed under KEY must stay at their START value (changing them costs ½ point):
+      SSID (network name): start=ClinicOps
+      Hide SSID (disable broadcast): start=Off
+      Band: start=2.4 + 5 GHz
+    * Security mode: start=WPA2-Personal  →  KEY=WPA2/WPA3 mixed   // WPA3 transition (mixed) mode lets WPA3-capable laptops use SAE while WPA2-only scanners still join with the PSK on the same SSID.
+    * Passphrase (pre-shared key): start=clinic2019  →  KEY=Sun-Harbor-Maple-77
+      EAP method: start=PEAP (MSCHAPv2)
+      RADIUS server: start=
+      RADIUS authentication port: start=1812
+      RADIUS shared secret: start=
+    * Protected management frames (802.11w): start=Disabled  →  KEY=Optional   // Transition mode requires PMF to be 'Optional': WPA3 clients negotiate it, legacy WPA2 clients that cannot are still admitted. 'Required' would drop the scanners; 'Disabled' breaks WPA3.
+    * WPS push-button / PIN setup: start=On  →  KEY=Off   // WPS is a brute-force target regardless of the mode in use.
+      MAC filtering: start=Off
+      Client isolation (block client-to-client): start=Off
+      Admin interface reachable from wireless clients: start=Off
+      Admin password: start=Changed to a unique strong password
+TAKEAWAY: Mixed/transition mode is the bridge between WPA2 and WPA3 fleets, and it needs PMF set to Optional. Replacing a weak passphrase with a long passphrase and killing WPS are the two cheapest wins.
+
+[ap-byod] sim=appanel domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
+TITLE: BYOD SSID with domain credentials
+PROMPT: Staff phones must log in with their Active Directory username and password.
+TASK:
+    1. SSID: Staff-BYOD, visible so onboarding instructions work.
+    2. Users authenticate with their domain username and password; personal devices have no certificates installed.
+    3. The identity team runs Microsoft NPS (RADIUS) at radius.corp.example, port 1812, secret Byod#Fern-9182.
+    4. Use the strongest Enterprise mode the NPS server supports: standard WPA3-Enterprise.
+DEVICE: AP-FLOOR3-04 — fields not listed under KEY must stay at their START value (changing them costs ½ point):
+      SSID (network name): start=Staff-BYOD
+    * Hide SSID (disable broadcast): start=On  →  KEY=Off   // Hiding the SSID adds no security and makes onboarding harder.
+      Band: start=2.4 + 5 GHz
+    * Security mode: start=WPA2-Personal  →  KEY=WPA3-Enterprise
+      Passphrase (pre-shared key): start=Welcome2024
+    * EAP method: start=EAP-TLS  →  KEY=PEAP (MSCHAPv2) | EAP-TTLS   // PEAP (or EAP-TTLS) wraps a password exchange in a TLS tunnel that only needs a server certificate; EAP-TLS would require a certificate on every phone.
+    * RADIUS server: start=  →  KEY=radius.corp.example
+    * RADIUS authentication port: start=1645  →  KEY=1812   // RADIUS authentication listens on UDP 1812 (1813 accounting); 1645/1646 are the legacy ports.
+    * RADIUS shared secret: start=  →  KEY=Byod#Fern-9182
+      Protected management frames (802.11w): start=Required
+      WPS push-button / PIN setup: start=Off
+      MAC filtering: start=Off
+      Client isolation (block client-to-client): start=Off
+      Admin interface reachable from wireless clients: start=Off
+      Admin password: start=Changed to a unique strong password
+TAKEAWAY: No client certificates → PEAP-MSCHAPv2 (or EAP-TTLS). Certificates on clients → EAP-TLS. RADIUS auth is UDP 1812. Enterprise mode means each user has their own credential, so one leaked password does not expose the whole network.
+
+[ap-printers] sim=appanel domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
+TITLE: Lock down the printer SSID
+PROMPT: Apply the change request exactly as written, even the parts you would argue with.
+TASK:
+    1. The 12 label printers support only WPA2-PSK on 2.4 GHz; keep that mode and restrict the radio to that band.
+    2. Replace the passphrase with the one in the ticket: Granite-Lantern-Orbit-2026.
+    3. Per the manager's request: stop broadcasting the SSID and allow only the printers' registered MAC addresses to associate.
+    4. Do not change anything else on this profile.
+DEVICE: AP-BRANCH-07 — fields not listed under KEY must stay at their START value (changing them costs ½ point):
+      SSID (network name): start=PrintNet
+    * Hide SSID (disable broadcast): start=Off  →  KEY=On   // Hiding an SSID only removes it from beacons; probe requests still reveal it. It is obscurity, not security, but the ticket asked for it.
+    * Band: start=2.4 + 5 GHz  →  KEY=2.4 GHz
+      Security mode: start=WPA2-Personal
+    * Passphrase (pre-shared key): start=print  →  KEY=Granite-Lantern-Orbit-2026
+      EAP method: start=PEAP (MSCHAPv2)
+      RADIUS server: start=
+      RADIUS authentication port: start=1812
+      RADIUS shared secret: start=
+      Protected management frames (802.11w): start=Optional
+      WPS push-button / PIN setup: start=Off
+    * MAC filtering: start=Off  →  KEY=Allow list only   // MAC addresses are trivially spoofed after a few seconds of sniffing. An allow list raises the bar slightly and adds management overhead.
+      Client isolation (block client-to-client): start=Off
+      Admin interface reachable from wireless clients: start=Off
+      Admin password: start=Changed to a unique strong password
+TAKEAWAY: Follow the spec on a PBQ even when a control is weak. For the MC side of the exam remember: hidden SSIDs and MAC filtering are obscurity controls; the real strength is the passphrase length and WPA2/WPA3 with PMF.
+
+[hd-web] sim=hardening domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
+TITLE: Harden a public web server
+PROMPT: Reduce the attack surface without taking the site down.
+TASK:
+    1. The site must keep serving HTTPS, and HTTP must keep redirecting to it.
+    2. Remove every service and open port that the stated role does not need.
+    3. MySQL is used only by the local application; it must never be reachable from the network.
+    4. Admins connect over SSH from the VPN only; root must not be able to log in over SSH.
+    5. Patches must install automatically; the host firewall must be on with a default-deny inbound policy.
+HOST: web01 · Ubuntu Server 22.04 · Public HTTPS site; the app reads a local MySQL database; admins SSH in over the VPN
+CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1; unmarked = leave alone, −½ if changed):
+  Services
+    ! nginx (web server): start=Running  [crit: keep]   // The business function is the website.
+    ! mysqld (database): start=Running  [crit: keep]   // The application reads the local database; stopping it breaks the site. Restrict it instead.
+    * telnetd: start=Running  →  KEY=Stopped   // Cleartext remote login; SSH replaces it entirely.
+    * vsftpd (FTP): start=Running  →  KEY=Stopped   // Cleartext file transfer with no stated use; SFTP over SSH covers any real need.
+    * cups (printing): start=Running  →  KEY=Stopped   // A web server does not print. Unused services are unpatched attack surface.
+    ! sshd: start=Running  [crit: keep]   // Admins need SSH; the task is to restrict it, not remove it.
+  Host firewall
+    * Host firewall (ufw): start=Disabled  →  KEY=Enabled
+    * Default inbound policy: start=Allow all  →  KEY=Deny all except allowed rules   // Implicit deny: open only what is listed.
+  Listening ports (reachable from the network)
+    ! TCP 80 (HTTP) (Redirects to HTTPS): start=Open  [crit: keep]   // The task says HTTP must keep redirecting.
+    ! TCP 443 (HTTPS): start=Open  [crit: keep]
+    * TCP 22 (SSH) — source: start=Any  →  KEY=VPN subnet 10.0.9.0/24 only   // Admins arrive via the VPN; nobody else needs SSH. Closing it entirely locks the admins out.
+    * TCP 3306 (MySQL): start=Open  →  KEY=Closed   // The database is local-only; bind it to localhost and close the port.
+    * TCP 21 (FTP): start=Open  →  KEY=Closed
+    * TCP 23 (Telnet): start=Open  →  KEY=Closed
+  Accounts & remote access
+    * PermitRootLogin (SSH): start=Yes  →  KEY=No   // Admins log in as themselves and escalate with sudo; that keeps an audit trail and removes the one username every attacker already knows.
+    * Account: guest (default, no password): start=Enabled  →  KEY=Disabled
+    ! Account: webadmin (sudo): start=Enabled  [crit: keep]   // That is how the admins get in.
+    * VNC remote desktop: start=On  →  KEY=Off   // Unneeded remote-access path; SSH is the sanctioned one.
+  Updates
+    * Unattended security updates: start=Off  →  KEY=On
+      Full-disk encryption (LUKS): start=Off  [leave alone]   // Not in the requirement for this change; encrypting a running server's disk is a separate project.
+TAKEAWAY: Hardening = remove what the role does not need (services, ports, accounts), restrict what it does need (SSH from the VPN, DB local-only), and turn on the baseline controls (host firewall default-deny, automatic patching). Breaking the business function is a failed change, not a hardened host.
+
+[hd-finance] sim=hardening domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
+TITLE: Apply the workstation baseline
+PROMPT: Bring the accounting PC to the corporate baseline without stopping the user from working.
+TASK:
+    1. Protect data at rest if the PC is stolen, turn on the host firewall, and keep it patched automatically.
+    2. The user must not be a local administrator.
+    3. Nobody remotes in to this PC; close every inbound remote-access path.
+    4. Disable the built-in accounts the baseline names (Administrator, Guest) and remove the obsolete file-sharing protocol.
+    5. Policy: no USB mass storage, screen locks after 10 minutes. Do not touch anything the user needs to print or reach the file server.
+HOST: FIN-WS-17 · Windows 11 Pro · Accounting workstation: prints invoices, opens shares on FIN-FS01, runs the ERP client
+CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1; unmarked = leave alone, −½ if changed):
+  Encryption & updates
+    * BitLocker full-disk encryption: start=Off  →  KEY=On   // Data at rest on a stolen laptop or PC is only protected by encryption.
+    * Windows Update: start=Notify only  →  KEY=Automatic
+    * Windows Defender Firewall: start=Off  →  KEY=On
+  Accounts
+    * Account type: j.alvarez: start=Administrator  →  KEY=Standard user   // Least privilege: malware runs with the user's rights.
+    * Built-in Administrator account: start=Enabled  →  KEY=Disabled   // A well-known RID-500 account with no lockout; the baseline disables it.
+    * Guest account: start=Enabled  →  KEY=Disabled
+  Remote access
+    * Remote Desktop (inbound): start=On  →  KEY=Off
+    * Remote Assistance: start=On  →  KEY=Off
+    * WinRM (PowerShell remoting, inbound): start=On  →  KEY=Off
+  Services & protocols
+    ! Print Spooler: start=Running  [crit: keep]   // The user prints invoices; stopping the spooler breaks that.
+    * SMBv1 client/server: start=Installed  →  KEY=Removed   // SMBv1 is the protocol WannaCry/EternalBlue abused; modern shares use SMBv3.
+    ! File sharing client (SMBv3) to FIN-FS01: start=On  [crit: keep]   // The user opens shares on the file server.
+    ! ERP client service: start=Running  [crit: keep]
+  Device policy
+    * USB mass storage: start=Allowed  →  KEY=Blocked
+    * Screen lock timeout: start=Never  →  KEY=10 minutes
+      Bluetooth: start=On  [leave alone]   // Not mentioned in the baseline; the user may have a wireless headset or mouse.
+TAKEAWAY: A secure baseline is a checklist of settings applied the same way everywhere: encryption, patching, firewall, least privilege, disabled default accounts, no unnecessary remote access, removable-media control. The user still has to print and reach the file server when you are done.
+
+[hd-camera] sim=hardening domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
+TITLE: Secure an IP camera
+PROMPT: Embedded devices ship insecure. Fix this one without blinding the security office.
+TASK:
+    1. The NVR must keep receiving the video stream.
+    2. Nothing on this camera may still use the vendor's default credentials.
+    3. Remove every plaintext or discovery protocol the role does not need.
+    4. The camera must not phone home to the vendor's cloud relay.
+    5. Firmware must update automatically, the admin interface must be encrypted-only, and the camera belongs on the isolated IoT VLAN.
+HOST: CAM-LOBBY-3 · Vendor firmware 5.2 (embedded Linux) · Streams RTSP video to the on-site NVR; staff view it only through the NVR
+CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1; unmarked = leave alone, −½ if changed):
+  Accounts
+    * admin password: start=Vendor default (admin / 12345)  →  KEY=Unique strong password   // Default credentials are a listed threat vector (2.2) and the first thing IoT botnets try.
+    * Hidden vendor support account: start=Enabled  →  KEY=Disabled   // Undocumented backdoor accounts are a supply-chain and default-credential risk.
+  Services
+    ! RTSP stream (TCP 554): start=On  [crit: keep]   // That is how the NVR gets video.
+    * Telnet (TCP 23): start=On  →  KEY=Off
+    * UPnP (auto port-forwarding on the router): start=On  →  KEY=Off   // UPnP lets the device punch holes in the perimeter by itself.
+    * ONVIF discovery: start=On  →  KEY=Off   // Discovery broadcasts advertise the device; the NVR is already configured with its address.
+    * HTTP admin page (TCP 80): start=On  →  KEY=Off
+    ! HTTPS admin page (TCP 443): start=On  [crit: keep]   // Keep the encrypted management path; the task says encrypted-only, not none.
+  Network
+    * Vendor cloud P2P relay: start=On  →  KEY=Off   // Outbound relays bypass the firewall and expose the feed to the vendor's cloud.
+    * VLAN assignment: start=VLAN 1 (default / user LAN)  →  KEY=VLAN 40 (IoT, isolated)   // Segmentation limits what a compromised camera can reach.
+  Updates
+    * Automatic firmware updates: start=Off  →  KEY=On
+      NTP time sync: start=On  [leave alone]   // Accurate timestamps on video are valuable; nothing asked you to change it.
+TAKEAWAY: IoT/embedded hardening: change defaults, kill Telnet/UPnP/discovery/cloud relays, keep only the protocol the role needs (RTSP to the NVR), encrypt management, segment onto an IoT VLAN, patch automatically. Devices that cannot be hardened get isolated instead.
+
+[hd-sql] sim=hardening domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
+TITLE: Lock down the database server
+PROMPT: Tighten the SQL host for the PCI audit without breaking the web application that depends on it.
+TASK:
+    1. The web tier must keep reaching the database; nothing else may.
+    2. DBAs administer the host only from the admin VLAN, over an encrypted session.
+    3. Remove the components, protocols and accounts the audit flagged: SQL Browser, IIS, the sa login, SQL (mixed-mode) authentication, unencrypted client connections.
+    4. Encrypt the volumes. Patch during the monthly maintenance window, never with automatic reboots.
+    5. Leave the SQL Server engine and its service account alone.
+HOST: SQL-PRD-02 · Windows Server 2022 · Runs the orders database for the web tier (10.0.20.0/24); DBAs manage it from the admin VLAN (10.0.5.0/24)
+CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1; unmarked = leave alone, −½ if changed):
+  Services & components
+    ! SQL Server engine: start=Running  [crit: keep]
+    * SQL Server Browser (UDP 1434): start=Running  →  KEY=Stopped   // Browser advertises instances; with a fixed port the web tier does not need it.
+    * IIS web server role: start=Installed  →  KEY=Removed   // A web server on the database host is unnecessary attack surface.
+      SQL Server Agent (backup jobs): start=Running  [leave alone]   // Not mentioned; it runs the backups.
+  Network access
+    * TCP 1433 allowed from: start=Any  →  KEY=Web tier 10.0.20.0/24 only
+    * Remote Desktop allowed from: start=Any  →  KEY=Admin VLAN 10.0.5.0/24 only   // DBAs still need to administer it; 'Off' breaks that, 'Any' leaves RDP exposed.
+    * RDP Network Level Authentication + TLS: start=Not required  →  KEY=Required
+    ! Windows Defender Firewall: start=On  [crit: keep]   // The firewall is what enforces the source restrictions above.
+  Authentication
+    * sa login: start=Enabled  →  KEY=Disabled   // A well-known superuser login is a brute-force magnet.
+    * Authentication mode: start=Mixed mode (SQL + Windows)  →  KEY=Windows authentication only   // Windows auth uses Kerberos and central lockout/MFA policy; SQL logins are passwords stored in the database.
+      Engine service account: start=Managed service account (gMSA)  [leave alone]   // Already correct; the task said to leave it alone.
+  Data protection & patching
+    * Force encryption on client connections (TLS): start=Off  →  KEY=On
+    * BitLocker on data and log volumes: start=Off  →  KEY=On
+    * Patching: start=Automatic, reboot when required  →  KEY=Monthly maintenance window (WSUS), manual reboot   // Servers get patched on a schedule with a backout plan; surprise reboots are an availability incident.
+TAKEAWAY: Server hardening is about scope: allow the one consumer (web tier) on the one port, allow admins from the one VLAN over an encrypted session, remove extra roles, disable well-known logins, encrypt in transit and at rest, and patch in a controlled window.
+
+[hd-legacy] sim=hardening domain=2 obj=2.5 (Explain the purpose of mitigation techniques used to secure the enterprise)
+TITLE: Compensating controls for an unpatchable HMI
+PROMPT: This box cannot be upgraded. Reduce the risk around it instead.
+TASK:
+    1. The HMI must keep talking to the PLC and the historian, and the vendor must keep its VNC support path through the jump host.
+    2. Updates cannot be enabled, so isolate the host: put it on the OT VLAN and allow inbound connections only from the engineering jump host.
+    3. Turn on the host firewall and the application allow list, and remove the vendor's default account password.
+    4. Disable protocols and media paths the role does not need, and remove the host's Internet access entirely.
+HOST: HMI-LINE2 · Windows 7 (vendor-locked, no patches available) · Operator screen for the bottling line PLC; vendor supports it over VNC through the engineering jump host; the HMI software needs SMBv1 to the historian
+CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1; unmarked = leave alone, −½ if changed):
+  Network
+    * VLAN assignment: start=VLAN 10 (office LAN)  →  KEY=VLAN 200 (OT, isolated)   // Segmentation is the primary compensating control for a host you cannot patch.
+    * Inbound connections allowed from: start=Any  →  KEY=Engineering jump host 10.0.5.10 only   // 'None' cuts off the vendor's sanctioned support path.
+    ! Modbus/TCP to PLC (TCP 502): start=On  [crit: keep]   // That is the production link.
+  Host controls
+    * Host firewall: start=Off  →  KEY=On
+    * Application allow list: start=Off  →  KEY=On   // Only the HMI software may execute; ransomware and droppers cannot.
+      Windows Update: start=Disabled (no updates exist for this OS)  [leave alone]   // There is nothing to install; the risk is handled by isolation and allow-listing. Selecting Automatic changes nothing and signals you missed the point.
+  Accounts
+    * Vendor account hmi_svc: start=Default password (hmi123)  →  KEY=Unique strong password, documented in the vault
+    ! Operator account (kiosk): start=Enabled  [crit: keep]   // Operators run the line with it.
+  Services & media
+    ! SMBv1 to historian: start=On  [crit: keep]   // The HMI software needs it; this is exactly why the host is isolated instead.
+    ! VNC (vendor support): start=On  [crit: keep]   // Sanctioned support path, now reachable only from the jump host.
+    * Telnet service: start=On  →  KEY=Off
+    * USB AutoRun / AutoPlay: start=On  →  KEY=Off   // Removable media is a classic path into air-gapped OT networks.
+    * Internet access via web proxy: start=On  →  KEY=Off   // An HMI never needs to browse; it only needs the PLC and the historian.
+TAKEAWAY: When you cannot patch, compensate: isolate (VLAN + allow only the jump host), restrict execution (allow list), harden what remains (firewall, no defaults, no Telnet/AutoRun/Internet). Keep the production and support paths intact; a plant that stops is also a security failure.
+
+[m-ctrl] sim=match domain=- obj=1.1 (Compare and contrast various types of security controls)
+TITLE: Match the control to its TYPE
+PROMPT: Tap an item on the left, then its match on the right. Tap a matched item to undo.
+PAIRS (left → right):
+    Firewall rule that blocks inbound Telnet  →  Preventive
+    Warning sign stating the area is under video surveillance  →  Deterrent
+    SIEM alert on repeated failed logins  →  Detective
+    Restoring a server from backup after ransomware  →  Corrective
+    Isolating an unpatchable device on its own VLAN  →  Compensating
+    Policy requiring annual security training  →  Directive
+
+[m-cat] sim=match domain=- obj=1.1 (Compare and contrast various types of security controls)
+TITLE: Match the control to its CATEGORY and TYPE
+PROMPT: Tap a control on the left, then the category/type combination that describes it on the right.
+PAIRS (left → right):
+    Full-disk encryption on laptops  →  Technical / Preventive
+    Acceptable use policy that every employee must sign  →  Managerial / Directive
+    Guard reviewing CCTV footage after an alarm  →  Operational / Detective
+    Bollards in front of the data center entrance  →  Physical / Preventive
+    Restoring a server from a backup image  →  Technical / Corrective
+    Sign warning that the site is monitored  →  Physical / Deterrent
+    Vendor risk review before onboarding  →  Managerial / Preventive
+
+[m-ind] sim=match domain=- obj=2.4 (Given a scenario, analyze indicators of malicious activity)
+TITLE: Match the attack to its indicator
+PROMPT: Tap an attack on the left, then the log evidence that reveals it on the right.
+PAIRS (left → right):
+    Password spraying  →  Failed logins for many usernames, same password, none locked out
+    Account takeover  →  Login from Chicago, then Manila 12 minutes later
+    DDoS  →  Web server saturated by thousands of requests from many sources
+    Rootkit  →  Outbound connections seen on the wire but not in local process list
+    Cryptomining malware  →  CPU pinned at 100 percent on an idle workstation
+    Log tampering  →  Six-hour gap in a server that logs every minute
+    Directory traversal  →  Request containing ../../etc/passwd
+
+[m-mit] sim=match domain=- obj=2.5 (Explain the purpose of mitigation techniques used to secure the enterprise)
+TITLE: Match the attack to its BEST mitigation
+PROMPT: Tap an attack on the left, then the control that most directly defeats it.
+PAIRS (left → right):
+    SQL injection  →  Parameterized queries and input validation
+    Cross-site scripting  →  Output encoding of untrusted data
+    Cross-site request forgery  →  Anti-forgery tokens on state-changing requests
+    Password spraying  →  MFA plus monitoring across all accounts
+    On-path attack on Wi-Fi  →  WPA3 with certificate-based EAP
+    Buffer overflow  →  Memory-safe language and ASLR/DEP
+    Rainbow table attack  →  Salted, stretched password hashes
+
+[m-agree] sim=match domain=- obj=5.3 (Explain the processes associated with third-party risk assessment and management)
+TITLE: Match the agreement to its purpose
+PROMPT: Tap an agreement type on the left, then what it is used for on the right.
+PAIRS (left → right):
+    SLA  →  Measurable service targets with penalties
+    MOU  →  Non-binding statement of shared intent
+    MSA  →  Umbrella contract terms for an ongoing vendor relationship
+    SOW  →  Specific deliverables, timeline, and price for one project
+    NDA  →  Protects confidential information from disclosure
+    BPA  →  Defines profit sharing and duties between business partners
+
+[m-risk] sim=match domain=- obj=5.2 (Explain elements of the risk management process)
+TITLE: Match the risk strategy to the example
+PROMPT: Tap a strategy on the left, then the scenario that illustrates it on the right.
+PAIRS (left → right):
+    Transfer  →  Purchasing cyber insurance for breach costs
+    Avoid  →  Cancelling a project that would store card numbers
+    Mitigate  →  Deploying MFA to reduce credential theft impact
+    Accept  →  Documenting a low-impact risk and taking no action
+    Exception  →  Approving a temporary deviation from patching for a legacy app
+    Exemption  →  Permanently excusing an air-gapped system from a control
+
+[m-auth] sim=match domain=- obj=4.6 (Given a scenario, implement and maintain identity and access management)
+TITLE: Match the protocol to its description
+PROMPT: Tap a protocol on the left, then its best description on the right.
+PAIRS (left → right):
+    SAML  →  XML assertions from an IdP enabling web SSO
+    OAuth 2.0  →  Access tokens that let an app call an API on a user's behalf
+    OpenID Connect  →  Identity layer built on OAuth providing an ID token
+    LDAP  →  Directory query protocol, secured over TLS on port 636
+    RADIUS  →  UDP AAA protocol for Wi-Fi, VPN, and 802.1X
+    TACACS+  →  TCP AAA protocol encrypting the whole packet, used for device admin
+    Kerberos  →  Ticket-based authentication using a KDC
+
+[m-mal] sim=match domain=- obj=2.4 (Given a scenario, analyze indicators of malicious activity)
+TITLE: Match the malware to its behavior
+PROMPT: Tap a malware type on the left, then its defining behavior on the right.
+PAIRS (left → right):
+    Worm  →  Self-propagates across the network with no user action
+    Virus  →  Attaches to a host file and spreads when it is run
+    Trojan  →  Poses as legitimate software to get installed
+    Ransomware  →  Encrypts files and demands payment
+    Logic bomb  →  Stays dormant until a date or condition triggers it
+    Keylogger  →  Records keystrokes to capture credentials
+    Rootkit  →  Hides itself and other malware from the operating system
+    Spyware  →  Silently collects browsing and personal data
+
+[m-state] sim=match domain=- obj=3.3 (Compare and contrast concepts and strategies to protect data)
+TITLE: Match the data state to a protection method
+PROMPT: Tap a data state or type on the left, then the method that protects it on the right.
+PAIRS (left → right):
+    Data at rest  →  Full-disk or database encryption
+    Data in transit  →  TLS or IPSec
+    Data in use  →  Secure enclave or memory encryption
+    Card numbers in a retail database  →  Tokenization
+    Customer records in a test environment  →  Data masking
+    Backups shipped off site  →  Encrypted media with escrowed keys
+
+[o-ir] sim=order domain=- obj=4.8 (Explain appropriate incident response activities)
+TITLE: Order the incident response process
+PROMPT: Tap the steps in order. Undo removes the last tap.
+CORRECT ORDER:
+    1. Preparation
+    2. Detection
+    3. Analysis
+    4. Containment
+    5. Eradication
+    6. Recovery
+    7. Lessons learned
+
+[o-vol] sim=order domain=- obj=4.8 (Explain appropriate incident response activities)
+TITLE: Order of volatility: acquire the MOST volatile first
+PROMPT: Tap the evidence sources in the order they should be collected.
+CORRECT ORDER:
+    1. CPU registers and cache
+    2. RAM contents and running processes
+    3. Network connections and routing table
+    4. Temporary files and swap space
+    5. Hard disk image
+    6. Remote logs and archival backups
+    interchangeable steps: 2=3 (RAM/process state and network state sit in the same RFC 3227 tier; either order is accepted.)
+
+[o-chg] sim=order domain=- obj=1.3 (Explain the importance of change management processes and the impact to security)
+TITLE: Order the change management flow
+PROMPT: Tap the steps in the order a standard change moves through them.
+CORRECT ORDER:
+    1. Submit change request with owner and stakeholders
+    2. Perform impact analysis and write backout plan
+    3. Test in a non-production environment
+    4. Obtain approval from the change board
+    5. Implement during the maintenance window
+    6. Update documentation and version control
+    interchangeable steps: 3=4 (SY0-701 defines no fixed sequence for testing vs CAB approval; either order is accepted.)
+
+[o-risk] sim=order domain=- obj=5.2 (Explain elements of the risk management process)
+TITLE: Order the risk assessment steps
+PROMPT: Tap the steps in the order they are performed.
+CORRECT ORDER:
+    1. Identify assets and mission-essential functions
+    2. Identify threats and vulnerabilities
+    3. Analyze likelihood and impact
+    4. Prioritize risks in the register
+    5. Select a response: mitigate, transfer, avoid, or accept
+    6. Monitor and report on residual risk
+
+[o-pki] sim=order domain=- obj=1.4 (Explain the importance of using appropriate cryptographic solutions)
+TITLE: Order the certificate issuance flow
+PROMPT: Tap the steps in the order a server obtains a trusted certificate.
+CORRECT ORDER:
+    1. Server generates a public and private key pair
+    2. Server creates a certificate signing request containing the public key
+    3. CA validates the requester's identity and domain control
+    4. CA signs the certificate with its private key
+    5. Certificate is installed on the server with the intermediate chain
+    6. Clients verify the chain up to a trusted root
+
+[o-zt] sim=order domain=- obj=1.2 (Summarize fundamental security concepts)
+TITLE: Order the zero trust access decision
+PROMPT: Tap the steps in the order a zero trust request is handled.
+CORRECT ORDER:
+    1. Subject requests access to a resource
+    2. Policy enforcement point forwards the request to the control plane
+    3. Policy engine evaluates identity, device posture, and context
+    4. Policy administrator communicates the decision
+    5. Policy enforcement point opens or denies the session
+    6. Session is continuously re-evaluated
+
+[s-fw] sim=scenario domain=- obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security)
+TITLE: Exhibit: Firewall rule table
+SETUP: Users on the LAN (10.10.0.0/16) report they cannot reach the internal web app at 10.20.5.40 over HTTPS, although they can ping it. The perimeter firewall processes rules top to bottom.
+EXHIBIT:
+    #  ACTION  SRC              DST              PROTO  DPORT
+    1  ALLOW   10.10.0.0/16     10.20.5.40       ICMP   any
+    2  DENY    10.10.0.0/16     10.20.5.0/24     TCP    443
+    3  ALLOW   10.10.0.0/16     10.20.5.40       TCP    443
+    4  ALLOW   any              10.20.5.40       TCP    80
+    5  DENY    any              any              any    any
+Q: Which of the following changes will restore HTTPS access with the least additional exposure?
+  * A. Move rule 3 above rule 2
+    B. Delete rule 5
+        why wrong: Rule 5 is the implicit-deny cleanup rule; removing it would not fix the order problem and would expose everything not explicitly denied.
+    C. Change rule 4 to port 443
+        why wrong: Rule 4 already allows HTTP from anywhere; changing it to 443 would open HTTPS to any source, far more than needed, and rule 2 would still block LAN users first.
+    D. Add an ALLOW any-to-any rule at the top
+        why wrong: An allow-all at the top defeats the purpose of the firewall entirely.
+TAKEAWAY: Rules are evaluated in order and rule 2 denies TCP 443 to the whole /24 before rule 3 can allow it. Placing the specific allow above the broader deny lets LAN users reach only 10.20.5.40 on 443 while the rest of the subnet stays blocked.
+
+[s-siem] sim=scenario domain=- obj=4.9 (Given a scenario, use data sources to support an investigation)
+TITLE: Exhibit: SIEM authentication events
+SETUP: A SOC analyst is reviewing the following authentication events for a finance user whose badge shows office entry at 08:01 in Atlanta.
+EXHIBIT:
+    2026-09-08 08:03:12  auth=SUCCESS  user=p.okafor  src=198.51.100.23  geo=Atlanta,US  app=VPN
+    2026-09-08 08:22:47  auth=SUCCESS  user=p.okafor  src=203.0.113.88   geo=Jakarta,ID  app=O365
+    2026-09-08 08:23:10  event=MailboxRuleCreated  user=p.okafor  rule="forward all to ext-acct@mail-relay.example"
+    2026-09-08 08:25:31  event=FileDownload  user=p.okafor  file=Q3_Wire_Instructions.xlsx
+Q: Which of the following should the analyst do FIRST?
+  * A. Disable the account, revoke active sessions, and remove the forwarding rule
+    B. Email the user asking whether they are traveling
+        why wrong: The user's mailbox may already be attacker-controlled, and waiting for a reply leaves the session live.
+    C. Add 203.0.113.88 to the firewall block list and close the ticket
+        why wrong: Blocking one IP does not end the attacker's existing session or remove the persistence rule, and the attacker can change addresses.
+    D. Wait for a second anomalous login to confirm the pattern
+        why wrong: The evidence is already conclusive; delaying containment allows further exfiltration.
+TAKEAWAY: A login from Jakarta 19 minutes after an Atlanta login is impossible travel, and the external forwarding rule plus download of wire instructions shows an active takeover. Containment of the account comes first; investigation follows.
+
+[s-web] sim=scenario domain=- obj=2.4 (Given a scenario, analyze indicators of malicious activity)
+TITLE: Exhibit: Web server access log
+SETUP: A web administrator notices unusual requests to the customer login page in the Apache access log.
+EXHIBIT:
+    203.0.113.5 - - [08/Sep/2026:14:02:11 +0000] "GET /login?user=admin'--&pass=x HTTP/1.1" 200 1873
+    203.0.113.5 - - [08/Sep/2026:14:02:14 +0000] "GET /login?user=admin'%20OR%20'1'='1&pass=x HTTP/1.1" 200 5120
+    203.0.113.5 - - [08/Sep/2026:14:02:19 +0000] "GET /login?user=admin'%20UNION%20SELECT%20username,password%20FROM%20users--&pass=x HTTP/1.1" 200 44210
+Q: Which of the following is the BEST long-term fix for the vulnerability being exploited?
+  * A. Rewrite the login query to use parameterized statements
+    B. Block 203.0.113.5 at the firewall
+        why wrong: Blocking one source address stops this attacker for a moment but leaves the flaw for anyone else to exploit.
+    C. Rename the users table
+        why wrong: Renaming the table is obscurity; the injection still works and the attacker can enumerate schema names.
+    D. Switch the form from GET to POST
+        why wrong: Using POST hides the payload from the URL but the same input still reaches the same vulnerable query.
+TAKEAWAY: The quote, OR 1=1, and UNION SELECT payloads show SQL injection, and the growing response sizes indicate the database is returning data. Parameterized queries separate code from data so user input can never alter the query structure.
+
+[s-mail] sim=scenario domain=- obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security)
+TITLE: Exhibit: Email headers
+SETUP: An accounts-payable clerk forwards a suspicious invoice email to the security team. The relevant headers are shown.
+EXHIBIT:
+    From: "Dana Whitfield, CFO" <dana.whitfield@acme-corp.com>
+    Reply-To: dana.whitfield@acme-corp-billing.co
+    Return-Path: <bounce@mail-blast.example.net>
+    Received: from mail-blast.example.net (192.0.2.77) by mx.acme-corp.com
+    Authentication-Results: mx.acme-corp.com;
+      spf=fail (sender IP 192.0.2.77 not authorized for acme-corp.com);
+      dkim=none;
+      dmarc=fail (p=none) header.from=acme-corp.com
+    Subject: URGENT: Updated wire details for today's vendor payment
+Q: Which of the following BEST describes the message and the control that would have stopped it?
+  * A. Business email compromise spoofing the CFO; a DMARC policy of reject would have blocked it
+    B. Legitimate CFO email; the SPF failure is a mail server misconfiguration
+        why wrong: A genuine internal message would pass SPF because it would come from an authorized server, and would not use an outside Reply-To domain.
+    C. Spear phishing from a compromised CFO account; the CFO's password must be reset
+        why wrong: A compromised real account would send through the company's own servers and pass SPF and DKIM; this was sent from an unrelated bulk mailer.
+    D. Spam; adding the sender to a block list is sufficient
+        why wrong: Treating this as ordinary spam ignores the targeted fraud attempt and does nothing to stop the next spoofed domain.
+TAKEAWAY: The From domain is acme-corp.com but SPF failed for the sending IP, DKIM is absent, and DMARC failed while the policy is only p=none, so the receiver delivered it anyway. The mismatched Reply-To and urgent wire request are classic BEC; a p=reject DMARC policy would have caused rejection.
+
+[s-nmap] sim=scenario domain=- obj=4.1 (Given a scenario, apply common security techniques to computing resources)
+TITLE: Exhibit: Nmap scan of a file server
+SETUP: A security engineer scans a Windows file server in the finance VLAN as part of a hardening review.
+EXHIBIT:
+    Nmap scan report for fs-fin01.corp.local (10.20.8.15)
+    Host is up (0.0021s latency).
+    PORT      STATE  SERVICE       VERSION
+    21/tcp    open   ftp           Microsoft ftpd (anonymous login allowed)
+    135/tcp   open   msrpc         Microsoft Windows RPC
+    445/tcp   open   microsoft-ds  Windows Server 2019 SMB
+    3389/tcp  open   ms-wbt-server Microsoft Terminal Services
+    5985/tcp  open   http          Microsoft HTTPAPI (WinRM)
+Q: Which of the following findings should be remediated FIRST?
+  * A. Disable the anonymous FTP service on port 21
+    B. Change the RDP listener to a nonstandard port
+        why wrong: Moving RDP to another port is obscurity, not hardening; restricting RDP by firewall and requiring MFA is the real fix, and it is less urgent than an unauthenticated service.
+    C. Block port 445 so SMB cannot be used
+        why wrong: SMB on port 445 is how a Windows file server does its job; blocking it breaks the service rather than hardening it.
+    D. Uninstall WinRM
+        why wrong: WinRM is an encrypted management channel used by administrators; it should be restricted, not removed, and is not the most exposed item.
+TAKEAWAY: An FTP service that allows anonymous login lets anyone on the network read or upload files on a finance server without credentials, in cleartext. It has no business purpose on a file server that already serves SMB and should be removed immediately.
+
+[s-cvss] sim=scenario domain=- obj=4.3 (Explain various activities associated with vulnerability management)
+TITLE: Exhibit: Vulnerability scan summary
+SETUP: A vulnerability management analyst must decide which finding to remediate first from the weekly scan.
+EXHIBIT:
+    ID   HOST            EXPOSURE   CVSS  EXPLOIT AVAILABLE  FINDING
+    V-1  web01 (DMZ)     Internet   9.8   Yes                Unauthenticated RCE in web framework
+    V-2  db02 (internal) Internal   8.1   No                 Privilege escalation in DB service
+    V-3  lab-vm07        Isolated   7.5   Yes                Outdated SSH version
+    V-4  hr-print01      Internal   5.3   No                 Default SNMP community string
+Q: Which finding should be remediated FIRST?
+  * A. V-1
+    B. V-2
+        why wrong: V-2 is serious but requires an existing foothold on the internal network and has no known exploit, lowering its immediate likelihood.
+    C. V-3
+        why wrong: V-3 has an exploit, but the host is isolated in a lab, so exposure is minimal.
+    D. V-4
+        why wrong: V-4 is a medium finding on an internal printer; it should be fixed but is the lowest risk of the four.
+TAKEAWAY: V-1 combines the highest base score with internet exposure, no authentication required, and a public exploit, so its real-world likelihood and impact are the greatest. Environmental context, not just the base score, drives prioritization.
+
+[s-ransom] sim=scenario domain=- obj=4.8 (Explain appropriate incident response activities)
+TITLE: Exhibit: Ransomware note and symptoms
+SETUP: A help desk technician receives three calls in five minutes from users on the same floor. Each reports the following on screen, and shared drive files now end in .lockd.
+EXHIBIT:
+    !!! YOUR FILES HAVE BEEN ENCRYPTED !!!
+    All documents, databases and backups on this network are locked.
+    To recover them, send 2.5 BTC to bc1q...7v3k within 72 hours.
+    Do NOT power off or attempt recovery; your files will be lost.
+    Contact: restore-help@onionmail.example
+Q: Which of the following should the technician do FIRST?
+  * A. Disconnect the affected systems from the network and escalate to the incident response team
+    B. Pay the ransom so the shared drive can be restored quickly
+        why wrong: Payment funds criminals, does not guarantee decryption, and does nothing to stop the active spread.
+    C. Begin restoring the shared drive from last night's backup
+        why wrong: Restoring while infected hosts are still connected will result in the restored files being encrypted again.
+    D. Run a full antivirus scan on each affected workstation
+        why wrong: A scan takes time, may not detect the variant, and leaves the hosts on the network spreading the infection.
+TAKEAWAY: Multiple hosts encrypting a shared drive means the malware is still spreading. Containment by isolating affected systems stops the spread, and escalation triggers the IR plan, preserving evidence before any recovery begins.
+
+[s-ale] sim=scenario domain=- obj=5.2 (Explain elements of the risk management process)
+TITLE: Exhibit: Risk register row
+SETUP: A risk analyst is completing the quantitative fields of a risk register entry.
+EXHIBIT:
+    Risk ID:        R-114
+    Asset:          Customer order database
+    Asset value:    $250,000
+    Threat:         Storage array failure with data loss
+    Exposure factor: 40%
+    ARO:            0.5 (once every two years)
+    Risk owner:     Director of IT
+    SLE:            ______
+    ALE:            ______
+Q: Which of the following correctly completes the SLE and ALE fields?
+  * A. SLE $100,000; ALE $50,000
+    B. SLE $250,000; ALE $125,000
+        why wrong: This ignores the exposure factor; only 40 percent of the asset is lost per event, not all of it.
+    C. SLE $100,000; ALE $200,000
+        why wrong: ALE multiplies by ARO (0.5), which halves the SLE rather than doubling it.
+    D. SLE $50,000; ALE $100,000
+        why wrong: The SLE and ALE values are reversed; the per-event loss is larger than the annualized figure when ARO is below 1.
+TAKEAWAY: SLE = asset value x exposure factor = $250,000 x 0.40 = $100,000. ALE = SLE x ARO = $100,000 x 0.5 = $50,000.
+
+[s-cert] sim=scenario domain=- obj=1.4 (Explain the importance of using appropriate cryptographic solutions)
+TITLE: Exhibit: Browser certificate error
+SETUP: A user reports that the company intranet portal shows a full-page warning. The security team captures the certificate details shown in the browser.
+EXHIBIT:
+    Warning: Your connection is not private
+    NET::ERR_CERT_AUTHORITY_INVALID
+    
+    Issued to:   portal.corp.local
+    Issued by:   CORP-ROOT-CA
+    Valid from:  2026-03-01  to  2027-03-01
+    Subject Alt: portal.corp.local, portal
+    Chain:       portal.corp.local -> CORP-ROOT-CA (not in trust store)
+    Current date: 2026-09-08
+Q: Which of the following is the MOST likely cause?
+  * A. The user's device does not have the internal root CA certificate installed
+    B. The certificate has expired
+        why wrong: The validity period runs until March 2027 and today is September 2026, so it has not expired.
+    C. The certificate was issued for the wrong hostname
+        why wrong: The Subject Alternative Name includes portal.corp.local, which is the site the user visited, so there is no name mismatch.
+    D. The server is using a revoked certificate
+        why wrong: A revoked certificate produces a revocation error, and nothing in the exhibit indicates revocation.
+TAKEAWAY: The error names an invalid authority and the chain shows the internal root is not in the device's trust store. The name matches and the dates are valid, so deploying the corporate root CA to the device, for example via MDM or Group Policy, resolves it.
+
+[s-perm] sim=scenario domain=- obj=2.3 (Explain various types of vulnerabilities)
+TITLE: Exhibit: Script and file permissions
+SETUP: During an audit of a Linux backup server, an analyst finds the following script and its permissions.
+EXHIBIT:
+    $ ls -l /opt/backup/sync.sh
+    -rwxrwxrwx 1 root root 412 Aug 30 02:10 /opt/backup/sync.sh
+    
+    $ cat /opt/backup/sync.sh
+    #!/bin/bash
+    DB_USER=backup_admin
+    DB_PASS=Backup#2024!
+    mysqldump -u $DB_USER -p$DB_PASS orders > /mnt/nas/orders.sql
+    
+    $ crontab -l
+    0 2 * * * /opt/backup/sync.sh
+Q: Which of the following BEST describes the MOST serious vulnerability?
+  * A. Hard-coded credentials in a world-writable script that runs as root nightly
+    B. The backup runs at 02:00 when no one is monitoring
+        why wrong: The schedule is normal for backups; timing is not a security flaw.
+    C. mysqldump output is not compressed
+        why wrong: Compression is an efficiency choice and has no bearing on the exposure of credentials or root execution.
+    D. The script uses bash instead of Python
+        why wrong: The language is irrelevant; the same secrets and permissions problem would exist in any script.
+TAKEAWAY: The database password is stored in plaintext, and mode 777 lets any local user read it or replace the script's contents. Because root's cron executes the file, an attacker can gain root by editing it. Fix by moving the secret to a protected credentials file or vault and setting permissions to 700.
+
+[g-hashid] sim=hashid domain=- obj=1.4 (Explain the importance of using appropriate cryptographic solutions)
+TITLE: Identify the hash
+PROMPT: Read the digest, name the algorithm, give its bit length. Every attempt is a brand-new digest.
+TASK:
+    1. Count the characters and note the encoding (hex or Base64).
+    2. Pick the algorithm that produces a digest of that length.
+    3. Enter the digest length in bits.
+(generated: a fresh problem every attempt; grader in core/sims/generators.js)
+
+[g-fwrule] sim=fwrule domain=- obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security)
+TITLE: Firewall rule evaluation
+PROMPT: Walk the rule table top-down for the packet shown. Every attempt is a new table.
+TASK:
+    1. Compare the packet's source, destination and port against each rule from the top.
+    2. Stop at the first rule where all three match; that rule's action applies.
+    3. If nothing matches, the implicit deny at the bottom applies.
+(generated: a fresh problem every attempt; grader in core/sims/generators.js)
+
+[g-risk] sim=risk domain=- obj=5.2 (Explain elements of the risk management process)
+TITLE: Risk math: SLE, ALE, cost-benefit
+PROMPT: Compute the loss figures and decide whether the control is worth buying. Every attempt uses new numbers.
+TASK:
+    1. SLE = asset value × exposure factor.
+    2. ALE = SLE × ARO (events per year).
+    3. The control is justified when the ALE it removes exceeds its annual cost. Use the calculator in this pane.
+(generated: a fresh problem every attempt; grader in core/sims/generators.js)

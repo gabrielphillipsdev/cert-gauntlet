@@ -52,16 +52,15 @@ export const EXAM_BANK_C = [
  ],
  w:"Internet-facing services belong in a screened subnet; data stores stay internal, reachable only through a narrowly permitted firewall path."},
 
-{id:"c006",obj:"4.1",d:4,cat:"harden",t:"mc",
- q:"A remote-first consultancy wants to give staff a choice of phone model while keeping every device company-owned, fully managed, and free of employee-purchased hardware. The company will buy each phone from an approved list. Which of the following deployment models is being described?",
+{id:"c006",obj:"4.2",d:4,cat:"ops",t:"mc",
+ q:"A city government is retiring 300 desktop computers that processed resident records. Policy says no readable drive may leave city control, and auditors must be able to verify compliance a year from now. Which of the following is the BEST approach?",
  o:[
-  {t:"CYOD",ok:true,x:"Choose Your Own Device lets employees select from a company-approved list, but the company purchases and owns the device and applies full management."},
-  {t:"BYOD",ok:false,x:"Bring Your Own Device means the employee owns the hardware. The scenario explicitly rules out employee-purchased devices."},
-  {t:"COPE",ok:false,x:"Corporate-Owned, Personally Enabled devices are company-owned and allow personal use, but the company picks the device; the defining feature here is the employee's choice from a list."},
-  {t:"Corporate-owned, business only",ok:false,x:"A business-only model does not involve employee choice of model or any personal use, and the scenario centers on giving staff a choice."}
+  {t:"Sanitize or destroy each drive by an approved method, record method and serial in the asset system, keep the certificates",ok:true,x:"Sanitization plus documentation plus certification satisfies both requirements: the data is unrecoverable and the evidence survives for the audit."},
+  {t:"Reformat each drive and donate the computers to a local charity",ok:false,x:"A quick format rewrites the file system table only; resident records remain recoverable."},
+  {t:"Remove the drives and keep them in an unlocked storeroom until space is needed",ok:false,x:"Indefinite storage of readable drives in an unsecured room is a retention and physical-security failure, not disposal."},
+  {t:"Have the recycler sign an NDA and ship the computers intact",ok:false,x:"An NDA does not sanitize anything; readable drives would leave city control."}
  ],
- w:"BYOD = employee owns; COPE = company owns and picks, personal use allowed; CYOD = employee chooses from an approved list, company owns."},
-
+ w:"Disposal: sanitize (overwrite, cryptographic erase, degauss) or destroy, then document and certify. Formatting and paperwork do not remove data."},
 {id:"c007",obj:"2.2",d:2,cat:"social",t:"mc",
  q:"The accounts payable clerk at a consultancy receives an email from the managing partner's actual mailbox, with a correct signature block and a reply to an existing thread, asking that a long-standing supplier's bank details be changed before the next payment run. The partner is traveling and unreachable. Which of the following BEST describes this attack?",
  o:[
@@ -541,16 +540,15 @@ export const EXAM_BANK_C = [
  ],
  w:"Shadow IT = internal, usually well-meaning, but bypasses controls. Address with easier approved alternatives, CASB visibility, and policy."},
 
-{id:"c053",obj:"4.5",d:4,cat:"ops",t:"mc",
- q:"A city council directs IT to prevent employees from reaching gambling and adult sites on work computers, while still allowing the rest of the internet. Which of the following web-filtering capabilities BEST meets this directive?",
+{id:"c053",obj:"4.9",d:4,cat:"ops",t:"mc",
+ q:"City IT receives an automated weekly report showing that a public-library kiosk PC attempted connections to 400 distinct external addresses on TCP 445 within one hour. Which of the following data sources should the analyst collect FIRST to determine whether the kiosk is infected and what it is doing?",
  o:[
-  {t:"Content categorization with block rules for the specified categories",ok:true,x:"Filters classify sites into categories; blocking the gambling and adult categories addresses the directive without maintaining a manual list or blocking unrelated sites."},
-  {t:"URL scanning for malware on every download",ok:false,x:"Malware scanning protects against malicious files but does not stop access to legal gambling or adult sites."},
-  {t:"Reputation-based blocking of low-trust domains",ok:false,x:"Reputation scores target malicious or suspicious sites; many gambling sites are reputable and would not be blocked."},
-  {t:"A manually maintained deny list of specific site names",ok:false,x:"A hand-built list can never keep up with the number of such sites and would require constant updates; category filtering scales."}
+  {t:"Endpoint logs and process telemetry from the kiosk itself (running processes, recently created executables, EDR events)",ok:true,x:"Outbound SMB scanning is worm-like behavior. Endpoint logs identify the process responsible and how it arrived, which is the fastest path from indicator to confirmation."},
+  {t:"The quarterly vulnerability scan report for the library branch",ok:false,x:"The scan shows what could be exploited, not what is running on the kiosk right now."},
+  {t:"The dashboard trend of total firewall denies across the city network",ok:false,x:"Aggregate dashboards confirm a spike at best; they do not say what is on the kiosk."},
+  {t:"The DHCP lease table to confirm the kiosk's current IP address",ok:false,x:"Useful housekeeping, but it adds nothing to the question of whether the host is compromised."}
  ],
- w:"Web filters offer categorization, reputation, URL scanning, and explicit block rules; pick the capability that matches the policy goal."},
-
+ w:"Automated reports and dashboards point you to a host; endpoint logs and process data tell you what the host is doing. Collect from the host (and preserve it) before the evidence changes."},
 {id:"c054",obj:"1.2",d:1,cat:"controls",t:"mc",
  q:"A consultancy's VPN concentrator uses a RADIUS server. Management asks for a monthly report showing which consultants connected, when, for how long, and how much data each transferred. Which of the following AAA functions provides this information?",
  o:[
