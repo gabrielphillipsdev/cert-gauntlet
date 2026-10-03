@@ -35,6 +35,12 @@ Branch `chat-8/ccna-labs`. Plan: `dev/CHAT8-PLAN.md`. Baseline on main: `node de
 - **`enable` typed at a `#` prompt** returns `Translating "enable"...` (IOS just stays in privileged EXEC). Harmless in labs; solution scripts avoid it.
 - Re-entering a `network` statement with the same address/wildcard but a different area is silently ignored (IOS prints an overlap error).
 - No OSPF MTU/EXSTART or hello/dead mismatch (documented out of scope) → the reader has no "stuck in EXSTART" items; area mismatch / passive / DR-BDR cover adjacency questions instead.
+- **ACL `remark` lines crash packet matching** (`wildcardMatch` on an entry with no `src`) → `ping` through such an ACL throws. labGrader `safeExec` turns the throw into `% Internal simulator error…` so the lab UI survives; reader scenarios avoid remarks.
+- **`show ip ospf interface brief` throws** when an OSPF interface has no state (seen with an area-mismatched segment). Also caught by `safeExec`.
+- Loopback /32s are listed as both `C` and `L` in `show ip route` (IOS lists only `C`); reader items avoid asking about it.
+- `ip ospf network point-to-point` on a loopback is accepted but the loopback is still advertised as /32 (IOS advertises the configured mask).
+- No ARP reply for a static-NAT inside-global address that sits in the outside interface's subnet (IOS answers it). Labs/PBQs publish static NAT addresses outside the connected subnet and give the ISP a route.
+- Global commands that do not enter a mode (`ip route`, `access-list`, `ip nat inside source …`) are rejected with `% Invalid input` from a sub-mode; IOS accepts them and drops to global config. Config-order PBQs include an explicit `exit` step where this matters.
 - No `access-class` on vty lines → the standard-ACL lab uses an interface ACL near the destination.
 
 ## Fidelity sources (Cisco lab item) — see dev/specs/ccna.md "Lab item fidelity"

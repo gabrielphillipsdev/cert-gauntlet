@@ -46,7 +46,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 2 · router-on-a-stick */
   {
-    id: "lab-router-on-a-stick", type: "ccna-lab", obj: "2.1.c", d: 2, title: "Inter-VLAN routing: router-on-a-stick", timeTargetMin: 6,
+    id: "lab-router-on-a-stick", type: "ccna-lab", obj: "2.1", d: 2, title: "Inter-VLAN routing: router-on-a-stick", timeTargetMin: 6,
     topology: {
       devices: { R1: { type: "router", x: 240, y: 50 }, SW1: { type: "switch", x: 240, y: 160 }, PC1: pc("10.1.10.11", "10.1.10.1", 130, 270), PC2: pc("10.1.20.12", "10.1.20.1", 350, 270) },
       links: [["R1", "g0/0", "SW1", "g0/1"], ["SW1", "f0/1", "PC1"], ["SW1", "f0/2", "PC2"]],
@@ -75,7 +75,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 3 · SVI routing on a Layer 3 switch */
   {
-    id: "lab-svi-routing", type: "ccna-lab", obj: "2.1.c", d: 2, title: "Inter-VLAN routing with SVIs", timeTargetMin: 6,
+    id: "lab-svi-routing", type: "ccna-lab", obj: "2.1", d: 2, title: "Inter-VLAN routing with SVIs", timeTargetMin: 6,
     topology: {
       devices: { SW1: { type: "l3switch", x: 240, y: 60 }, PC1: pc("10.1.10.11", "10.1.10.1", 90, 230), PC2: pc("10.1.20.12", "10.1.20.1", 240, 230), PC3: pc("10.1.30.13", "10.1.30.1", 390, 230) },
       links: [["SW1", "g1/0/1", "PC1"], ["SW1", "g1/0/2", "PC2"], ["SW1", "g1/0/3", "PC3"]],

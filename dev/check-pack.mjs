@@ -18,10 +18,9 @@ import { readdirSync } from "node:fs";
 for (const f of readdirSync(path.join(root, "core/sims")).filter(f => f.endsWith(".js") && !["registry.js", "ui.js"].includes(f)).sort()) await import(pathToFileURL(path.join(root, "core/sims", f)));
 await import(pathToFileURL(path.join(root, "core/sims/kql/drill.js")));     /* KQL Lab sim (Chat 6) */
 await import(pathToFileURL(path.join(root, "core/exam/msitems.js")));      /* hot-area sim + Microsoft exam item types (Chat 6) */
-const types = new Set(simTypes());
-
 const m = (await import(pathToFileURL(path.join(root, `packs/${id}/pack.js`)))).default;
 const c = await m.load();
+const types = new Set(simTypes());   /* read after load(): packs may import sim modules from subfolders (CCNA: core/sims/ios/ui) */
 const OBJ_RE = m.objPattern ? new RegExp(m.objPattern) : /^[1-9]\.[1-9][0-9]?$/;   /* packs with multi-level objective ids (Microsoft skills bullets) declare objPattern */
 const OBJ = { test: o => Array.isArray(o) ? o.length > 0 && o.every(x => OBJ_RE.test(x)) : OBJ_RE.test(o || "") };   /* an item may span two bullets: obj = ["1.1.9", "1.1.7"], first is primary */
 const primary = o => Array.isArray(o) ? o[0] : o;
