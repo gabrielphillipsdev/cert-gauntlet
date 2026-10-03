@@ -51,51 +51,59 @@ SLOTS (key):
     D · inbound mail  →  mailgw   // An email security gateway applies spam, malware and SPF/DKIM/DMARC checks before delivery.
 TAKEAWAY: Inline IPS behind the firewall, VPN concentrator for remote access, forward proxy for egress, email gateway in front of the mail server. The IDS, WAF, load balancer and jump box have no job described here.
 
-[pc3] sim=hashid domain=1 obj=1.4 (Explain the importance of using appropriate cryptographic solutions)
-TITLE: Identify the hash
-PROMPT: Read the digest, name the algorithm, give its bit length.
-TASK:
-    1. Count the characters and note the encoding (hex or Base64).
-    2. Pick the algorithm that produces a digest of that length.
-    3. Enter the digest length in bits.
-(generated: a fresh problem every attempt; grader in core/sims/generators.js)
+[pc3] sim=fweditor domain=4 obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security)
+TITLE: MSP: egress filtering for a client office
+PROMPT: An MSP client's firewall sits between its workstation VLAN, its server VLAN and the internet. The inherited table lets almost anything out. Edit, add, delete and reorder rules until it enforces the MSP's egress standard. Rules are evaluated top-down.
+TASKS:
+    - The threat-intel range 203.0.113.0/24 is blocked for every source, web traffic included.
+    - Workstations (10.60.20.0/24) may browse the internet on TCP 80 and TCP 443.
+    - Workstations resolve names only through the internal DNS server (10.60.10.53, UDP 53); only that server may send DNS to the internet.
+    - Only the mail server (10.60.10.25) may send SMTP (TCP 25) to the internet.
+    - The MSP management VPN (10.99.0.0/24) may reach the client server VLAN (10.60.10.0/24) on TCP 3389 only. Everything else is denied.
+NETWORKS: any=Any, 10.60.20.0/24=Workstations, 10.60.10.0/24=Server VLAN, 10.60.10.53=Internal DNS server, 10.60.10.25=Mail server, 10.99.0.0/24=MSP management VPN, 203.0.113.0/24=Threat-intel range
+STARTING RULES (top-down, first match):
+    1. allow 10.60.20.0/24 → any any/any
+    2. deny any → 203.0.113.0/24 any/any
+    3. allow 10.60.10.25 → any tcp/25
+    4. allow 10.99.0.0/24 → 10.60.10.0/24 any/any
+HIDDEN TEST PACKETS (KEY):
+    ALLOW  10.60.20.41 → 198.51.100.80 tcp/443   // workstation web browsing over HTTPS
+    ALLOW  10.60.20.41 → 198.51.100.80 tcp/80   // workstation web browsing over HTTP
+    DENY   10.60.20.41 → 203.0.113.15 tcp/443   // the threat-intel deny must sit ABOVE the workstation web allow
+    DENY   10.60.20.41 → 198.51.100.53 udp/53   // workstations may not query outside resolvers directly (DNS tunneling path)
+    ALLOW  10.60.20.41 → 10.60.10.53 udp/53   // workstations use the internal resolver
+    ALLOW  10.60.10.53 → 198.51.100.53 udp/53   // the internal resolver forwards to the internet
+    DENY   10.60.20.41 → 198.51.100.25 tcp/25   // a workstation sending SMTP directly is a spam bot
+    ALLOW  10.60.10.25 → 198.51.100.25 tcp/25   // the mail server delivers outbound mail
+    DENY   10.60.10.25 → 203.0.113.30 tcp/25   // the threat-intel block applies to every source, the mail server included
+    ALLOW  10.99.0.14 → 10.60.10.25 tcp/3389   // MSP engineer RDP to a client server
+    DENY   10.99.0.14 → 10.60.10.25 tcp/445   // the management VPN gets RDP only, not any/any
+    DENY   10.60.20.41 → 10.60.10.25 tcp/3389   // workstations have no RDP path to the servers
+TAKEAWAY: Egress filtering: DNS and mail leave through the one server built for each, so a bot on a workstation cannot tunnel over DNS or spam over port 25, and threat-intel denies go above the web allows they must override. The MSP's management access is scoped to the one protocol it needs instead of any/any.
 
-[pc4] sim=exhibit domain=4 obj=4.3 (Explain various activities associated with vulnerability management)
-TITLE: Exhibit: vulnerability scan findings
-SETUP: An MSP runs a credentialed scan for a small law firm. Prioritize the response.
-EXHIBIT:
-    ID   HOST            FINDING                                   CVSS  EXPLOIT  EXPOSURE
-    1    web01 (DMZ)     Apache 2.4.49 path traversal CVE-2021-41773 9.8   public   internet
-    2    file01 (LAN)    SMBv1 enabled                             7.5   public   internal
-    3    hr-pc07 (LAN)   Missing browser update                    6.1   none     internal
-    4    print01 (LAN)   Default admin credentials                 8.8   trivial  internal
-    5    web01 (DMZ)     TLS 1.0 enabled                           5.3   none     internet
-    6    db01 (LAN)      Self-signed certificate                   4.3   none     internal
-  1. Which finding should be remediated FIRST?
-     * A. 1: critical CVSS, public exploit, internet-facing
-       B. 4: default credentials are trivial to abuse
-       C. 2: SMBv1 is what WannaCry used
-       D. 5: TLS 1.0 on an internet host
-     why: Prioritize by severity, exploitability AND exposure together: 9.8 with a public exploit on an internet-facing host is the most likely to be exploited today.
-  2. Finding 4 has no CVE. What is the BEST classification and fix?
-     * A. Misconfiguration; change the default password and restrict management access
-       B. Zero-day; wait for a patch
-       C. False positive; ignore
-       D. Hardware vulnerability; replace the printer
-     why: Default credentials are a configuration weakness, not a software flaw. Change them and limit who can reach the admin interface; no patch will fix it.
-  3. The firm says file01 cannot be upgraded because a legacy scanner needs SMBv1. What is the appropriate response?
-     * A. Segment and restrict access to file01, document an exception with a compensating control, and set a review date
-       B. Ignore the finding since the business accepted it
-       C. Disable SMB entirely
-       D. Mark it as a false positive
-     why: When patching is not possible, the vulnerability-response options are compensating controls plus a documented exception, not silent acceptance.
-  4. After patching web01, what confirms the work is done?
-     * A. Rescan web01 and verify finding 1 no longer appears
-       B. Close the ticket when the admin says it is patched
-       C. Wait for the next quarterly scan
-       D. Check the CVE page
-     why: Validation means rescanning (or otherwise verifying) that the finding is gone. Ticket notes and vendor pages do not prove the fix is in place.
-TAKEAWAY: Prioritize on CVSS × exploit availability × exposure, classify findings correctly (misconfiguration vs software flaw), use exceptions with compensating controls when you cannot patch, and validate with a rescan.
+[pc4] sim=console domain=4 obj=4.8 (Explain appropriate incident response activities)
+TITLE: Incident console: rogue remote-access tool at city hall
+PROMPT: The MSP's SOC sees a city permits server and a clerk's workstation holding sessions to addresses on its threat feed. You have a shell on both through the MSP's tooling. Contain it; the permits portal, printing and the MSP's own RMM agent must keep working.
+TASKS:
+    - The attacker installed a remote-access tool that imitates the MSP's RMM agent. Tell them apart by binary path, listening port and remote address.
+    - Stop each rogue service AND disable it so it does not return at boot.
+    - Block every IoC address on every host that connects to it.
+    - nginx, PostgreSQL and SSH on permits01, the print spooler on CLERK-WS12, and the genuine MSP RMM agent on both hosts (it reports to the MSP management network, 10.99.0.0/24) must keep running.
+IOCs given: ports=4899 · procs= · ips=198.51.100.140, 203.0.113.45 · malicious services must be stopped AND disabled
+HOST permits01 (linux, 10.60.10.12)
+    ! KEEP  nginx "A high performance web server" proc=nginx pid=1210 listen=tcp/443
+    ! KEEP  postgresql "PostgreSQL RDBMS" proc=postgres pid=960 listen=tcp/5432
+    ! KEEP  ssh "OpenBSD Secure Shell server" proc=sshd pid=801 listen=tcp/22
+    ! KEEP  rmm-agent "MSP RMM agent" proc=rmm-agent pid=1333 remote=10.99.0.20:443
+      leave  snmpd "SNMP agent" proc=snmpd pid=1020 listen=udp/161
+    * STOP  rmm-helper "MSP RMM helper" proc=rmmhelper pid=4470 listen=tcp/4899 remote=198.51.100.140:8080
+HOST CLERK-WS12 (windows, 10.60.20.112)
+    ! KEEP  Spooler "Print Spooler" proc=spoolsv.exe pid=1850
+    ! KEEP  RMMAgent "MSP RMM Agent" proc=rmmagent.exe pid=2240 remote=10.99.0.20:443
+      leave  W32Time "Windows Time" proc=svchost.exe pid=1380
+    * STOP  RMMAgentSvc "MSP RMM Agent Service" proc=rmmagentsvc.exe pid=5520 listen=tcp/4899 remote=198.51.100.140:8080
+KEY: block 198.51.100.140, 203.0.113.45 on every host that talks to it; stop + disable every '* STOP' service; '! KEEP' stopped = −1, other legit services stopped = −½
+TAKEAWAY: Attackers often install a second remote-access tool that imitates the one the MSP already runs, so the name cannot settle it. The genuine agent runs from its install directory and reports to the MSP management network (10.99.0.20); the rogue one runs from a hidden or ProgramData path, listens on 4899 and relays to 198.51.100.140. Stopping the genuine agent cuts off the MSP's own response capability. Block both IoC addresses on the hosts that talk to them, including the exfiltration session on permits01.
 
 [pc5] sim=appanel domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
 TITLE: Remote firm: home-office AP standard

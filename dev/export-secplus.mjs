@@ -53,6 +53,25 @@ function fmtSim(p) {
     L.push("CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1; unmarked = leave alone, −½ if changed):");
     (p.groups || [{ id: "all", label: "" }]).forEach(g => { L.push(`  ${g.label}`); p.controls.filter(x => (x.g || "all") === g.id).forEach(ct => { const lab = v => ct.t === "toggle" ? (v ? ct.on || "On" : ct.off || "Off") : v; L.push(`    ${ct.want !== undefined ? "*" : ct.crit ? "!" : " "} ${ct.l}${ct.d ? " (" + ct.d + ")" : ""}: start=${lab(ct.start)}${ct.want !== undefined ? "  →  KEY=" + lab(ct.want) : ct.crit ? "  [crit: keep]" : "  [leave alone]"}${ct.why ? "   // " + ct.why : ""}`); }); });
   }
+  /* Chat 2 sims (console / fweditor / logview) — added in Chat 9 so their keys reach the reviewer too */
+  if (p.tasks && !p.task) { L.push("TASKS:"); p.tasks.forEach(t => L.push(`    - ${t}`)); }
+  if (p.type === "console") {
+    if (p.iocs) L.push(`IOCs given: ${Object.entries(p.iocs).map(([k, v]) => `${k}=${[].concat(v).join(", ")}`).join(" · ")}${p.requireDisable ? " · malicious services must be stopped AND disabled" : ""}`);
+    p.hosts.forEach(h => {
+      L.push(`HOST ${h.name || h.id} (${h.os}, ${h.ip})`);
+      h.services.forEach(sv => L.push(`    ${sv.bad ? "* STOP" : sv.keep ? "! KEEP" : "  leave"}  ${sv.name}${sv.display ? " \"" + sv.display + "\"" : ""} proc=${sv.proc} pid=${sv.pid}${sv.port ? ` listen=${sv.proto || "tcp"}/${sv.port}` : ""}${sv.remote ? ` remote=${sv.remote}` : ""}`));
+    });
+    const ips = [].concat((p.iocs || {}).ips || []); if (ips.length) L.push(`KEY: block ${ips.join(", ")} on every host that talks to it; stop${p.requireDisable ? " + disable" : ""} every '* STOP' service; '! KEEP' stopped = −1, other legit services stopped = −½`);
+  }
+  if (p.type === "fweditor") {
+    L.push("NETWORKS: " + (p.nets || []).map(n => `${n.v}=${n.l}`).join(", "));
+    L.push("STARTING RULES (top-down, first match):"); p.rules.forEach((r, i) => L.push(`    ${i + 1}. ${r.act} ${r.src} → ${r.dst} ${r.proto || "any"}/${r.port}`));
+    L.push("HIDDEN TEST PACKETS (KEY):"); p.packets.forEach(k => L.push(`    ${k.want === "allow" || k.want === true ? "ALLOW" : "DENY "}  ${k.src} → ${k.dst} ${k.proto || "tcp"}/${k.port}${k.note ? "   // " + k.note : ""}`));
+  }
+  if (p.type === "logview") {
+    p.sources.forEach((src, si) => { L.push(`LOG ${src.name} ('*' = evidence line in the key):`); src.lines.forEach((ln, i) => L.push(`    ${(p.evidence || []).some(e => (e[0] === si || e[0] === src.name) && (e[1] === i || e[1] === ln)) ? "*" : " "} ${ln}`)); });
+    (p.qs || []).forEach((sq, i) => { L.push(`  Q${i + 1} (${sq.k}). ${sq.q}`); sq.o.forEach((o, k) => L.push(`     ${k === 0 ? "*" : " "} ${String.fromCharCode(65 + k)}. ${o}`)); if (sq.x) L.push(`     why: ${sq.x}`); });
+  }
   if (["hashid", "fwrule", "risk"].includes(p.type)) L.push("(generated: a fresh problem every attempt; grader in core/sims/generators.js)");
   if (p.why) L.push(`TAKEAWAY: ${p.why}`);
   return L.join("\n");

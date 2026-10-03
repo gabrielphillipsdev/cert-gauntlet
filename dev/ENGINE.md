@@ -26,7 +26,7 @@ core/
   sims/ios/           IOS CLI simulator engine (CCNA subset): index.js createLab/Topology/Session · device.js · topology.js (converge, ping) ·
                       cli.js (parser, modes, help, completion) · commands.js · show.js · config.js (running-config). No DOM; Chat 8 builds the lab UI.
                       Spec + out-of-scope list: dev/specs/ccna.md. Test: node dev/tests/ios-conformance.mjs
-  exam/runner.js      full exam: picker, item rendering, review grid, scoring, results, review, drill. Rules from manifest.exam.
+  exam/runner.js      full exam: picker, item rendering, review grid, scoring, results, review, drill. Rules from manifest.exam (backtrack:false = Cisco linear mode).
   exam/msitems.js     Microsoft item types (order · build · hot · series · case-study tabs), section locking, flattenBank(), "hotarea" sim (+ msitems.css)
   exam/learnpane.js   open-book Learn pane: opens learn.microsoft.com beside the exam, logs lookup time per question, results readout
   sims/kql/           KQL interpreter (kql.js API · lexer · parser · interp · funcs · values), seeded sample tables (tables.js), "kql" drill sim (drill.js + kql.css)
@@ -39,7 +39,7 @@ core/
   views/settings.js   sync link/unlink, backup/restore (merges, never wipes), reset pack
   styles.css          tokens → layout → components. Breakpoints: 768 (tablet), 1024 (two-pane exam). Safe-area insets honored.
 packs/<id>/pack.js    manifest (default export) + content modules
-dev/                  PLAN.md, this file, SYNC.md, FIDELITY-*.md, specs/, tags/, tests/, check-pack.mjs, export/
+dev/                  PLAN.md, this file, SYNC.md, FIDELITY-*.md, specs/, tags/, tests/, check-pack.mjs, check-ccna.mjs, export-*.mjs, export/
 ```
 
 ## Views and routing
@@ -115,6 +115,13 @@ Order sims accept `eq: [[i, j], ...]` — step indexes that are interchangeable 
 - Result record: `{id, t, x, fresh, practice, raw, scaled, pass, gate, dom:{d:[pts,max]}, conf, secs, pauses, timedOut, miss[], guess[], flags[], detail[]}`.
 - Layout: phone = single column; ≥1024px = sticky question-grid rail + question pane (`.xm-wrap`).
 
+## Cisco no-backtrack exams (CCNA; Chat 9)
+
+`manifest.exam.backtrack:false` makes the sitting strictly linear (`linear()` in runner.js; drill mode is exempt): no Back button, no Review button or grid, no flag, no rail/grid jumps in either direction (the ≥1024px rail becomes disabled progress cells), a "Next is final" confirm on every Next (naming question vs lab and warning when unanswered), and the last Next confirms submit instead of opening the review screen. The picker's lead states the rule and counts questions + lab items from the content. It cannot be combined with `caseFirst`/`seriesLast` (validator).
+Drag-drop items in a non-Microsoft pack: list them in `exam.bankTypes` (CCNA: `["mc","ms","order","build"]`) — NOT `itemTypes`, which turns on Microsoft sectioning. The `order`/`build` renderers and scorers in `core/exam/msitems.js` are used as-is (the runner already routes any `MS.isMs(q)` item there); the pack imports msitems.js in `load()`.
+`exam.labSlots` (CCNA) is informational for the picker; the pack fills `content.pbqs` from Chat 8's labs with `fillLabSlots()` (`packs/ccna/exam-labs.js`) and leaves a bank out until all its slots fill, so `pbqCount` is never half-met.
+Validators: `node dev/check-ccna.mjs all` (strict: v1.1 topic ids, deck↔domain, quotas, Cisco "(Choose two.)" wording, drag-drop schema) + `node dev/check-pack.mjs ccna`. E2E: `python3 dev/tests/e2e-ccna.py`. Exports: `node dev/export-ccna.mjs`.
+
 ## Microsoft-format exams (SC-200; Chat 6)
 
 Set on `manifest.exam`: `caseFirst`, `seriesLast`, `learnPane`, `itemTypes: ["mc","ms","order","build","hot","case","series"]`, optional `minMs` / `minEx` for the validator. Banks are shipped **flattened** by the pack's `load()` through `flattenBank()` (core/exam/msitems.js): a `case` unit becomes its 6–9 questions carrying `caseId/caseTitle/tabs/caseN/caseOf`, a `series` unit becomes 4 `t:"series"` questions (`id` = `unitId-n`, `s`, `ok`, `scenario`). The runner then: puts the case study first and the series last (`arrangeBank`, or `mixPick` for Random mix — one whole case + one whole series + standalone to `mixQuota`), locks the case study once the candidate leaves it (`XS.caseLocked`), and runs the series with no Back, no grid and no flag (`XS.midLocked`). Item state reuses `it.ans`: option indexes for mc/ms/hot, pool indexes in chosen order for order/build, `[1]`/`[0]` for Yes/No. Scoring is all-or-nothing per item (`order` accepts `alt` sequences; `build` with `ordered:false` is graded as a set). Per-item Learn lookups live in `it.lk = {n, ms}` and the result record gains `learn: {n, secs, right, pctUsed, pctRest, items[]}`. The mc/ms/PBQ path is unchanged, so CompTIA packs behave exactly as before.
@@ -135,4 +142,4 @@ The two new modules inject their own stylesheets (`core/exam/msitems.css`, `core
 - No HTML from content: content strings are plain text; `esc()` everything. Diagrams are the one exception (trusted SVG strings in the pack).
 - CSS: use tokens; new components get their own section in styles.css; phone first, then `@media(min-width:768px)` / `1024px`.
 - `VERSION` in `core/app.js` and `sw.js` move together when a deploy should invalidate caches.
-- Validate before PR: `node dev/tests/merge.test.mjs && node dev/check-pack.mjs <pack> && python3 dev/tests/e2e.py` (serve the repo on :8765 first). SC-200 adds `node dev/tests/kql.test.mjs && node dev/check-kql-drills.mjs && python3 dev/tests/e2e-sc200.py`. Sec+ sims: also `node dev/tests/sims.test.mjs && node dev/tests/sims-lab.test.mjs` (`python3 dev/tests/sims-e2e.py` for the Chat 2 sims). Anything under `core/sims/ios/`: also `node dev/tests/ios-conformance.mjs`.
+- Validate before PR: `node dev/tests/merge.test.mjs && node dev/check-pack.mjs <pack> && python3 dev/tests/e2e.py` (serve the repo on :8765 first). SC-200 adds `node dev/tests/kql.test.mjs && node dev/check-kql-drills.mjs && python3 dev/tests/e2e-sc200.py`. Sec+ sims: also `node dev/tests/sims.test.mjs && node dev/tests/sims-lab.test.mjs` (`python3 dev/tests/sims-e2e.py` for the Chat 2 sims). Anything under `core/sims/ios/`: also `node dev/tests/ios-conformance.mjs`. CCNA: `node dev/check-ccna.mjs all && python3 dev/tests/e2e-ccna.py`. Sec+ exam PBQs: `node dev/tests/secplus-exam-pbqs.test.mjs`.

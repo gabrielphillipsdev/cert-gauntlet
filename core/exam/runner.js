@@ -20,13 +20,18 @@ const pct = p => p[1] ? Math.round(p[0] / p[1] * 100) : 0;
 const bankQ = id => { for (const k in A.content.banks) { const q = A.content.banks[k].find(q => q.id === id); if (q) return q; } return null; };
 const pbqItem = id => { for (const k in A.content.pbqs) { const p = A.content.pbqs[k].find(p => p.id === id); if (p) return p; } return null; };
 function save() { if (XS && !XS.drill) setInprog(A.packId, XS); }
+/* backtrack:false (Cisco): no Back, no review grid, no jumping either way, no flag — every Next is final (drill mode keeps its list) */
+const linear = () => R().backtrack === false && mode !== "drill";
 
 /* ---------- picker ---------- */
 export function renderExam(app) {
   A = app; if (timer) { clearInterval(timer); timer = null; }
   const r = R(); const saved = getInprog(A.packId); const gate = gateStatus(); const H = hist();
   let html = `<div class="tb"><button data-go="home">Exit</button><div class="labtitle">Full exam</div></div>`;
-  html += `<p class="lead">${r.count} questions, ${r.minutes} minutes${r.pbqFirst ? ", PBQs first" : ""}, scored ${r.scaleMin}–${r.scaleMax} with ${r.pass} to pass. No pause, no feedback until you submit — exactly like the real thing. Mark how sure you are on every question; the report shows whether your guesses beat chance.</p>`;
+  const nP = Math.max(0, ...Object.values(A.content.pbqs || {}).map(l => l.length)), nQ = Math.max(0, ...Object.values(A.content.banks || {}).map(l => l.length));
+  const shape = r.backtrack === false ? `${nQ} questions${nP ? ` + ${nP} lab items mixed in` : ""}` : `${r.count} questions`;
+  html += `<p class="lead">${shape}, ${r.minutes} minutes${r.pbqFirst ? ", PBQs first" : ""}, scored ${r.scaleMin}–${r.scaleMax} with ${r.pass} to pass. ${r.backtrack === false ? "<b>No going back:</b> every Next is final — no Back button, no review screen, no skipping ahead. " : ""}No pause, no feedback until you submit — exactly like the real thing. Mark how sure you are on every question; the report shows whether your guesses beat chance.</p>`;
+  if (r.labSlots && !nP) html += `<p class="lead tight dim">Lab items join each exam once the IOS labs land (Chat 8); until then every exam is its ${nQ} questions.</p>`;
   html += `<div class="gatebox"><div class="gt">READINESS GATE · two consecutive fresh exams at ${r.gate.all}%+, every domain ${r.gate.dom}%+</div><div class="gv">${gate.html}</div></div>`;
   if (saved && !saved.done) {
     const left = r.minutes * 60000 - saved.elapsed;
@@ -35,7 +40,7 @@ export function renderExam(app) {
   html += `<div class="modebar"><span>Mode</span><button class="pill ${mode !== "practice" ? "on" : ""}" data-m="exam">Exam</button><button class="pill ${mode === "practice" ? "on" : ""}" data-m="practice">Practice</button><span class="hint">${mode === "practice" ? "Pausable, never counts toward the gate." : "Timed, no pause. Fresh attempts count toward the gate."}</span></div>`;
   for (const x of Object.keys(r.banks)) {
     const n = taken(x); const last = H.filter(h => h.x === x).slice(-1)[0];
-    html += `<button class="deck" data-x="${x}"><span class="jack" style="background:${n ? "var(--muted)" : "var(--green)"}"></span><span><span class="t">${esc(r.banks[x].name)}<span class="fresh ${n ? "no" : "yes"}">${n ? "seen " + n + "×" : "fresh"}</span></span><span class="s">${esc(r.banks[x].sub || "")}</span></span><span class="n" style="color:${last ? (last.pass ? "var(--green)" : "var(--red)") : "var(--muted)"}">${last ? last.scaled + "<br><small>" + last.raw + "%</small>" : r.count + " Qs"}</span></button>`;
+    html += `<button class="deck" data-x="${x}"><span class="jack" style="background:${n ? "var(--muted)" : "var(--green)"}"></span><span><span class="t">${esc(r.banks[x].name)}<span class="fresh ${n ? "no" : "yes"}">${n ? "seen " + n + "×" : "fresh"}</span></span><span class="s">${esc(r.banks[x].sub || "")}</span></span><span class="n" style="color:${last ? (last.pass ? "var(--green)" : "var(--red)") : "var(--muted)"}">${last ? last.scaled + "<br><small>" + last.raw + "%</small>" : ((A.content.banks[x] || []).length + ((A.content.pbqs || {})[x] || []).length) + " Qs"}</span></button>`;
   }
   html += `<button class="deck" data-x="mix"><span class="jack" style="background:var(--amber)"></span><span><span class="t">Random mix</span><span class="s">Drawn across all banks to the real domain weights. Not fresh once you've taken the others, but good volume.</span></span><span class="n">${r.count} Qs</span></button>`;
   if (H.length) {
@@ -126,7 +131,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden && XS 
 /* ---------- item rendering ---------- */
 function topbar(label, opts = {}) {
   const left = R().minutes * 60000 - XS.elapsed;
-  return `<div class="tb"><button id="xmleave">${mode === "drill" ? "Exit" : XS.practice ? "Pause" : "Leave"}</button><span class="xm-count">${label}</span><span class="sp"></span>${mode === "drill" ? "" : LP.buttonHtml(R())}${mode === "drill" ? "" : `<span class="xm-clock ${left < 5 * 60000 ? "low" : ""}" id="xmclock">${fmtClock(left)}</span>`}${opts.noGrid ? "" : `<button class="gridbtn" id="xmgridbtn">${mode === "drill" ? "List" : "Review"}</button>`}</div>`;
+  return `<div class="tb"><button id="xmleave">${mode === "drill" ? "Exit" : XS.practice ? "Pause" : "Leave"}</button><span class="xm-count">${label}</span><span class="sp"></span>${mode === "drill" ? "" : LP.buttonHtml(R())}${mode === "drill" ? "" : `<span class="xm-clock ${left < 5 * 60000 ? "low" : ""}" id="xmclock">${fmtClock(left)}</span>`}${opts.noGrid || linear() ? "" : `<button class="gridbtn" id="xmgridbtn">${mode === "drill" ? "List" : "Review"}</button>`}</div>`;
 }
 function confHtml(it) {
   return `<div class="xm-conf"><div class="cl">HOW SURE ARE YOU?</div><div class="cb">${CONF.map((c, i) => `<button data-c="${i}" class="${it.conf === i ? "on" + i : ""}">${c}<br><span>${CONFLONG[i]}</span></button>`).join("")}</div></div>`;
@@ -140,16 +145,20 @@ function renderItem() {
   if (msExam && mode !== "drill") html += LP.bannerHtml(XS, it);
   html += `<div class="xm-main">${it.k === "q" ? questionHtml(it) : pbqShell(it)}${confHtml(it)}`;
   const canBack = msExam ? nav.back : (r.backtrack !== false && XS.i > 0);
-  html += `<div class="xm-nav">${r.backtrack === false || inSeries ? "" : `<button id="xmprev" ${canBack ? "" : "disabled"}>Back</button>`}${nav.flag ? `<button class="flag ${it.fl ? "on" : ""}" id="xmflag" title="Flag for review">⚑</button>` : ""}${XS.i === n - 1 ? `<button class="submit" id="xmnext">Finish &amp; submit</button>` : `<button class="next" id="xmnext">Next</button>`}</div></div>`;
-  A.el.innerHTML = `<div class="xm-wrap ${inSeries ? "single" : ""}">${inSeries ? "" : railHtml()}<div class="xm-pane">${html}</div></div>`;
+  html += `<div class="xm-nav">${r.backtrack === false || inSeries ? "" : `<button id="xmprev" ${canBack ? "" : "disabled"}>Back</button>`}${nav.flag && !linear() ? `<button class="flag ${it.fl ? "on" : ""}" id="xmflag" title="Flag for review">⚑</button>` : ""}${XS.i === n - 1 ? `<button class="submit" id="xmnext">Finish &amp; submit</button>` : `<button class="next" id="xmnext">Next</button>`}</div></div>`;
+  A.el.innerHTML = `<div class="xm-wrap ${inSeries ? "single" : ""}">${inSeries ? "" : railHtml()}<div class="xm-pane">${html}</div></div>`;   /* linear exams get a read-only progress rail */
   A.el.scrollTop = 0;
   $("#xmleave").onclick = () => { if (mode === "drill") drillDone(); else leave(); };
   const gb = $("#xmgridbtn"); if (gb) gb.onclick = () => renderGrid();
   const prev = $("#xmprev"); if (prev) prev.onclick = () => { if (XS.i > 0 && canBack) { XS.i--; save(); renderItem(); } };
   const fb = $("#xmflag"); if (fb) fb.onclick = () => { it.fl = !it.fl; fb.classList.toggle("on", it.fl); save(); };
   $("#xmnext").onclick = () => {
-    if (XS.i === n - 1) { if (inSeries && !XS.drill) { if (ask("Submit the exam now?")) submit(false); return; } renderGrid(true); return; }
-    if (r.backtrack === false && !ask("Next is final on this exam — you can't come back to this question.")) return;
+    const blank = answered(it) ? "" : " This item is unanswered and will be scored as wrong.";
+    if (XS.i === n - 1) {
+      if (linear()) { if (ask(`This is the last item. Submit the exam now?${blank}`)) submit(false); return; }
+      if (inSeries && !XS.drill) { if (ask("Submit the exam now?")) submit(false); return; } renderGrid(true); return;
+    }
+    if (linear() && !ask(`Next is final — once you move on you can't come back to this ${it.k === "p" ? "lab" : "question"}.${blank}`)) return;
     if (!MS.beforeMove(XS, XS.i + 1, r, bankQ)) return;
     XS.i++; save(); renderItem();
   };
@@ -167,14 +176,15 @@ function gridCell(it, i) {
 function jumpTo(i) {
   const r = R();
   if (MS.applies(r)) { if (i === XS.i) return renderItem(); if (!MS.canJump(XS, i, r, bankQ)) { const m = MS.gridJumpMessage(XS, i, r, bankQ); if (m) alert(m); return; } if (!MS.beforeMove(XS, i, r, bankQ)) return; }
-  else if (r.backtrack === false && i < XS.i) return;
+  else if (linear() && i !== XS.i) return;
   XS.i = i; save(); renderItem();
 }
 function railHtml() {
   const ms = MS.applies(R());
+  if (linear()) return `<aside class="xm-rail"><div class="xm-grid lin">${XS.items.map((it, i) => `<button type="button" disabled tabindex="-1" aria-disabled="true" class="${i < XS.i ? "ans" : ""} ${i === XS.i ? "cur" : ""} ${it.k === "p" && i <= XS.i ? "pb" : ""}">${i + 1}</button>`).join("")}</div><div class="xm-legend">Progress only — this exam doesn't allow going back or skipping ahead.</div></aside>`;
   return `<aside class="xm-rail"><div class="xm-grid">${XS.items.map((it, i) => gridCell(it, i)).join("")}</div><div class="xm-legend">filled = answered · dot = flagged · red edge = no clue${ms ? " · teal = case study · amber = solution series · dotted = locked" : " · dashed = PBQ"}</div></aside>`;
 }
-function bindRail() { $$(".xm-rail .xm-grid button").forEach(b => b.onclick = () => jumpTo(+b.dataset.i)); }
+function bindRail() { if (linear()) return; $$(".xm-rail .xm-grid button").forEach(b => b.onclick = () => jumpTo(+b.dataset.i)); }
 function questionHtml(it) {
   const q = bankQ(it.id); const D = A.content.diagrams || {};
   if (MS.isMs(q)) return MS.caseTabsHtml(q, it) + MS.questionHtml(q, it, domName(q.d));
@@ -208,6 +218,7 @@ function mountPbq(it, reveal) {
 }
 function answered(it) { if (it.k === "q") { const q = bankQ(it.id); return MS.isMs(q) ? MS.answeredMs(q, it) : it.ans.length > 0; } return sim(it.type).answered(pbqItem(it.id), it.st); }
 function renderGrid(final) {
+  if (linear()) return renderItem();                      /* no review screen on a no-backtrack exam */
   const n = XS.items.length, un = XS.items.filter(it => !answered(it)).length, fl = XS.items.filter(it => it.fl).length;
   const ms = MS.applies(R()); const nextIsSeries = ms && final && XS.i < n - 1;
   let html = topbar("Review", { noGrid: true });

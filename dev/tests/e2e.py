@@ -80,6 +80,9 @@ with sync_playwright() as p:
     A.wait_for_timeout(2500); B.wait_for_timeout(2500)
     A.evaluate("document.dispatchEvent(new Event('visibilitychange'))"); B.evaluate("window.dispatchEvent(new Event('focus'))"); A.wait_for_timeout(1500); B.wait_for_timeout(1500)
     A.evaluate("window.dispatchEvent(new Event('focus'))"); A.wait_for_timeout(1500)
+    # Gist PATCH has no compare-and-swap: when both devices push in the same window, one write overwrites the other and the
+    # loser's record comes back on its next pull→merge→push. Convergence therefore needs a final pull on B as well (flaked ~50% without it).
+    B.evaluate("window.dispatchEvent(new Event('focus'))"); B.wait_for_timeout(1500)
     sa, sb = state(A)["packs"]["secplus"], state(B)["packs"]["secplus"]
     assert set(sa["cards"]) == set(sb["cards"]) and len(sa["cards"]) >= nA + 1, f"card sets differ: {len(sa['cards'])} vs {len(sb['cards'])}"
     tot_a = sum(c["seen"] for c in sa["cards"].values()); tot_b = sum(c["seen"] for c in sb["cards"].values())

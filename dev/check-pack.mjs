@@ -102,9 +102,14 @@ Object.entries(c.pbqs || {}).forEach(([x, list]) => {
 const allPbqIds = [...(c.lab || []), ...(c.generators || []), ...Object.values(c.pbqs || {}).flat()].map(p => p.id);
 allPbqIds.forEach((id, i) => { if (allPbqIds.indexOf(id) !== i) bad(`duplicate PBQ id ${id}`); });
 
+/* exam-level rules */
+if (m.exam.backtrack === false && (m.exam.caseFirst || m.exam.seriesLast)) bad("exam.backtrack:false cannot be combined with Microsoft sectioning (caseFirst/seriesLast)");
+if (m.exam.bankTypes && (m.exam.itemTypes || []).length) bad("declare drag-drop types in exam.bankTypes OR exam.itemTypes, not both");
+const qsum = Object.values(m.exam.mixQuota || {}).reduce((a, b) => a + b, 0); if (Object.keys(c.banks || {}).length && qsum !== m.exam.count - (m.exam.pbqCount ?? 5)) bad(`mixQuota sums to ${qsum}, expected ${m.exam.count - (m.exam.pbqCount ?? 5)}`);
+
 /* exam banks (Microsoft-format packs declare exam.itemTypes and ship banks flattened: case questions as x001-n, series solutions as x040-n) */
 const nQ = m.exam.count - (m.exam.pbqCount ?? 5);
-const allowed = new Set(m.exam.itemTypes || ["mc", "ms"]);
+const allowed = new Set(m.exam.bankTypes || m.exam.itemTypes || ["mc", "ms"]);   /* bankTypes: drag-drop item types in a pack that does NOT use Microsoft sectioning (CCNA) */
 Object.entries(c.banks || {}).forEach(([x, bank]) => {
   if (bank.length !== nQ) bad(`bank ${x} has ${bank.length} questions, expected ${nQ}`);
   const byD = {}; let ms = 0, ex = 0;
@@ -125,7 +130,7 @@ Object.entries(c.banks || {}).forEach(([x, bank]) => {
     if (q.caseId && !(q.tabs && ["overview", "environment", "requirements", "issues"].every(k => q.tabs[k] && q.tabs[k].length >= 300))) bad(`bank ${q.id} case tabs incomplete`);
     if (q.ex) ex++;
     (q.o || []).forEach((o, i) => { if (!o.t || !o.x) bad(`bank ${q.id} option ${i} missing t/x`); if (o.t.length > 130) bad(`bank ${q.id} option ${i} > 130 chars`); });
-    if (!q.w) bad(`bank ${q.id} missing w`); if ((q.q || "").length > (m.exam.itemTypes ? 520 : 420)) bad(`bank ${q.id} stem > ${m.exam.itemTypes ? 520 : 420} chars`);
+    if (!q.w) bad(`bank ${q.id} missing w`); if ((q.q || "").length > (m.exam.itemTypes || m.exam.bankTypes ? 520 : 420)) bad(`bank ${q.id} stem > ${m.exam.itemTypes || m.exam.bankTypes ? 520 : 420} chars`);
     if (stems.has(q.q)) bad(`bank ${q.id} duplicate stem`); stems.add(q.q);
   });
   for (const d in m.exam.mixQuota) if ((byD[d] || 0) !== m.exam.mixQuota[d]) bad(`bank ${x} domain ${d}: ${byD[d] || 0} questions, quota ${m.exam.mixQuota[d]}`);
@@ -140,6 +145,7 @@ const objs = Object.keys(cover).sort((a, b) => a.localeCompare(b, undefined, { n
 console.log(`pack ${id}: ${c.cards.length} cards · ${(c.exq || []).length} exq · ${(c.twins || []).length} twins · ${(c.lab || []).length} lab + ${(c.generators || []).length} generators · banks ${Object.values(c.banks || {}).map(b => b.length).join("/")} · exam PBQs ${Object.values(c.pbqs || {}).map(b => b.length).join("/")}`);
 console.log("objective coverage: " + objs.map(o => `${o}:${cover[o]}`).join(" "));
 const examOnly = {}; [...Object.values(c.banks || {}).flat(), ...Object.values(c.pbqs || {}).flat()].forEach(i => { examOnly[primary(i.obj)] = (examOnly[primary(i.obj)] || 0) + 1; });
-const missing = objs.filter(o => !examOnly[o]); if (missing.length) console.log("WARN objectives with no exam-bank items: " + missing.join(", "));
+const related = (o, e) => o === e || o.startsWith(e + ".") || e.startsWith(o + ".");   /* "1.13" (topic) and "1.13.a" (sub-topic) cover each other */
+const missing = objs.filter(o => !Object.keys(examOnly).some(e => related(o, e))); if (missing.length) console.log("WARN objectives with no exam-bank items: " + missing.join(", "));
 if (problems.length) { console.log(`FAIL (${problems.length})`); problems.slice(0, 60).forEach(p => console.log(" - " + p)); process.exit(1); }
 console.log("PASS");

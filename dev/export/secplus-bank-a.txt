@@ -47,49 +47,61 @@ DEVICE: AP-HS-LIB-02 — fields not listed under KEY must stay at their START va
       Admin password: start=Changed to a unique strong password
 TAKEAWAY: Device certificates → EAP-TLS over WPA3-Enterprise with RADIUS. Client isolation for untrusted peers. A shared passphrase would mean one leaked password for the whole district.
 
-[pa3] sim=hashid domain=1 obj=1.4 (Explain the importance of using appropriate cryptographic solutions)
-TITLE: Identify the hash
-PROMPT: Read the digest, name the algorithm, give its bit length.
-TASK:
-    1. Count the characters and note the encoding (hex or Base64).
-    2. Pick the algorithm that produces a digest of that length.
-    3. Enter the digest length in bits.
-(generated: a fresh problem every attempt; grader in core/sims/generators.js)
+[pa3] sim=fweditor domain=3 obj=3.2 (Given a scenario, apply security principles to secure enterprise infrastructure)
+TITLE: Hospital: fix the internal segmentation firewall
+PROMPT: A contractor left the hospital's internal firewall half-built. Edit, add, delete and reorder rules until the table enforces the segmentation policy. Rules are evaluated top-down.
+TASKS:
+    - Guest Wi-Fi (10.40.90.0/24) may browse the internet on TCP 80 and TCP 443 and must reach nothing inside the hospital (10.40.0.0/16).
+    - Staff workstations (10.40.20.0/24) may reach the EHR server (10.40.30.10) on TCP 443 and nothing else on the Server VLAN.
+    - The clinical device VLAN (10.40.10.0/24) may reach only the pump management server (10.40.30.30), on TCP 8443.
+    - The imaging vendor's jump box (10.40.50.5) may reach the PACS server (10.40.30.20) on TCP 22 only.
+    - Everything not listed is denied, including any connection into the clinical device VLAN.
+NETWORKS: any=Any, 10.40.0.0/16=Hospital internal, 10.40.10.0/24=Clinical device VLAN, 10.40.20.0/24=Staff workstations, 10.40.30.0/24=Server VLAN, 10.40.30.10=EHR server, 10.40.30.20=PACS server, 10.40.30.30=Pump management server, 10.40.50.5=Vendor jump box, 10.40.90.0/24=Guest Wi-Fi
+STARTING RULES (top-down, first match):
+    1. allow 10.40.90.0/24 → any any/any
+    2. deny 10.40.90.0/24 → 10.40.0.0/16 any/any
+    3. allow 10.40.20.0/24 → 10.40.30.0/24 any/any
+    4. allow 10.40.10.0/24 → 10.40.30.30 tcp/8443
+HIDDEN TEST PACKETS (KEY):
+    ALLOW  10.40.90.33 → 198.51.100.20 tcp/443   // guests may browse the web over HTTPS
+    ALLOW  10.40.90.33 → 198.51.100.20 tcp/80   // guests may browse the web over HTTP
+    DENY   10.40.90.33 → 198.51.100.20 tcp/22   // guests get web only; an any/any guest rule is broader than the policy
+    DENY   10.40.90.33 → 10.40.30.10 tcp/443   // the guest-to-internal deny must sit ABOVE the guest web allow, or HTTPS to the EHR gets through
+    DENY   10.40.90.33 → 10.40.10.21 tcp/8443   // guests must never reach clinical devices
+    ALLOW  10.40.20.15 → 10.40.30.10 tcp/443   // staff to the EHR over HTTPS
+    DENY   10.40.20.15 → 10.40.30.20 tcp/22   // staff reach the EHR only, not the whole Server VLAN
+    DENY   10.40.20.15 → 10.40.30.30 tcp/8443   // the pump management server is for the clinical VLAN only
+    ALLOW  10.40.10.21 → 10.40.30.30 tcp/8443   // infusion pumps report to their management server
+    DENY   10.40.10.21 → 10.40.30.10 tcp/443   // clinical devices get one destination and one port
+    ALLOW  10.40.50.5 → 10.40.30.20 tcp/22   // vendor engineers reach PACS through the jump box
+    DENY   10.40.50.5 → 10.40.30.10 tcp/22   // the vendor path is PACS only
+    DENY   10.40.20.15 → 10.40.10.21 tcp/8443   // nothing initiates into the clinical device VLAN
+TAKEAWAY: Segmentation is narrow allows plus denies placed ABOVE any broader allow they must override: the guest-to-internal deny only works if it is evaluated before the guest web allow. Clinical devices get one destination and one port, vendor access goes through the jump box, and staff reach the EHR on HTTPS rather than the whole Server VLAN.
 
-[pa4] sim=exhibit domain=4 obj=4.9 (Given a scenario, use data sources to support an investigation)
-TITLE: Exhibit: read the authentication log
-SETUP: A hospital SOC receives the following SIEM entries for a nurse's account.
-EXHIBIT:
-    07:58:12  LOGIN OK      user=r.patel  src=10.40.12.55   geo=Cincinnati US  mfa=push
-    08:03:40  LOGIN OK      user=r.patel  src=185.220.101.9  geo=Frankfurt DE   mfa=push
-    08:04:02  RULE ADDED    mailbox=r.patel  action=forward-all  to=rpatel.backup@mail-relay.example
-    08:04:30  LOGIN FAIL x6 user=r.patel  src=185.220.101.9  reason=bad_password
-    08:05:10  MFA PROMPT    user=r.patel  result=approved   src=185.220.101.9
-  1. Which indicator MOST strongly suggests the account is compromised?
-     * A. Impossible travel: two successful logins 5 minutes apart from Cincinnati and Frankfurt
-       B. Six failed passwords at 08:04
-       C. The user logged in before 08:00
-       D. MFA push was used instead of a hardware key
-     why: Two successful sessions from continents apart within minutes is the impossible-travel indicator. Failed passwords alone could be a typo; login time and MFA method are normal.
-  2. What does the 08:04:02 entry MOST likely represent?
-     * A. Persistence and exfiltration: the attacker set an auto-forward so mail keeps flowing out even after a password reset
-       B. A legitimate out-of-office rule
-       C. A mail-server maintenance task
-       D. Evidence the account was locked out
-     why: External auto-forward rules are a classic business email compromise step: they survive credential resets and quietly copy every message to the attacker.
-  3. What does the 08:05:10 entry suggest about the MFA control?
-     * A. The user approved a push they did not initiate (MFA fatigue / prompt bombing), so number matching or a phishing-resistant factor is needed
-       B. MFA is working as designed
-       C. The attacker has the user's hardware token
-       D. MFA was never enabled on the account
-     why: A push approved from the attacker's IP after a burst of failures is prompt-bombing: the victim tapped Approve to make the prompts stop. Number matching or FIDO2 keys defeat it.
-  4. Which of the following is the BEST FIRST action?
-     * A. Disable the account, revoke all sessions and tokens, and remove the forwarding rule
-       B. Email the user to ask whether they are traveling
-       C. Reset the password only
-       D. Open a ticket with the mail vendor
-     why: Contain first: cut the attacker's access (account, sessions, rule). Asking the user or resetting only the password leaves active sessions and the forward in place.
-TAKEAWAY: Impossible travel plus a new external forward plus an approved MFA push after failures = takeover with MFA fatigue. Contain (disable, revoke, remove rule), then investigate.
+[pa4] sim=console domain=4 obj=4.8 (Explain appropriate incident response activities)
+TITLE: Incident console: school district student-records breach
+PROMPT: Threat intel matched outbound traffic from the school district's student information system (SIS) server and a registrar's workstation. You have a shell on both. Contain the incident; enrollment and transcript printing must stay up.
+TASKS:
+    - On each host, find the service that matches the IoC list. Compare listening ports and remote addresses; names alone prove nothing.
+    - Stop each malicious service AND disable it so it does not return at boot.
+    - Block every IoC address on the host that connects to it.
+    - Apache, MariaDB and SSH on sis01 and the print spooler on REG-PC04 must keep running.
+    - The district runs its own backup and transcript-print agents that talk only to district (10.20.x.x) addresses; they must keep running too.
+IOCs given: ports=9001, 5555 · procs= · ips=198.51.100.61, 203.0.113.88 · malicious services must be stopped AND disabled
+HOST sis01 (linux, 10.20.30.15)
+    ! KEEP  apache2 "The Apache HTTP Server" proc=apache2 pid=1102 listen=tcp/443
+    ! KEEP  mariadb "MariaDB database server" proc=mariadbd pid=988 listen=tcp/3306
+    ! KEEP  ssh "OpenBSD Secure Shell server" proc=sshd pid=790 listen=tcp/22
+    ! KEEP  sis-backup "District SIS nightly backup agent" proc=sis-backupd pid=1544 listen=tcp/8400 remote=10.20.0.40:8400
+      leave  chrony "chrony, an NTP client/server" proc=chronyd pid=702
+    * STOP  dbus-sync "D-Bus session sync" proc=dbus-sync pid=4412 listen=tcp/9001 remote=198.51.100.61:443
+HOST REG-PC04 (windows, 10.20.40.24)
+    ! KEEP  Spooler "Print Spooler" proc=spoolsv.exe pid=1840
+    ! KEEP  TranscriptPrint "SIS Transcript Print Bridge" proc=tprintbridge.exe pid=2290 listen=tcp/9101 remote=10.20.30.15:443
+      leave  W32Time "Windows Time" proc=svchost.exe pid=1376
+    * STOP  WinHttpProxySync "WinHTTP Proxy Sync" proc=wphsync.exe pid=6630 listen=tcp/5555 remote=203.0.113.88:8443
+KEY: block 198.51.100.61, 203.0.113.88 on every host that talks to it; stop + disable every '* STOP' service; '! KEEP' stopped = −1, other legit services stopped = −½
+TAKEAWAY: Names prove nothing: dbus-sync and WinHttpProxySync sound like system components, while sis-backupd and tprintbridge.exe look odd. The listening ports (9001, 5555), the remote addresses on the threat feed and the binary paths (a web uploads folder, a user's AppData) identify the malicious services; the agents that talk only to district addresses are the district's own. Stop AND disable so the unit file or auto-start entry cannot revive them, then block each IoC address on the host that talks to it.
 
 [pa5] sim=hardening domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
 TITLE: Software company: harden the build server

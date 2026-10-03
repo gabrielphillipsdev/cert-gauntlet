@@ -1,0 +1,83 @@
+{
+  "exam": "200-301",
+  "title": "Cisco Certified Network Associate (CCNA) v1.1",
+  "source": "https://learningcontent.cisco.com/documents/marketing/exam-topics/200-301-CCNA-v1.1.pdf",
+  "fetched": "2026-10-03",
+  "note": "Exam topic text is Cisco's; it is reproduced here only as the tag map. Item text in packs/ccna/ is original. v2.0 replaces v1.1 on Feb 3, 2027 (PLAN.md §1). obj ids: the topic number (\"3.4\") or a sub-topic (\"3.4.c\") — the validator accepts either; the first digit is the domain.",
+  "format": {
+    "durationMin": 120,
+    "questionRange": [100, 120],
+    "scale": [300, 1000],
+    "passScore": "not published by Cisco (varies per exam form; see dev/specs/ccna.md §1)",
+    "backtrack": false,
+    "itemTypes": ["mc", "ms (all-or-nothing)", "drag-drop", "lab (IOS terminals, partial credit)"],
+    "scaleSource": "https://learningnetwork.cisco.com/blogs/certifications-and-labs-delivery/2016/10/10/demystifying-the-cisco-score-report"
+  },
+  "domains": [
+    { "d": 1, "name": "Network Fundamentals", "weight": 20, "topics": {
+      "1.1": { "t": "Explain the role and function of network components", "cat": "parts", "sub": { "a": "Routers", "b": "Layer 2 and Layer 3 switches", "c": "Next-generation firewalls and IPS", "d": "Access points", "e": "Controllers", "f": "Endpoints", "g": "Servers", "h": "PoE" } },
+      "1.2": { "t": "Describe characteristics of network topology architectures", "cat": "parts", "sub": { "a": "Two-tier", "b": "Three-tier", "c": "Spine-leaf", "d": "WAN", "e": "Small office/home office (SOHO)", "f": "On-premises and cloud" } },
+      "1.3": { "t": "Compare physical interface and cabling types", "cat": "parts", "sub": { "a": "Single-mode fiber, multimode fiber, copper", "b": "Connections (Ethernet shared media and point-to-point)" } },
+      "1.4": { "t": "Identify interface and cable issues (collisions, errors, mismatch duplex, and/or speed)", "cat": "parts" },
+      "1.5": { "t": "Compare TCP to UDP", "cat": "tcpip" },
+      "1.6": { "t": "Configure and verify IPv4 addressing and subnetting", "cat": "tcpip" },
+      "1.7": { "t": "Describe private IPv4 addressing", "cat": "tcpip" },
+      "1.8": { "t": "Configure and verify IPv6 addressing and prefix", "cat": "ipv6" },
+      "1.9": { "t": "Describe IPv6 address types", "cat": "ipv6", "sub": { "a": "Unicast (global, unique local, and link local)", "b": "Anycast", "c": "Multicast", "d": "Modified EUI 64" } },
+      "1.10": { "t": "Verify IP parameters for Client OS (Windows, Mac OS, Linux)", "cat": "tcpip" },
+      "1.11": { "t": "Describe wireless principles", "cat": "wlbasics", "sub": { "a": "Nonoverlapping Wi-Fi channels", "b": "SSID", "c": "RF", "d": "Encryption" } },
+      "1.12": { "t": "Explain virtualization fundamentals (server virtualization, containers, and VRFs)", "cat": "wlbasics" },
+      "1.13": { "t": "Describe switching concepts", "cat": "switching", "sub": { "a": "MAC learning and aging", "b": "Frame switching", "c": "Frame flooding", "d": "MAC address table" } }
+    } },
+    { "d": 2, "name": "Network Access", "weight": 20, "topics": {
+      "2.1": { "t": "Configure and verify VLANs (normal range) spanning multiple switches", "cat": "vlan", "sub": { "a": "Access ports (data and voice)", "b": "Default VLAN", "c": "InterVLAN connectivity" } },
+      "2.2": { "t": "Configure and verify interswitch connectivity", "cat": "vlan", "sub": { "a": "Trunk ports", "b": "802.1Q", "c": "Native VLAN" } },
+      "2.3": { "t": "Configure and verify Layer 2 discovery protocols (Cisco Discovery Protocol and LLDP)", "cat": "l2link" },
+      "2.4": { "t": "Configure and verify (Layer 2/Layer 3) EtherChannel (LACP)", "cat": "l2link" },
+      "2.5": { "t": "Interpret basic operations of Rapid PVST+ Spanning Tree Protocol", "cat": "stp", "sub": { "a": "Root port, root bridge (primary/secondary), and other port names", "b": "Port states and roles", "c": "PortFast", "d": "Root guard, loop guard, BPDU filter, and BPDU guard" } },
+      "2.6": { "t": "Describe Cisco Wireless Architectures and AP modes", "cat": "wlan" },
+      "2.7": { "t": "Describe physical infrastructure connections of WLAN components (AP, WLC, access/trunk ports, and LAG)", "cat": "wlan" },
+      "2.8": { "t": "Describe network device management access (Telnet, SSH, HTTP, HTTPS, console, TACACS+/RADIUS, and cloud managed)", "cat": "mgmt" },
+      "2.9": { "t": "Interpret the wireless LAN GUI configuration for client connectivity, such as WLAN creation, security settings, QoS profiles, and advanced settings", "cat": "wlan" }
+    } },
+    { "d": 3, "name": "IP Connectivity", "weight": 25, "topics": {
+      "3.1": { "t": "Interpret the components of routing table", "cat": "rtable", "sub": { "a": "Routing protocol code", "b": "Prefix", "c": "Network mask", "d": "Next hop", "e": "Administrative distance", "f": "Metric", "g": "Gateway of last resort" } },
+      "3.2": { "t": "Determine how a router makes a forwarding decision by default", "cat": "rtable", "sub": { "a": "Longest prefix match", "b": "Administrative distance", "c": "Routing protocol metric" } },
+      "3.3": { "t": "Configure and verify IPv4 and IPv6 static routing", "cat": "static", "sub": { "a": "Default route", "b": "Network route", "c": "Host route", "d": "Floating static" } },
+      "3.4": { "t": "Configure and verify single area OSPFv2", "cat": "ospf", "sub": { "a": "Neighbor adjacencies", "b": "Point-to-point", "c": "Broadcast (DR/BDR selection)", "d": "Router ID" } },
+      "3.5": { "t": "Describe the purpose, functions, and concepts of first hop redundancy protocols", "cat": "fhrp" }
+    } },
+    { "d": 4, "name": "IP Services", "weight": 10, "topics": {
+      "4.1": { "t": "Configure and verify inside source NAT using static and pools", "cat": "nat" },
+      "4.2": { "t": "Configure and verify NTP operating in a client and server mode", "cat": "svc" },
+      "4.3": { "t": "Explain the role of DHCP and DNS within the network", "cat": "svc" },
+      "4.4": { "t": "Explain the function of SNMP in network operations", "cat": "mon" },
+      "4.5": { "t": "Describe the use of syslog features, including facilities and severity levels", "cat": "mon" },
+      "4.6": { "t": "Configure and verify DHCP client and relay", "cat": "svc" },
+      "4.7": { "t": "Explain the forwarding per-hop behavior (PHB) for QoS such as classification, marking, queuing, congestion, policing, and shaping", "cat": "qos" },
+      "4.8": { "t": "Configure network devices for remote access using SSH", "cat": "svc" },
+      "4.9": { "t": "Describe the capabilities and functions of TFTP/FTP in the network", "cat": "mon" }
+    } },
+    { "d": 5, "name": "Security Fundamentals", "weight": 15, "topics": {
+      "5.1": { "t": "Define key security concepts (threats, vulnerabilities, exploits, and mitigation techniques)", "cat": "secbase" },
+      "5.2": { "t": "Describe security program elements (user awareness, training, and physical access control)", "cat": "secbase" },
+      "5.3": { "t": "Configure and verify device access control using local passwords", "cat": "secbase" },
+      "5.4": { "t": "Describe security password policy elements, such as management, complexity, and password alternatives (multifactor authentication, certificates, and biometrics)", "cat": "secbase" },
+      "5.5": { "t": "Describe IPsec remote access and site-to-site VPNs", "cat": "vpn" },
+      "5.6": { "t": "Configure and verify access control lists", "cat": "acl" },
+      "5.7": { "t": "Configure and verify Layer 2 security features (DHCP snooping, dynamic ARP inspection, and port security)", "cat": "l2sec" },
+      "5.8": { "t": "Compare authentication, authorization, and accounting concepts", "cat": "vpn" },
+      "5.9": { "t": "Describe wireless security protocols (WPA, WPA2, and WPA3)", "cat": "wsec" },
+      "5.10": { "t": "Configure and verify WLAN within the GUI using WPA2 PSK", "cat": "wsec" }
+    } },
+    { "d": 6, "name": "Automation and Programmability", "weight": 10, "topics": {
+      "6.1": { "t": "Explain how automation impacts network management", "cat": "sdn" },
+      "6.2": { "t": "Compare traditional networks with controller-based networking", "cat": "sdn" },
+      "6.3": { "t": "Describe controller-based, software defined architecture (overlay, underlay, and fabric)", "cat": "sdn", "sub": { "a": "Separation of control plane and data plane", "b": "Northbound and Southbound APIs" } },
+      "6.4": { "t": "Explain AI (generative and predictive) and machine learning in network operations", "cat": "sdn" },
+      "6.5": { "t": "Describe characteristics of REST-based APIs (authentication types, CRUD, HTTP verbs, and data encoding)", "cat": "api" },
+      "6.6": { "t": "Recognize the capabilities of configuration management mechanisms such as Ansible and Terraform", "cat": "cfgmgmt" },
+      "6.7": { "t": "Recognize components of JSON-encoded data", "cat": "api" }
+    } }
+  ]
+}

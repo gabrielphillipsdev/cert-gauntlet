@@ -1,0 +1,452 @@
+# CCNA confusable twins (52). Each statement is tagged with the side it is true of; flag any that is true of both or neither.
+
+== OSPF ExStart state  vs  OSPF Exchange state  [3.4.a]
+In ExStart, two neighbors decide which of them is master (the higher router ID) and agree on the starting DBD sequence number, using empty DBD packets. In Exchange, they trade DBD packets that list the LSA headers in each database, so each router learns which LSAs it is missing before moving to Loading.
+  (A) Master and slave roles are chosen here, and the higher router ID becomes master
+  (A) The first DBD sequence number is agreed
+  (A) DBD packets carry no LSA headers yet
+  (B) DBD packets describing each LSA header are traded
+  (B) Each router compares the received headers to its own LSDB to build a request list
+  (B) Comes immediately before the Loading state
+
+== OSPF 2-Way (between DROTHERs)  vs  OSPF Full  [3.4.c]
+2-Way means each router has seen its own router ID in the other's hello, so communication is bidirectional; on a broadcast segment two DROTHERs stop there by design and never synchronize databases directly. Full means the LSDBs are synchronized, which a DROTHER reaches only with the DR and BDR, and which every healthy point-to-point adjacency reaches.
+  (A) Reached from Init once a router finds its own router ID listed in the neighbor's hello
+  (A) Normal, stable state between two DROTHERs on an Ethernet segment
+  (A) The two routers have not exchanged their LSDBs with each other
+  (B) The two routers' link-state databases are synchronized
+  (B) What a DROTHER reaches with the DR and the BDR
+  (B) The only healthy end state for neighbors on a point-to-point link
+
+== STP root port  vs  STP designated port  [2.5.a]
+A root port is the single port on each non-root switch with the lowest cost path to the root bridge; the root bridge itself has none. A designated port is the one port per segment chosen to forward toward that segment and send BPDUs onto it, and every active port on the root bridge is designated.
+  (A) Exactly one per non-root switch
+  (A) The root bridge never has one
+  (A) Chosen by lowest root path cost, then lowest neighbor bridge ID, then lowest neighbor port ID
+  (B) Exactly one per network segment
+  (B) Every active port on the root bridge has this role
+  (B) Sends the superior BPDU onto its segment
+
+== RSTP alternate port  vs  RSTP backup port  [2.5.b]
+An alternate port receives a superior BPDU from a different switch and offers a second path to the root, ready to take over immediately if the root port fails. A backup port receives BPDUs from its own switch's designated port on the same shared segment, so it backs up that designated port; it is rare because it needs a hub or shared medium. Both sit in discarding.
+  (A) Provides a different path toward the root bridge
+  (A) Replaces the root port quickly when the root port fails
+  (A) Receives the better BPDU from another switch
+  (B) Receives BPDUs sent by another port on the same switch
+  (B) Backs up a designated port on a shared segment
+  (B) Usually seen only when a hub connects two ports of one switch
+
+== RSTP discarding state  vs  RSTP learning state  [2.5.b]
+Discarding folds the 802.1D disabled, blocking and listening states into one: the port neither forwards data frames nor learns MAC addresses. Learning is the short transitional state where the port adds source MACs to the table but still does not forward user frames, before it moves to forwarding.
+  (A) Replaces the 802.1D blocking and listening states
+  (A) Alternate and backup ports stay here
+  (A) MAC addresses are not added to the table
+  (B) Source MAC addresses are added to the MAC table
+  (B) Transitional state immediately before forwarding
+
+== BPDU guard  vs  Root guard  [2.5.d]
+BPDU guard err-disables a port the moment any BPDU arrives, protecting PortFast edge ports where only end hosts should connect; recovery needs a shutdown/no shutdown or errdisable recovery. Root guard lets BPDUs in but blocks the port as root-inconsistent if a superior BPDU arrives, and the port recovers on its own once the superior BPDUs stop.
+  (A) Any BPDU received places the port in err-disabled
+  (A) Normally paired with PortFast on access ports
+  (A) Enabled with 'spanning-tree bpduguard enable'
+  (B) Only a superior BPDU triggers it
+  (B) The port goes root-inconsistent and recovers automatically
+  (B) Applied on designated ports facing switches that must never become root
+
+== PortFast  vs  BPDU filter  [2.5.c]
+PortFast lets an edge port skip listening and learning and forward right away, but the port still sends BPDUs and loses edge status if one is received. BPDU filter stops BPDUs: configured on an interface it neither sends nor processes them, so a switch plugged into that port goes unnoticed and a loop can form.
+  (A) Moves an edge port straight to forwarding at link up
+  (A) The port still sends BPDUs every hello interval
+  (A) Port drops out of edge behavior if a BPDU arrives
+  (B) Configured per interface, the port stops sending and processing BPDUs
+  (B) Can hide a looped switch from spanning tree
+
+== Standard ACL  vs  Extended ACL  [5.6]
+A standard ACL matches only the source IPv4 address, so it is placed as close to the destination as possible to avoid blocking that source from other places. An extended ACL matches protocol, source, destination and ports, so it is placed close to the source to drop unwanted traffic before it crosses the network.
+  (A) Numbered 1-99 or 1300-1999
+  (A) Matches on source address only
+  (A) Placed near the destination
+  (B) Numbered 100-199 or 2000-2699
+  (B) Can match a TCP or UDP destination port
+  (B) Placed near the source
+
+== Static NAT  vs  PAT (NAT overload)  [4.1]
+Static NAT permanently maps one inside local address to one inside global address, so outside hosts can start connections to an inside server. PAT lets many inside hosts share one inside global address, telling sessions apart by port number, and creates entries only when inside hosts send traffic out.
+  (A) One-to-one mapping that is always in the translation table
+  (A) Lets outside hosts initiate connections to an inside server
+  (A) Configured with 'ip nat inside source static'
+  (B) Many inside hosts share a single public address
+  (B) Uses source port numbers to keep sessions apart
+  (B) Requires the 'overload' keyword
+
+== Dynamic NAT (pool)  vs  PAT (NAT overload)  [4.1]
+Dynamic NAT hands each inside host its own address from a pool for the life of the translation, so when the pool runs out the next host cannot get out. PAT adds port translation so hundreds of hosts share one address, either from a pool or the outside interface's own address.
+  (A) Each active inside host consumes one pool address
+  (A) New hosts fail to translate once the pool is exhausted
+  (A) Uses 'ip nat inside source list 1 pool NAME' without 'overload'
+  (B) Can translate to the outside interface's own address
+  (B) Translation table entries include port numbers
+
+== Inside local address  vs  Inside global address  [4.1]
+Inside local is the address actually configured on an inside host, usually RFC 1918, as seen from the inside network. Inside global is the address that represents that same inside host to the outside world, taken from a NAT pool or the router's outside interface.
+  (A) The address configured on the inside host's NIC
+  (A) Typically an RFC 1918 private address
+  (A) First address in 'ip nat inside source static 10.1.1.10 203.0.113.10'
+  (B) What outside hosts see as the inside host's address
+  (B) Second address in 'ip nat inside source static 10.1.1.10 203.0.113.10'
+  (B) Comes from a NAT pool or the outside interface
+
+== HSRP  vs  VRRP  [3.5]
+HSRP is Cisco proprietary and uses an active and a standby router, with preemption off unless configured. VRRP is an IETF open standard that uses a master and backups, preempts by default, and can even use a real interface address as the virtual IP. Both default to priority 100.
+  (A) Cisco proprietary
+  (A) Active and standby router roles
+  (A) Version 1 virtual MAC 0000.0C07.ACxx
+  (B) Open standard
+  (B) Master and backup router roles
+  (B) Virtual MAC 0000.5E00.01xx
+
+== HSRP  vs  GLBP  [3.5]
+HSRP gives each group one active gateway forwarding traffic while the standby waits idle, so load sharing needs multiple groups. GLBP load-balances within one group: the active virtual gateway answers ARP requests with different virtual MACs that belong to up to four active virtual forwarders.
+  (A) Only one router forwards for the group at a time
+  (A) Version 1 virtual MAC 0000.0C07.ACxx
+  (A) Load sharing requires configuring several groups
+  (B) One group can spread hosts across several forwarding routers
+  (B) Uses an AVG that hands out virtual MACs of AVFs
+  (B) Virtual MAC format 0007.B400.xxyy
+
+== 802.11n (Wi-Fi 4)  vs  802.11ac (Wi-Fi 5)  [1.11]
+802.11n introduced MIMO and 40 MHz channels and works in both 2.4 GHz and 5 GHz, topping out around 600 Mbps. 802.11ac runs only in 5 GHz, adds 80 and 160 MHz channels, 256-QAM and downlink MU-MIMO, and reaches multi-gigabit theoretical rates.
+  (A) Operates in both the 2.4 GHz and 5 GHz bands
+  (A) Maximum theoretical rate about 600 Mbps
+  (A) Widest channel is 40 MHz
+  (B) Operates in 5 GHz only
+  (B) Supports 80 MHz and 160 MHz channels
+  (B) Adds downlink multi-user MIMO
+
+== 802.11ac (Wi-Fi 5)  vs  802.11ax (Wi-Fi 6)  [1.11]
+802.11ac is a 5 GHz-only standard that serves clients mostly one at a time per stream set with OFDM. 802.11ax works in 2.4 and 5 GHz (and 6 GHz as Wi-Fi 6E), adds OFDMA to serve many clients in one transmission, 1024-QAM, uplink MU-MIMO, BSS coloring and target wake time, aimed at dense environments.
+  (A) Limited to the 5 GHz band
+  (A) Highest modulation is 256-QAM
+  (B) Uses OFDMA to split a channel among several clients at once
+  (B) Can operate in the 2.4 GHz band
+  (B) Adds target wake time to save client battery
+  (B) Uses 1024-QAM
+
+== 2.4 GHz band  vs  5 GHz band  [1.11.a]
+The 2.4 GHz band has longer range and better wall penetration but only three nonoverlapping 20 MHz channels (1, 6 and 11 in North America) and heavy interference from other devices. The 5 GHz band has many more nonoverlapping channels and room for channel bonding, at the cost of shorter range.
+  (A) Only channels 1, 6 and 11 avoid overlap in North America
+  (A) Shares spectrum with microwave ovens and Bluetooth
+  (A) Covers a larger area from one AP
+  (B) Offers roughly 20 or more nonoverlapping 20 MHz channels, depending on country
+  (B) Practical for 80 MHz and 160 MHz bonded channels
+  (B) Not supported by 802.11b or 802.11g clients
+
+== Ansible  vs  Terraform  [6.6]
+Ansible is agentless configuration management: a control node pushes tasks over SSH (or NETCONF/API) to hosts listed in an inventory, following YAML playbooks. Terraform is declarative infrastructure as code written in HCL: it compares the desired configuration with a state file, shows a plan, and applies changes through providers.
+  (A) Playbooks are written in YAML
+  (A) Lists managed devices in an inventory file
+  (A) Pushes changes over SSH with no agent on the device
+  (B) Configuration files are written in HCL
+  (B) Keeps a state file of the resources it manages
+  (B) Runs 'plan' to preview changes before 'apply'
+
+== Ansible  vs  Puppet / Chef  [6.6]
+Ansible uses a push model: the control node connects to each device over SSH and needs no agent installed. Puppet and Chef traditionally use a pull model in which an agent on each managed node checks in with a central server for its configuration. Puppet and Chef were named in CCNA v1.0; v1.1 lists Ansible and Terraform instead.
+  (A) Agentless
+  (A) Control node pushes the configuration to devices
+  (A) Uses YAML playbooks
+  (B) An agent on the managed node pulls its configuration from a server
+  (B) Uses manifests or Ruby-based recipes and cookbooks
+  (B) Named in the CCNA v1.0 topics but replaced by Terraform in v1.1
+
+== PUT  vs  PATCH  [6.5]
+Both verbs map to the Update in CRUD. PUT sends a complete representation that replaces the resource at that URI, so any field left out may be reset or removed. PATCH sends only the fields to change and leaves the rest of the resource as it was.
+  (A) Request body is the full new representation of the resource
+  (A) Fields omitted from the body may be cleared
+  (A) Defined as idempotent by the HTTP standard
+  (B) Request body carries only the fields being changed
+  (B) Untouched fields keep their current values
+
+== POST  vs  PUT  [6.5]
+POST maps to Create: it is usually sent to a collection URI and the server assigns the new item's identifier, typically answering 201 Created; repeating it can create duplicates. PUT targets a specific resource URI and replaces it, and repeating it has the same effect as sending it once.
+  (A) Maps to Create in CRUD
+  (A) Usually sent to a collection URI, and the server assigns the new item's ID
+  (A) Repeating the request can create a second resource
+  (B) Sent to the URI of one specific resource
+  (B) Idempotent
+  (B) Replaces the whole resource with the body sent
+
+== JSON  vs  YAML  [6.7]
+JSON wraps objects in braces and arrays in square brackets, requires double-quoted keys, ignores whitespace and has no comment syntax. YAML relies on indentation for structure, marks list items with a leading dash, allows '#' comments, and is the format of Ansible playbooks.
+  (A) Objects are wrapped in curly braces
+  (A) Keys must be in double quotes
+  (A) Has no syntax for comments
+  (B) Indentation defines the structure
+  (B) List items start with a dash
+  (B) Ansible playbooks are written in it
+
+== TCP  vs  UDP  [1.5]
+TCP is connection-oriented: a three-way handshake, sequence numbers, acknowledgments, retransmission and windowing make it reliable, which suits SSH (22), HTTP (80) and HTTPS (443). UDP is connectionless with an 8-byte header and no recovery, which suits DNS queries (53), TFTP (69), SNMP (161/162), syslog (514) and voice.
+  (A) Sets up a session with a three-way handshake
+  (A) Retransmits lost segments
+  (A) Carries SSH and HTTPS sessions
+  (B) 8-byte header with no sequence numbers
+  (B) Carries TFTP, SNMP and syslog
+  (B) Carries typical DNS queries
+
+== Collision domain  vs  Broadcast domain  [1.13]
+A collision domain is the set of devices whose frames can collide; every switch port is its own, all ports of a hub share one, and full duplex removes collisions entirely. A broadcast domain is the set of devices that receive a broadcast; a switch keeps one per VLAN and a router port ends one.
+  (A) Each switch port forms a separate one
+  (A) All ports on a hub share a single one
+  (A) Eliminated on links running full duplex
+  (B) A router interface marks its boundary
+  (B) Each VLAN is one
+  (B) An ARP request reaches every host in it
+
+== SVI  vs  Routed port  [2.1.c]
+An SVI is a virtual Layer 3 interface for a VLAN, created with 'interface vlan 10', that acts as the gateway for every access port in that VLAN; it comes up only when the VLAN exists and has an active port. A routed port is a physical switch interface converted with 'no switchport' that behaves like a router interface and belongs to no VLAN.
+  (A) Created with 'interface vlan 10'
+  (A) Serves as the default gateway for many access ports in one VLAN
+  (A) Stays down if no port in its VLAN is up
+  (B) Created with 'no switchport' on a physical interface
+  (B) Not a member of any VLAN
+  (B) Common for a point-to-point Layer 3 link to a router
+
+== Access port  vs  Trunk port  [2.2.a]
+An access port belongs to one data VLAN (plus an optional voice VLAN) and sends frames to the end device untagged. A trunk port carries many VLANs over one link by adding 802.1Q tags, except for the native VLAN, and is used between switches, to routers and to some APs.
+  (A) Configured with 'switchport mode access'
+  (A) Sends data VLAN frames to the PC untagged
+  (A) Can carry a voice VLAN alongside one data VLAN
+  (B) Adds an 802.1Q tag to frames from most VLANs
+  (B) Limited with 'switchport trunk allowed vlan'
+  (B) Has a native VLAN
+
+== Default VLAN  vs  Native VLAN  [2.2.c]
+The default VLAN is VLAN 1: every switch port starts in it, and it cannot be deleted or renamed. The native VLAN is the VLAN whose frames cross an 802.1Q trunk untagged; it is VLAN 1 by default but is set per trunk, and both ends must agree.
+  (A) Always VLAN 1
+  (A) Every port belongs to it until assigned elsewhere
+  (A) Cannot be deleted
+  (B) Its frames cross an 802.1Q trunk untagged
+  (B) Changed with 'switchport trunk native vlan'
+  (B) A mismatch between the two ends is reported by CDP
+
+== DTP dynamic auto  vs  DTP dynamic desirable  [2.2.a]
+Dynamic auto waits passively and becomes a trunk only if the neighbor actively asks, from trunk or desirable mode; two auto ports stay access. Dynamic desirable actively sends DTP to request a trunk, so it trunks with a neighbor in auto, desirable or trunk mode.
+  (A) Never starts the trunk negotiation itself
+  (A) Two ports both in this mode end up as access ports
+  (A) Forms a trunk only if the far end is trunk or desirable
+  (B) Actively asks the neighbor to become a trunk
+  (B) Forms a trunk with a neighbor in dynamic auto
+
+== LACP  vs  PAgP  [2.4]
+LACP is the IEEE 802.3ad (802.1AX) standard with active and passive modes; active-active and active-passive form a bundle, passive-passive does not. PAgP is Cisco proprietary with desirable and auto modes, where auto-auto fails. Neither negotiates with mode 'on', which works only opposite another 'on'.
+  (A) Open IEEE standard
+  (A) Modes are active and passive
+  (A) Two ends both set to passive never form a bundle
+  (B) Cisco proprietary
+  (B) Modes are desirable and auto
+  (B) Two ends both set to auto never form a bundle
+
+== CDP  vs  LLDP  [2.3]
+CDP is Cisco proprietary, enabled by default on Cisco devices, and sends every 60 seconds with a 180-second holdtime. LLDP is the IEEE 802.1AB standard for multivendor networks, usually disabled by default on Cisco IOS, turned on with 'lldp run', and uses a 30-second timer and 120-second holdtime.
+  (A) Cisco proprietary
+  (A) Enabled by default on Cisco IOS
+  (A) Default advertisement interval is 60 seconds
+  (B) IEEE 802.1AB standard
+  (B) Enabled globally with 'lldp run'
+  (B) Default holdtime is 120 seconds
+
+== Telnet  vs  SSH  [2.8]
+Telnet uses TCP 23 and sends everything, including passwords, in clear text, needing only a VTY password and 'login'. SSH uses TCP 22 and encrypts the session; IOS needs a hostname, a domain name, an RSA key pair from 'crypto key generate rsa', and normally local users with 'login local'.
+  (A) TCP port 23
+  (A) Credentials can be read in a packet capture
+  (B) TCP port 22
+  (B) Requires an RSA key pair on the IOS device
+  (B) Needs 'ip domain-name' configured before keys can be generated
+  (B) Version 2 is selected with 'ip ssh version 2'
+
+== TACACS+  vs  RADIUS  [2.8]
+TACACS+ was developed by Cisco, runs over TCP 49, encrypts the whole payload and separates authentication, authorization and accounting, which suits per-command control of device administrators. RADIUS is an open standard over UDP 1812/1813, encrypts only the password and combines authentication with authorization, which suits network access such as 802.1X and VPN users.
+  (A) Uses TCP port 49
+  (A) Encrypts the entire packet body
+  (A) Can authorize individual CLI commands
+  (B) Uses UDP 1812 and 1813
+  (B) Encrypts only the password
+  (B) Typical back end for 802.1X network access
+
+== enable password  vs  enable secret  [5.3]
+'enable password' is stored in clear text, and 'service password-encryption' only turns it into a reversible type 7 string. 'enable secret' is stored as a one-way hash (type 5 MD5, or type 8 or 9 when chosen with 'algorithm-type') and takes precedence when both are set.
+  (A) Appears in clear text unless service password-encryption is on
+  (A) With service password-encryption it becomes a type 7 string that is easily reversed
+  (A) Ignored when the other command is also configured
+  (B) Stored as a one-way hash such as type 5, 8 or 9
+  (B) Takes precedence when both are configured
+
+== Port security 'protect'  vs  Port security 'restrict'  [5.7]
+Both modes keep the port up and drop frames from unauthorized MACs once the maximum is reached. Protect does it silently, with no log message and no counter increase. Restrict also sends a syslog message or SNMP trap and increments the violation counter. Neither is the default: shutdown, which err-disables the port, is.
+  (A) Drops violating frames without any log message
+  (A) The violation counter does not increase
+  (B) Generates a syslog message or SNMP trap on a violation
+  (B) The violation counter increments
+
+== DHCP snooping  vs  Dynamic ARP inspection  [5.7]
+DHCP snooping classifies ports as trusted or untrusted, drops DHCP server messages arriving on untrusted ports to stop rogue servers, and records a binding table of MAC, IP, VLAN and port. Dynamic ARP inspection checks ARP messages on untrusted ports against that binding table and drops ones whose IP-to-MAC pairing does not match, stopping ARP poisoning.
+  (A) Drops DHCPOFFER and DHCPACK messages on untrusted ports
+  (A) Builds the IP-to-MAC binding table
+  (A) Stops a rogue DHCP server
+  (B) Validates ARP messages against the binding table
+  (B) Stops ARP poisoning man-in-the-middle attacks
+  (B) Enabled with 'ip arp inspection vlan'
+
+== WPA2-Personal  vs  WPA2-Enterprise  [5.9]
+WPA2-Personal uses one pre-shared passphrase for everyone on the SSID, so no server is needed but removing one user means changing the key for all. WPA2-Enterprise uses 802.1X with EAP so each user authenticates with their own credentials against a RADIUS server.
+  (A) Every client uses the same passphrase
+  (A) No authentication server is required
+  (A) Chosen as 'PSK' in the WLC auth key management settings
+  (B) Each user authenticates with individual credentials
+  (B) Requires a RADIUS server
+  (B) Uses 802.1X with EAP
+
+== WPA2  vs  WPA3  [5.9]
+WPA2 uses AES-CCMP, and its PSK handshake can be captured and attacked offline with a dictionary. WPA3 replaces the PSK exchange with SAE, which resists offline guessing and provides forward secrecy, requires Protected Management Frames, and adds a 192-bit mode for enterprise.
+  (A) Personal mode is open to offline dictionary attacks on a captured handshake
+  (A) Protected Management Frames are optional
+  (B) Personal mode uses SAE instead of a PSK handshake
+  (B) Protected Management Frames are mandatory
+  (B) Offers forward secrecy for personal networks
+
+== Site-to-site VPN  vs  Remote-access VPN  [5.5]
+A site-to-site VPN joins whole networks through a permanent IPsec tunnel between two gateways such as routers or firewalls, so hosts need no VPN software. A remote-access VPN connects a single user's device, using client software (IPsec or TLS) or a browser, only when the user brings it up.
+  (A) Tunnel terminates on two network gateways
+  (A) Hosts behind the gateways run no VPN software
+  (A) Typically up all the time
+  (B) Connects one user's device to the corporate network
+  (B) Started on demand by the user
+  (B) Usually requires a VPN client on the endpoint
+
+== Policing  vs  Shaping  [4.7]
+Policing enforces a rate by dropping or re-marking excess traffic immediately, adds no delay, and can apply inbound or outbound, as a provider does at its edge. Shaping buffers excess traffic and sends it later, smoothing bursts at the cost of delay, and applies only outbound, as a customer does toward the provider's CIR.
+  (A) Excess traffic is dropped or re-marked
+  (A) Can be applied in the inbound direction
+  (A) Adds no queuing delay
+  (B) Excess traffic is queued and sent later
+  (B) Applied outbound only
+  (B) Used by a customer to stay under the provider's committed rate
+
+== CoS  vs  DSCP  [4.7]
+CoS is a 3-bit priority field in the 802.1Q tag, so it exists only on tagged Ethernet links and is lost when a router rewrites the frame. DSCP is a 6-bit field in the IP header, so the marking survives across routed hops; voice is usually EF (46).
+  (A) 3-bit field in the 802.1Q tag
+  (A) Values range from 0 to 7
+  (A) Lost when a router forwards the packet onto an untagged link
+  (B) 6-bit field in the IP header
+  (B) Voice is usually marked EF, decimal 46
+  (B) Survives end to end across routers
+
+== SNMP trap  vs  SNMP inform  [4.4]
+Both are unsolicited messages an agent sends to the manager on UDP 162. A trap is fire-and-forget, so a lost trap is never known. An inform, added in SNMPv2c, must be acknowledged by the manager, and the agent resends it until it is.
+  (A) Not acknowledged by the manager
+  (A) Available since SNMPv1
+  (A) The agent never knows if it was lost
+  (B) The manager sends back a response
+  (B) The agent resends it until acknowledged
+
+== TFTP  vs  FTP  [4.9]
+TFTP runs over UDP 69 with no login and no directory listing, sending small blocks that are each acknowledged; it is the usual quick way to copy IOS images and configs. FTP runs over TCP with a control connection on port 21 and separate data connections, requires a username and password, and can list and manage files.
+  (A) Uses UDP port 69
+  (A) No username or password
+  (A) Cannot list the files on the server
+  (B) Uses TCP port 21 for its control connection
+  (B) Opens separate data connections for transfers
+  (B) Requires a login
+
+== Northbound API  vs  Southbound API  [6.3.b]
+A northbound API sits between the controller and the applications or scripts above it, usually REST over HTTPS with JSON, so an app can ask for intent rather than device commands. A southbound API sits between the controller and the network devices below it, using NETCONF, RESTCONF, OpenFlow, SNMP or SSH.
+  (A) Faces applications and automation scripts
+  (A) Catalyst Center's Intent API is an example
+  (B) Faces the switches, routers and APs
+  (B) NETCONF and OpenFlow are examples
+  (B) Carries configuration from the controller to devices
+
+== Underlay  vs  Overlay  [6.3]
+The underlay is the physical network of switches, links and routing protocol that gives every fabric device IP reachability to every other. The overlay is the set of virtual networks and tunnels, such as VXLAN, built on top of it so that endpoints and segments are independent of the physical layout. Together they form the fabric.
+  (A) Physical devices and links
+  (A) Its routing protocol provides reachability between fabric nodes
+  (A) Must be working before tunnels can come up
+  (B) Virtual networks carried in tunnels
+  (B) VXLAN encapsulation is an example
+  (B) Lets endpoint segments ignore the physical topology
+
+== Control plane  vs  Data plane  [6.3.a]
+The control plane decides where traffic should go: routing protocols, STP, ARP and similar functions build the tables, usually on the CPU. The data plane does the forwarding itself, using those tables to move each frame or packet out the right interface, typically in hardware ASICs. SDN centralizes much of the control plane in a controller.
+  (A) Processes OSPF hellos and LSAs
+  (A) Builds the routing table
+  (A) Centralized in a controller in classic SDN
+  (B) Moves transit packets to the egress interface
+  (B) Usually handled in hardware ASICs
+
+== Predictive AI  vs  Generative AI  [6.4]
+Predictive AI uses machine learning on historical telemetry to classify and forecast: flagging anomalies, predicting link or device failure, and estimating capacity needs. Generative AI uses large language models to produce new content, such as a configuration snippet or a plain-language summary of a fault, and its output must be checked because it can be confidently wrong.
+  (A) Forecasts when a link will run out of capacity
+  (A) Flags traffic that deviates from a learned baseline
+  (B) Drafts a configuration from a plain-language request
+  (B) Built on large language models
+  (B) Can produce a confident but incorrect answer
+
+== Lightweight AP  vs  Autonomous AP  [2.6]
+A lightweight AP is managed by a WLC: it builds a CAPWAP tunnel to the controller (UDP 5246 control, 5247 data), gets its configuration from it and splits MAC functions with it. An autonomous AP is configured and managed on its own and bridges client traffic straight onto the wired network, usually through a trunk port.
+  (A) Joins a WLC over CAPWAP
+  (A) Receives its configuration from the controller
+  (A) Splits MAC-layer duties with the controller
+  (B) Configured individually on each AP
+  (B) Bridges client traffic onto the wired VLANs itself
+  (B) Works with no controller
+
+== Local mode  vs  FlexConnect mode  [2.6]
+Local mode is the default for a lightweight AP: all client data is tunneled in CAPWAP to the WLC, so the AP's switch port is usually an access port. FlexConnect lets a branch AP switch client traffic locally onto its own VLANs and keep serving clients if the WAN link to the controller fails.
+  (A) Default mode of a lightweight AP
+  (A) All client data travels through the CAPWAP tunnel to the WLC
+  (A) Switch port is normally an access port
+  (B) Can switch client traffic locally at the branch
+  (B) Keeps clients connected if the link to the WLC goes down
+
+== Type 1 hypervisor  vs  Type 2 hypervisor  [1.12]
+A type 1 hypervisor runs directly on the server hardware with no host operating system underneath, which is the norm in data centers. A type 2 hypervisor runs as an application on top of a normal desktop operating system, which is common for labs and testing but adds overhead.
+  (A) Installed directly on the hardware
+  (A) Standard for production data center servers
+  (A) Also called bare-metal
+  (B) Runs as an application on a host operating system
+  (B) Common on laptops for lab work
+
+== Virtual machine  vs  Container  [1.12]
+A virtual machine emulates a whole computer and runs its own full guest operating system and kernel on a hypervisor, so it is large and slow to boot but strongly isolated. A container packages an application with its libraries and shares the host's kernel through a container engine, so it is small and starts in seconds.
+  (A) Includes its own guest operating system kernel
+  (A) Runs on a hypervisor
+  (A) Image is typically gigabytes in size
+  (B) Shares the host operating system's kernel
+  (B) Usually starts in seconds
+
+== IPv6 link-local address  vs  IPv6 unique local address  [1.9.a]
+A link-local address (FE80::/10) is created automatically on every IPv6 interface and is never routed off the link; NDP and routing protocol next hops use it. A unique local address (FC00::/7, in practice FD00::/8) must be assigned, is routable inside an organization but not on the internet, and plays the role RFC 1918 plays in IPv4.
+  (A) Starts with FE80
+  (A) Created automatically when IPv6 is enabled on an interface
+  (A) Used as the next hop in IPv6 routing protocol updates
+  (B) Starts with FD in practice
+  (B) Routed between subnets inside the organization
+  (B) Comparable to IPv4 private addressing
+
+== Static route to a next-hop IP  vs  Static route to an exit interface  [3.3]
+A next-hop static route names the neighbor's address, so the router does a recursive lookup to find the outgoing interface and the route stays only while that address is reachable. A directly attached static route names the outgoing interface and appears as directly connected; on Ethernet it makes the router ARP for each destination, so it suits point-to-point links.
+  (A) 'ip route 10.2.0.0 255.255.0.0 192.168.12.2'
+  (A) Requires a recursive lookup to find the outgoing interface
+  (A) Shown with 'via' and an address in the routing table
+  (B) 'ip route 10.2.0.0 255.255.0.0 Serial0/0/0'
+  (B) Shown as directly connected in the routing table
+  (B) On Ethernet it relies on the neighbor answering ARP for remote addresses
+
+== Longest prefix match  vs  Administrative distance  [3.2]
+Longest prefix match picks, for each packet, the most specific matching route already in the table, whatever its source. Administrative distance is used earlier, when two sources offer the same prefix and length, to decide which one is installed (lower wins: OSPF 110 beats RIP 120). Metric only compares routes from the same protocol.
+  (A) A /28 from RIP is used over a /24 from OSPF for an address in both
+  (A) Applied to each packet at forwarding time
+  (B) Compares routes to the same prefix and length from different sources
+  (B) Decides which route is installed in the routing table
+  (B) Lower value is more trusted
