@@ -5,6 +5,8 @@
 import { $, $$, esc, shuffle, fmtClock, fmtDateTime, ask, uid } from "../util.js";
 import { pack, bumpDay, persist, getInprog, setInprog, clearInprog } from "../store.js";
 import { sim } from "../sims/registry.js";
+import * as MS from "./msitems.js";      /* Microsoft item types (order, build, hot, series, case study) — Chat 6; mc/ms path unchanged */
+import * as LP from "./learnpane.js";    /* open-book Learn pane timing — Chat 6 */
 
 let A = null;          // app context {packId, manifest, content, el, go}
 let XS = null, timer = null, mode = "exam";
@@ -78,13 +80,15 @@ function buildItems(x) {
     qs = []; for (const d in r.mixQuota) qs = qs.concat(shuffle((byD[d] || []).slice()).slice(0, r.mixQuota[d])); qs = shuffle(qs);
     const seen = new Set(); pbqs = shuffle(Object.values(P).flat()).filter(p => { const k = sim(p.type).generated ? p.type : p.id; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, r.pbqCount || 5);
   } else { qs = shuffle(B[x].slice()); pbqs = (P[x] || []).slice(); }
-  const pItems = pbqs.map(newPbqItem), qItems = qs.map(q => ({ k: "q", id: q.id, ord: shuffle(q.o.map((_, i) => i)), ans: [], conf: 0, fl: false }));
+  if (MS.applies(r)) qs = x === "mix" ? MS.mixPick(Object.values(B).flat(), r) : MS.arrangeBank(B[x]);   /* case study first, series last */
+  const pItems = pbqs.map(newPbqItem), qItems = qs.map(q => ({ k: "q", id: q.id, ord: MS.initialOrder(q), ans: [], conf: 0, fl: false }));
+  if (MS.applies(r)) return pItems.concat(qItems);
   return r.pbqFirst ? pItems.concat(qItems) : shuffle(pItems.concat(qItems));
 }
 function newPbqItem(p) { return { k: "p", id: p.id, type: p.type, conf: 0, fl: false, st: sim(p.type).create(p) }; }
 function start(x, practice) {
   mode = practice ? "practice" : "exam";
-  XS = { id: uid(), x, items: buildItems(x), i: 0, elapsed: 0, running: false, pauses: [], started: Date.now(), done: false, drill: false, practice, maxSeen: 0 };
+  XS = { id: uid(), x, items: buildItems(x), i: 0, elapsed: 0, running: false, pauses: [], started: Date.now(), done: false, drill: false, practice, maxSeen: 0, caseLocked: false, midLocked: false, lookup: null };
   save(); resume();
 }
 function resume() {
@@ -100,6 +104,7 @@ function tick() {
   const left = R().minutes * 60000 - XS.elapsed;
   const el = $("#xmclock"); if (el) { el.textContent = fmtClock(left); el.classList.toggle("low", left < 5 * 60000); }
   if (!XS.drill && (now - (XS.lastQuiet || 0)) > 15000) { XS.lastQuiet = now; setInprog(A.packId, XS, true); } // keep the saved tick fresh without a sync push
+  LP.tick(XS);
   if (left <= 0) { XS.elapsed = R().minutes * 60000; submit(true); }
 }
 function pause() {
@@ -114,14 +119,14 @@ function pause() {
 function leave() {
   if (XS.practice) return pause();
   if (!ask("Leave the exam? The clock keeps running, just like walking out of the testing center. You can resume from any device.")) return;
-  save(); if (timer) { clearInterval(timer); timer = null; } XS.running = false; renderExam(A);
+  LP.end(XS, save); save(); if (timer) { clearInterval(timer); timer = null; } XS.running = false; renderExam(A);
 }
 document.addEventListener("visibilitychange", () => { if (document.hidden && XS && XS.running && !XS.done && XS.practice) pause(); });
 
 /* ---------- item rendering ---------- */
-function topbar(label) {
+function topbar(label, opts = {}) {
   const left = R().minutes * 60000 - XS.elapsed;
-  return `<div class="tb"><button id="xmleave">${mode === "drill" ? "Exit" : XS.practice ? "Pause" : "Leave"}</button><span class="xm-count">${label}</span><span class="sp"></span>${mode === "drill" ? "" : `<span class="xm-clock ${left < 5 * 60000 ? "low" : ""}" id="xmclock">${fmtClock(left)}</span>`}<button class="gridbtn" id="xmgridbtn">${mode === "drill" ? "List" : "Review"}</button></div>`;
+  return `<div class="tb"><button id="xmleave">${mode === "drill" ? "Exit" : XS.practice ? "Pause" : "Leave"}</button><span class="xm-count">${label}</span><span class="sp"></span>${mode === "drill" ? "" : LP.buttonHtml(R())}${mode === "drill" ? "" : `<span class="xm-clock ${left < 5 * 60000 ? "low" : ""}" id="xmclock">${fmtClock(left)}</span>`}${opts.noGrid ? "" : `<button class="gridbtn" id="xmgridbtn">${mode === "drill" ? "List" : "Review"}</button>`}</div>`;
 }
 function confHtml(it) {
   return `<div class="xm-conf"><div class="cl">HOW SURE ARE YOU?</div><div class="cb">${CONF.map((c, i) => `<button data-c="${i}" class="${it.conf === i ? "on" + i : ""}">${c}<br><span>${CONFLONG[i]}</span></button>`).join("")}</div></div>`;
@@ -129,29 +134,52 @@ function confHtml(it) {
 function renderItem() {
   const it = XS.items[XS.i]; const n = XS.items.length; const r = R();
   XS.maxSeen = Math.max(XS.maxSeen || 0, XS.i);
-  let html = topbar(`${XS.i + 1} / ${n}`);
+  const nav = MS.navState(XS, r, bankQ);                       /* section rules for Microsoft-format exams; plain {back,grid,flag} otherwise */
+  const msExam = MS.applies(r), inSeries = nav.section === "series";
+  let html = topbar(`${XS.i + 1} / ${n}`, { noGrid: !nav.grid });
+  if (msExam && mode !== "drill") html += LP.bannerHtml(XS, it);
   html += `<div class="xm-main">${it.k === "q" ? questionHtml(it) : pbqShell(it)}${confHtml(it)}`;
-  const canBack = r.backtrack !== false && XS.i > 0;
-  html += `<div class="xm-nav">${r.backtrack === false ? "" : `<button id="xmprev" ${canBack ? "" : "disabled"}>Back</button>`}<button class="flag ${it.fl ? "on" : ""}" id="xmflag" title="Flag for review">⚑</button>${XS.i === n - 1 ? `<button class="submit" id="xmnext">Finish &amp; submit</button>` : `<button class="next" id="xmnext">Next</button>`}</div></div>`;
-  A.el.innerHTML = `<div class="xm-wrap">${railHtml()}<div class="xm-pane">${html}</div></div>`;
+  const canBack = msExam ? nav.back : (r.backtrack !== false && XS.i > 0);
+  html += `<div class="xm-nav">${r.backtrack === false || inSeries ? "" : `<button id="xmprev" ${canBack ? "" : "disabled"}>Back</button>`}${nav.flag ? `<button class="flag ${it.fl ? "on" : ""}" id="xmflag" title="Flag for review">⚑</button>` : ""}${XS.i === n - 1 ? `<button class="submit" id="xmnext">Finish &amp; submit</button>` : `<button class="next" id="xmnext">Next</button>`}</div></div>`;
+  A.el.innerHTML = `<div class="xm-wrap ${inSeries ? "single" : ""}">${inSeries ? "" : railHtml()}<div class="xm-pane">${html}</div></div>`;
   A.el.scrollTop = 0;
   $("#xmleave").onclick = () => { if (mode === "drill") drillDone(); else leave(); };
-  $("#xmgridbtn").onclick = () => renderGrid();
-  const prev = $("#xmprev"); if (prev) prev.onclick = () => { if (XS.i > 0) { XS.i--; save(); renderItem(); } };
-  $("#xmflag").onclick = () => { it.fl = !it.fl; $("#xmflag").classList.toggle("on", it.fl); save(); };
-  $("#xmnext").onclick = () => { if (XS.i === n - 1) renderGrid(true); else if (r.backtrack === false && !ask("Next is final on this exam — you can't come back to this question.")) return; else { XS.i++; save(); renderItem(); } };
+  const gb = $("#xmgridbtn"); if (gb) gb.onclick = () => renderGrid();
+  const prev = $("#xmprev"); if (prev) prev.onclick = () => { if (XS.i > 0 && canBack) { XS.i--; save(); renderItem(); } };
+  const fb = $("#xmflag"); if (fb) fb.onclick = () => { it.fl = !it.fl; fb.classList.toggle("on", it.fl); save(); };
+  $("#xmnext").onclick = () => {
+    if (XS.i === n - 1) { if (inSeries && !XS.drill) { if (ask("Submit the exam now?")) submit(false); return; } renderGrid(true); return; }
+    if (r.backtrack === false && !ask("Next is final on this exam — you can't come back to this question.")) return;
+    if (!MS.beforeMove(XS, XS.i + 1, r, bankQ)) return;
+    XS.i++; save(); renderItem();
+  };
   $$(".xm-conf .cb button").forEach(b => b.onclick = () => { it.conf = +b.dataset.c; $$(".xm-conf .cb button").forEach(x => x.className = (+x.dataset.c === it.conf) ? "on" + it.conf : ""); save(); });
   bindRail();
   if (it.k === "q") bindQuestion(it); else mountPbq(it, false);
+  if (msExam && mode !== "drill") { LP.bind(XS, it, save, renderItem); LP.bindBanner(XS, save, renderItem); LP.hookFocus(() => XS, save, () => { if (XS && XS.running && !XS.done) renderItem(); }); }
 }
 /* iPad/laptop: a sticky rail with the question grid; hidden on phones by CSS */
-function railHtml() {
-  return `<aside class="xm-rail"><div class="xm-grid">${XS.items.map((it, i) => `<button data-i="${i}" class="${answered(it) ? "ans" : ""} ${i === XS.i ? "cur" : ""} ${it.fl ? "fl" : ""} ${it.conf === 2 ? "g2" : ""} ${it.k === "p" ? "pb" : ""}">${i + 1}</button>`).join("")}</div><div class="xm-legend">filled = answered · dot = flagged · red edge = no clue · dashed = PBQ</div></aside>`;
+function gridCell(it, i) {
+  const r = R(); const ms = MS.applies(r); const sec = ms ? MS.sectionOf(XS, i, bankQ) : "";
+  const locked = ms && i !== XS.i && !MS.canJump(XS, i, r, bankQ);
+  return `<button data-i="${i}" class="${answered(it) ? "ans" : ""} ${i === XS.i ? "cur" : ""} ${it.fl ? "fl" : ""} ${it.conf === 2 ? "g2" : ""} ${it.k === "p" ? "pb" : ""} ${locked ? "lk" : ""} ${sec ? "sec-" + sec : ""}">${i + 1}</button>`;
 }
-function bindRail() { $$(".xm-rail .xm-grid button").forEach(b => b.onclick = () => { if (R().backtrack === false && +b.dataset.i < XS.i) return; XS.i = +b.dataset.i; save(); renderItem(); }); }
+function jumpTo(i) {
+  const r = R();
+  if (MS.applies(r)) { if (i === XS.i) return renderItem(); if (!MS.canJump(XS, i, r, bankQ)) { const m = MS.gridJumpMessage(XS, i, r, bankQ); if (m) alert(m); return; } if (!MS.beforeMove(XS, i, r, bankQ)) return; }
+  else if (r.backtrack === false && i < XS.i) return;
+  XS.i = i; save(); renderItem();
+}
+function railHtml() {
+  const ms = MS.applies(R());
+  return `<aside class="xm-rail"><div class="xm-grid">${XS.items.map((it, i) => gridCell(it, i)).join("")}</div><div class="xm-legend">filled = answered · dot = flagged · red edge = no clue${ms ? " · teal = case study · amber = solution series · dotted = locked" : " · dashed = PBQ"}</div></aside>`;
+}
+function bindRail() { $$(".xm-rail .xm-grid button").forEach(b => b.onclick = () => jumpTo(+b.dataset.i)); }
 function questionHtml(it) {
   const q = bankQ(it.id); const D = A.content.diagrams || {};
-  let h = `<div><span class="xm-dom">${domName(q.d)}</span><span class="xm-type">${q.t === "ms" ? "choose " + q.pick : "single answer"}</span></div>`;
+  if (MS.isMs(q)) return MS.caseTabsHtml(q, it) + MS.questionHtml(q, it, domName(q.d));
+  let h = MS.caseTabsHtml(q, it);
+  h += `<div><span class="xm-dom">${domName(q.d)}</span><span class="xm-type">${q.t === "ms" ? "choose " + q.pick : "single answer"}</span></div>`;
   if (q.dg && D[q.dg]) h += `<div class="qwrap">${D[q.dg]}</div>`;
   if (q.ex) h += `<pre class="out">${esc(q.ex)}</pre>`;
   h += `<div class="xm-q">${esc(q.q)}${q.t === "ms" ? `<span class="pickn">SELECT ${q.pick === 2 ? "TWO" : "THREE"}</span>` : ""}</div>`;
@@ -160,6 +188,8 @@ function questionHtml(it) {
 }
 function bindQuestion(it) {
   const q = bankQ(it.id);
+  MS.bindCaseTabs(A.el, q, it, save);
+  if (MS.isMs(q)) return MS.bindQuestion(A.el, q, it, save, renderItem);
   $$("#xmopts .xm-opt").forEach(b => b.onclick = () => {
     const i = +b.dataset.i;
     if (q.t === "mc") it.ans = [i]; else { if (it.ans.includes(i)) it.ans = it.ans.filter(x => x !== i); else { if (it.ans.length >= q.pick) it.ans.shift(); it.ans.push(i); } }
@@ -176,34 +206,35 @@ function mountPbq(it, reveal) {
   draw();
   const rb = $("#xmreset"); if (rb) rb.onclick = () => { if (reveal) return; if (!ask("Reset this PBQ to its starting state?")) return; it.st = s.generated ? { ...s.create(p), g: it.st.g } : s.create(p); save(); draw(); };
 }
-function answered(it) { if (it.k === "q") return it.ans.length > 0; return sim(it.type).answered(pbqItem(it.id), it.st); }
+function answered(it) { if (it.k === "q") { const q = bankQ(it.id); return MS.isMs(q) ? MS.answeredMs(q, it) : it.ans.length > 0; } return sim(it.type).answered(pbqItem(it.id), it.st); }
 function renderGrid(final) {
   const n = XS.items.length, un = XS.items.filter(it => !answered(it)).length, fl = XS.items.filter(it => it.fl).length;
-  let html = topbar("Review");
-  html += `<p class="lead tight">${final ? "Last question done. " : ""}${un ? `<b style="color:var(--amber)">${un} unanswered</b>` : "Every question answered"}${fl ? ` · ${fl} flagged` : ""}. ${R().backtrack === false ? "This exam doesn't allow going back." : "Tap a number to jump."}</p>`;
-  html += `<div class="xm-legend">Filled = answered · dot = flagged · red edge = marked "no clue" · dashed = PBQ</div>`;
-  html += `<div class="xm-grid big">${XS.items.map((it, i) => `<button data-i="${i}" class="${answered(it) ? "ans" : ""} ${i === XS.i ? "cur" : ""} ${it.fl ? "fl" : ""} ${it.conf === 2 ? "g2" : ""} ${it.k === "p" ? "pb" : ""}">${i + 1}</button>`).join("")}</div>`;
+  const ms = MS.applies(R()); const nextIsSeries = ms && final && XS.i < n - 1;
+  let html = topbar("Review", { noGrid: true });
+  html += `<p class="lead tight">${final ? "Last question of this section done. " : ""}${un ? `<b style="color:var(--amber)">${un} unanswered</b>` : "Every question answered"}${fl ? ` · ${fl} flagged` : ""}. ${R().backtrack === false ? "This exam doesn't allow going back." : ms ? "Tap a number to jump. Locked sections are dotted." : "Tap a number to jump."}</p>`;
+  html += `<div class="xm-legend">Filled = answered · dot = flagged · red edge = marked "no clue"${ms ? " · teal = case study · amber = solution series · dotted = locked" : " · dashed = PBQ"}</div>`;
+  html += `<div class="xm-grid big">${XS.items.map((it, i) => gridCell(it, i)).join("")}</div>`;
   html += mode === "drill" ? `<div class="xm-actions"><button class="pri" id="xmsubmit">Finish drill</button><button id="xmback2">Back to question</button></div>`
     : `<div class="xm-actions"><button class="pri" id="xmsubmit">Submit exam${un ? " (" + un + " blank will count wrong)" : ""}</button><button id="xmback2">Back to question ${XS.i + 1}</button></div>`;
   A.el.innerHTML = `<div class="xm-wrap single"><div class="xm-pane">${html}</div></div>`; A.el.scrollTop = 0;
   $("#xmleave").onclick = () => { if (mode === "drill") drillDone(); else leave(); };
-  $("#xmgridbtn").onclick = () => renderItem();
-  $$(".xm-grid button").forEach(b => b.onclick = () => { if (R().backtrack === false && +b.dataset.i < XS.i) return; XS.i = +b.dataset.i; save(); renderItem(); });
+  $$(".xm-grid button").forEach(b => b.onclick = () => jumpTo(+b.dataset.i));
   $("#xmback2").onclick = () => renderItem();
   $("#xmsubmit").onclick = () => { if (mode === "drill") return drillDone(); if (ask(`Submit now?${un ? " " + un + " unanswered questions will be scored as wrong." : ""}`)) submit(false); };
 }
 
 /* ---------- scoring ---------- */
-function scoreQ(it) { const q = bankQ(it.id); const ok = q.o.map((o, i) => o.ok ? i : -1).filter(i => i >= 0).sort(); const a = it.ans.slice().sort(); return ok.length === a.length && ok.every((v, k) => v === a[k]) ? 1 : 0; }
+function scoreQ(it) { const q = bankQ(it.id); if (MS.isMs(q)) return MS.scoreMs(q, it); const ok = q.o.map((o, i) => o.ok ? i : -1).filter(i => i >= 0).sort(); const a = it.ans.slice().sort(); return ok.length === a.length && ok.every((v, k) => v === a[k]) ? 1 : 0; }
 function scoreP(it) { const p = pbqItem(it.id); return sim(p.type).score(p, it.st); }
 function submit(timedOut) {
   if (!XS || XS.done) return;
   const r = R();
+  LP.end(XS, save);
   XS.running = false; XS.done = true; if (timer) { clearInterval(timer); timer = null; }
   const dom = {}; domIds().forEach(d => dom[d] = [0, 0]); const conf = { 0: [0, 0], 1: [0, 0], 2: [0, 0] };
   let pts = 0, max = 0; const miss = [], guess = [], flags = [], detail = [];
   XS.items.forEach(it => {
-    if (it.k === "q") { const q = bankQ(it.id); const s = scoreQ(it); pts += s; max += 1; dom[q.d][0] += s; dom[q.d][1] += 1; conf[it.conf][0] += s; conf[it.conf][1] += 1; if (!s) miss.push(it.id); if (it.conf === 2) guess.push(it.id); if (it.fl) flags.push(it.id); detail.push({ id: it.id, r: s, conf: it.conf, ans: it.ans }); }
+    if (it.k === "q") { const q = bankQ(it.id); const s = scoreQ(it); pts += s; max += 1; dom[q.d][0] += s; dom[q.d][1] += 1; conf[it.conf][0] += s; conf[it.conf][1] += 1; if (!s) miss.push(it.id); if (it.conf === 2) guess.push(it.id); if (it.fl) flags.push(it.id); detail.push({ id: it.id, r: s, conf: it.conf, ans: it.ans, ...(it.lk ? { lk: it.lk } : {}) }); }
     else { const p = pbqItem(it.id); const s = scoreP(it); const e = s.f * r.pbqPts; pts += e; max += r.pbqPts; const d = p.d || domIds()[0]; dom[d][0] += e; dom[d][1] += r.pbqPts; conf[it.conf][0] += s.f; conf[it.conf][1] += 1; if (s.f < 1) miss.push(it.id); if (it.conf === 2) guess.push(it.id); if (it.fl) flags.push(it.id); detail.push({ id: it.id, r: s.f, conf: it.conf, notes: s.notes, why: s.why }); }
   });
   for (const d in dom) dom[d][0] = Math.round(dom[d][0] * 100) / 100;
@@ -212,6 +243,7 @@ function submit(timedOut) {
   const fresh = !XS.practice && XS.x !== "mix" && taken(XS.x) === 0;
   const gate = fresh && raw >= r.gate.all && Object.values(dom).every(p => pct(p) >= r.gate.dom);
   const res = { id: XS.id, t: Date.now(), x: XS.x, fresh, practice: !!XS.practice, raw, scaled, pass: scaled >= r.pass, gate, dom, conf, secs: Math.round(XS.elapsed / 1000), pauses: XS.pauses.length, timedOut: !!timedOut, miss, guess, flags, detail };
+  if (r.learnPane) res.learn = LP.summary(XS, it => it.k === "q" ? scoreQ(it) : scoreP(it).f);
   hist().push(res);
   bumpDay(A.packId, 5); persist();
   XS = null; clearInprog(A.packId);
@@ -228,6 +260,7 @@ export function showResult(res, justFinished) {
   html += `<div class="reft">By domain</div><div class="xm-bars">${domIds().map(d => { const p = pct(res.dom[d]); const w = A.manifest.sections.find(s => s.d === d).weight; return `<div class="xm-bar"><span class="nm">${domName(d)}<br><span class="dim">${w}% of exam · ${res.dom[d][1]} pts</span></span><span class="tr"><i class="${p >= r.gate.all ? "" : p >= r.gate.dom ? "warn" : "bad"}" style="width:${p}%"></i></span><span class="pc" style="color:${p >= r.gate.all ? "var(--green)" : p >= r.gate.dom ? "var(--amber)" : "var(--red)"}">${p}%</span></div>`; }).join("")}</div>`;
   html += `<div class="reft">How good are your guesses?</div><table class="xm-tbl"><tr><th>You said</th><th class="r">Questions</th><th class="r">Right</th><th class="r">Hit rate</th></tr>${[0, 1, 2].map(k => { const p = res.conf[k]; const q = p[1] ? Math.round(p[0] / p[1] * 100) : null; return `<tr><td class="g${k}">${CONF[k]}<br><span class="dim">${CONFLONG[k]}</span></td><td class="r">${p[1]}</td><td class="r">${Math.round(p[0])}</td><td class="r g${k}">${q === null ? "—" : q + "%"}</td></tr>`; }).join("")}</table>`;
   html += `<div class="xm-note">${confNote(res)}</div>`;
+  html += LP.readoutHtml(res, r);
   html += `<div class="xm-actions">${res.miss.length || res.guess.length ? `<button class="pri" id="xmdrill">Drill the ${new Set(res.miss.concat(res.guess)).size} missed + guessed (with answers)</button>` : ""}${res.miss.length ? `<button class="amb" id="xmreview">Review every miss with explanations</button>` : ""}<button id="xmcards">Flashcards for the weak topics</button><button class="ghost" id="xmhome2">Back to exams</button></div>`;
   A.el.innerHTML = html; A.el.scrollTop = 0;
   $("#xmhome").onclick = () => renderExam(A); $("#xmhome2").onclick = () => renderExam(A);
@@ -254,7 +287,8 @@ function review(res) {
   let html = `<div class="tb"><button id="xmback">Report</button><div class="labtitle">Misses · ${res.miss.length}</div></div><p class="lead">Every miss, with why the right answer is right and why each distractor is wrong. Read it once now and again tomorrow.</p>`;
   res.miss.forEach(id => {
     const d = res.detail.find(x => x.id === id); const q = bankQ(id);
-    if (q) html += `<div class="xm-rev"><div class="rh"><span style="color:var(--amber)">${domName(q.d)}${q.t === "ms" ? " · choose " + q.pick : ""}${q.obj ? " · obj " + q.obj : ""}</span><span class="st">${d && d.conf !== undefined ? CONF[d.conf] : ""} · missed</span></div>${q.ex ? `<pre class="out">${esc(q.ex)}</pre>` : ""}<div class="rq">${esc(q.q)}</div><div class="xm-opts">${q.o.map((o, i) => `<div class="xm-opt static ${o.ok ? "right" : (d && d.ans && d.ans.includes(i)) ? "wrong" : ""}"><span class="k">${o.ok ? "✓" : (d && d.ans && d.ans.includes(i)) ? "✗" : ""}</span><span>${esc(o.t)}<span class="ox">${esc(o.x)}</span></span></div>`).join("")}</div><div class="rx"><b>Remember:</b> ${esc(q.w)}</div></div>`;
+    if (q && MS.isMs(q)) html += MS.reviewHtml(q, d, domName(q.d), CONF);
+    else if (q) html += `<div class="xm-rev"><div class="rh"><span style="color:var(--amber)">${domName(q.d)}${q.t === "ms" ? " · choose " + q.pick : ""}${q.obj ? " · obj " + q.obj : ""}</span><span class="st">${d && d.conf !== undefined ? CONF[d.conf] : ""} · missed</span></div>${q.ex ? `<pre class="out">${esc(q.ex)}</pre>` : ""}<div class="rq">${esc(q.q)}</div><div class="xm-opts">${q.o.map((o, i) => `<div class="xm-opt static ${o.ok ? "right" : (d && d.ans && d.ans.includes(i)) ? "wrong" : ""}"><span class="k">${o.ok ? "✓" : (d && d.ans && d.ans.includes(i)) ? "✗" : ""}</span><span>${esc(o.t)}<span class="ox">${esc(o.x)}</span></span></div>`).join("")}</div><div class="rx"><b>Remember:</b> ${esc(q.w)}</div></div>`;
     else { const p = pbqItem(id); if (!p) return; html += `<div class="xm-rev"><div class="rh"><span style="color:var(--amber)">${p.d ? domName(p.d) : "PBQ"} · PBQ${p.obj ? " · obj " + p.obj : ""}</span><span class="st">${d ? Math.round(d.r * 100) + "%" : ""}</span></div><div class="rq">${esc(p.title)}</div>${p.out ? `<pre class="out">${esc(p.out)}</pre>` : ""}<div class="rx">${d && d.notes ? esc(d.notes.join("\n")).replace(/\n/g, "<br>") : ""}${d && d.why ? `<br><br><b>Remember:</b> ${esc(d.why)}` : ""}</div></div>`; }
   });
   A.el.innerHTML = html; A.el.scrollTop = 0;
@@ -266,7 +300,7 @@ function startDrill(res) {
   const ids = [...new Set(res.miss.concat(res.guess))];
   const qs = ids.filter(id => bankQ(id)), pbs = ids.filter(id => pbqItem(id)).map(pbqItem);
   mode = "drill";
-  XS = { x: res.x, items: pbs.map(newPbqItem).concat(shuffle(qs).map(id => { const q = bankQ(id); return { k: "q", id, ord: shuffle(q.o.map((_, i) => i)), ans: [], conf: 0, fl: false }; })), i: 0, elapsed: 0, running: false, pauses: [], started: Date.now(), done: false, drill: true, from: res, right: 0 };
+  XS = { x: res.x, items: pbs.map(newPbqItem).concat(shuffle(qs).map(id => { const q = bankQ(id); return { k: "q", id, ord: MS.initialOrder(q), ans: [], conf: 0, fl: false }; })), i: 0, elapsed: 0, running: false, pauses: [], started: Date.now(), done: false, drill: true, from: res, right: 0 };
   drillItem();
 }
 function drillItem() {
@@ -278,7 +312,11 @@ function drillItem() {
   if (it.k === "q") bindQuestion(it); else mountPbq(it, false);
   $("#xmcheck").onclick = () => {
     let fb = "";
-    if (it.k === "q") {
+    if (it.k === "q" && MS.isMs(bankQ(it.id))) {
+      const q = bankQ(it.id); const r = scoreQ(it); if (r) XS.right++;
+      $$("#xmopts button, #xmopts [data-i]").forEach(b => { b.onclick = null; b.disabled = true; });
+      fb = `<div class="xm-fb"><b>${r ? "Correct." : "Not quite."}</b> ${esc(q.w || "")}</div>${MS.keyHtml(q, it)}`;
+    } else if (it.k === "q") {
       const q = bankQ(it.id); const r = scoreQ(it); if (r) XS.right++;
       $$("#xmopts .xm-opt").forEach(b => { const i = +b.dataset.i; const o = q.o[i]; b.classList.remove("sel"); if (o.ok) b.classList.add("right"); else if (it.ans.includes(i)) b.classList.add("wrong"); b.onclick = null; const sp = document.createElement("span"); sp.className = "ox"; sp.textContent = o.x; b.lastElementChild.appendChild(sp); });
       fb = `<div class="xm-fb"><b>${r ? "Correct." : "Not quite."}</b> ${esc(q.w)}</div>`;
@@ -302,4 +340,4 @@ function drillDone() {
     $("#xmback").onclick = () => showResult(from); $("#xmback2").onclick = () => showResult(from); $("#xmagain").onclick = () => startDrill(from);
   } else renderExam(A);
 }
-export function stopExamTimer() { if (timer) { clearInterval(timer); timer = null; } if (XS && XS.running && !XS.drill) { XS.running = false; save(); } }
+export function stopExamTimer() { if (timer) { clearInterval(timer); timer = null; } if (XS && XS.running && !XS.drill) { LP.end(XS, save); XS.running = false; save(); } }

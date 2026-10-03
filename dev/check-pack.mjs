@@ -16,11 +16,15 @@ globalThis.window = { addEventListener() { } };
 const { simTypes, sim } = await import(pathToFileURL(path.join(root, "core/sims/registry.js")));
 import { readdirSync } from "node:fs";
 for (const f of readdirSync(path.join(root, "core/sims")).filter(f => f.endsWith(".js") && !["registry.js", "ui.js"].includes(f)).sort()) await import(pathToFileURL(path.join(root, "core/sims", f)));
+await import(pathToFileURL(path.join(root, "core/sims/kql/drill.js")));     /* KQL Lab sim (Chat 6) */
+await import(pathToFileURL(path.join(root, "core/exam/msitems.js")));      /* hot-area sim + Microsoft exam item types (Chat 6) */
 const types = new Set(simTypes());
 
 const m = (await import(pathToFileURL(path.join(root, `packs/${id}/pack.js`)))).default;
 const c = await m.load();
-const OBJ = m.objPattern ? new RegExp(m.objPattern) : /^[1-9]\.[1-9][0-9]?$/;   /* packs with multi-level objective ids (Microsoft skills bullets) declare objPattern */
+const OBJ_RE = m.objPattern ? new RegExp(m.objPattern) : /^[1-9]\.[1-9][0-9]?$/;   /* packs with multi-level objective ids (Microsoft skills bullets) declare objPattern */
+const OBJ = { test: o => Array.isArray(o) ? o.length > 0 && o.every(x => OBJ_RE.test(x)) : OBJ_RE.test(o || "") };   /* an item may span two bullets: obj = ["1.1.9", "1.1.7"], first is primary */
+const primary = o => Array.isArray(o) ? o[0] : o;
 const cats = new Set(Object.keys(m.cats));
 const doms = new Set(m.sections.map(s => s.d));
 
@@ -46,7 +50,7 @@ const stems = new Set();
 (c.exq || []).forEach(q => {
   if (!/^x\d{3}$/.test(q.id)) bad(`exq bad id ${q.id}`);
   if (!doms.has(q.d)) bad(`exq ${q.id} bad domain`);
-  if (!OBJ.test(q.obj || "")) bad(`exq ${q.id} missing obj`); else if (q.obj.split(".")[0] !== String(q.d)) bad(`exq ${q.id} obj ${q.obj} not in domain ${q.d}`);
+  if (!OBJ.test(q.obj || "")) bad(`exq ${q.id} missing obj`); else if (primary(q.obj).split(".")[0] !== String(q.d)) bad(`exq ${q.id} obj ${q.obj} not in domain ${q.d}`);
   if (!Array.isArray(q.o) || q.o.length !== 4) bad(`exq ${q.id} needs 4 options`);
   if (!q.w || !Array.isArray(q.n) || q.n.length !== 3) bad(`exq ${q.id} needs w and 3 n`);
   if (stems.has(q.q)) bad(`exq ${q.id} duplicate stem`); stems.add(q.q);
@@ -98,23 +102,30 @@ Object.entries(c.pbqs || {}).forEach(([x, list]) => {
 const allPbqIds = [...(c.lab || []), ...(c.generators || []), ...Object.values(c.pbqs || {}).flat()].map(p => p.id);
 allPbqIds.forEach((id, i) => { if (allPbqIds.indexOf(id) !== i) bad(`duplicate PBQ id ${id}`); });
 
-/* exam banks */
+/* exam banks (Microsoft-format packs declare exam.itemTypes and ship banks flattened: case questions as x001-n, series solutions as x040-n) */
 const nQ = m.exam.count - (m.exam.pbqCount ?? 5);
+const allowed = new Set(m.exam.itemTypes || ["mc", "ms"]);
 Object.entries(c.banks || {}).forEach(([x, bank]) => {
   if (bank.length !== nQ) bad(`bank ${x} has ${bank.length} questions, expected ${nQ}`);
   const byD = {}; let ms = 0, ex = 0;
+  if (m.exam.caseFirst) { const cases = new Set(bank.filter(q => q.caseId).map(q => q.caseId)); if (cases.size !== 1) bad(`bank ${x} should carry exactly one case study, has ${cases.size}`); const n = bank.filter(q => q.caseId).length; if (n < 6 || n > 9) bad(`bank ${x} case study has ${n} questions (want 6–9)`); }
+  if (m.exam.seriesLast) { const ser = new Set(bank.filter(q => q.t === "series").map(q => q.seriesId)); if (ser.size !== 1) bad(`bank ${x} should carry exactly one solution series, has ${ser.size}`); const sol = bank.filter(q => q.t === "series"); if (sol.length !== 4) bad(`bank ${x} series has ${sol.length} solutions (want 4)`); const okN = sol.filter(q => q.ok).length; if (okN < 1 || okN > 2) bad(`bank ${x} series has ${okN} Yes answers (want 1–2)`); }
   bank.forEach(q => {
-    if (!new RegExp(`^${x}\\d{3}$`).test(q.id)) bad(`bank ${x} bad id ${q.id}`);
+    if (!new RegExp(`^${x}\\d{3}(-\\d+)?$`).test(q.id)) bad(`bank ${x} bad id ${q.id}`);
     if (!doms.has(q.d)) bad(`bank ${q.id} bad domain`); byD[q.d] = (byD[q.d] || 0) + 1;
     if (!cats.has(q.cat)) bad(`bank ${q.id} unknown cat ${q.cat}`);
-    if (!OBJ.test(q.obj || "")) bad(`bank ${q.id} missing obj`); else if (q.obj.split(".")[0] !== String(q.d)) bad(`bank ${q.id} obj ${q.obj} not in domain ${q.d}`);
-    if (!["mc", "ms"].includes(q.t)) bad(`bank ${q.id} bad type`);
+    if (!OBJ.test(q.obj || "")) bad(`bank ${q.id} missing obj`); else if (primary(q.obj).split(".")[0] !== String(q.d)) bad(`bank ${q.id} obj ${q.obj} not in domain ${q.d}`);
+    if (!allowed.has(q.t)) bad(`bank ${q.id} bad type ${q.t}`);
     const okN = (q.o || []).filter(o => o.ok).length;
     if (q.t === "mc" && (q.o.length !== 4 || okN !== 1)) bad(`bank ${q.id} mc needs 4 options, 1 correct (has ${okN})`);
     if (q.t === "ms") { ms++; if (q.o.length < 5 || okN !== q.pick) bad(`bank ${q.id} ms needs ≥5 options and pick=${q.pick} correct (has ${okN})`); }
+    if (q.t === "order" || q.t === "build") { if (!Array.isArray(q.pool) || q.pool.length < 4 || q.pool.length > 8) bad(`bank ${q.id} pool must have 4–8 entries`); if (!Array.isArray(q.answer) || !q.answer.length) bad(`bank ${q.id} answer missing`); else { q.answer.forEach(i => { if (!Number.isInteger(i) || i < 0 || i >= (q.pool || []).length) bad(`bank ${q.id} answer index ${i} out of range`); }); if (new Set(q.answer).size !== q.answer.length) bad(`bank ${q.id} answer repeats an index`); } if (q.t === "order" && q.answer && q.answer.length !== (q.pool || []).length) bad(`bank ${q.id} order must use every pool item`); if (q.t === "build" && q.answer && q.answer.length >= (q.pool || []).length) bad(`bank ${q.id} build list needs distractors in the pool`); (q.alt || []).forEach((a, k) => { if (!Array.isArray(a) || a.length !== q.answer.length) bad(`bank ${q.id} alt ${k} length`); }); if (!q.x) bad(`bank ${q.id} missing x`); }
+    if (q.t === "hot") { if (!Array.isArray(q.regions) || q.regions.length < 4 || q.regions.length > 8) bad(`bank ${q.id} hot needs 4–8 regions`); else if (q.regions.filter(r => r.ok).length !== (q.pick || 1)) bad(`bank ${q.id} hot ok-region count ≠ pick`); if (!("img" in q)) bad(`bank ${q.id} hot needs img (null until screenshots)`); if (!q.screen) bad(`bank ${q.id} hot needs screen text`); }
+    if (q.t === "series") { if (!q.scenario || !q.s || typeof q.ok !== "boolean" || !q.x) bad(`bank ${q.id} series solution malformed`); }
+    if (q.caseId && !(q.tabs && ["overview", "environment", "requirements", "issues"].every(k => q.tabs[k] && q.tabs[k].length >= 300))) bad(`bank ${q.id} case tabs incomplete`);
     if (q.ex) ex++;
     (q.o || []).forEach((o, i) => { if (!o.t || !o.x) bad(`bank ${q.id} option ${i} missing t/x`); if (o.t.length > 130) bad(`bank ${q.id} option ${i} > 130 chars`); });
-    if (!q.w) bad(`bank ${q.id} missing w`); if (q.q.length > 420) bad(`bank ${q.id} stem > 420 chars`);
+    if (!q.w) bad(`bank ${q.id} missing w`); if ((q.q || "").length > (m.exam.itemTypes ? 520 : 420)) bad(`bank ${q.id} stem > ${m.exam.itemTypes ? 520 : 420} chars`);
     if (stems.has(q.q)) bad(`bank ${q.id} duplicate stem`); stems.add(q.q);
   });
   for (const d in m.exam.mixQuota) if ((byD[d] || 0) !== m.exam.mixQuota[d]) bad(`bank ${x} domain ${d}: ${byD[d] || 0} questions, quota ${m.exam.mixQuota[d]}`);
@@ -124,11 +135,11 @@ Object.entries(c.banks || {}).forEach(([x, bank]) => {
 
 /* objective coverage summary */
 const cover = {};
-[...c.cards, ...(c.exq || []), ...(c.twins || []), ...(c.lab || []), ...Object.values(c.banks || {}).flat(), ...Object.values(c.pbqs || {}).flat()].forEach(i => { if (i.obj) cover[i.obj] = (cover[i.obj] || 0) + 1; });
+[...c.cards, ...(c.exq || []), ...(c.twins || []), ...(c.lab || []), ...Object.values(c.banks || {}).flat(), ...Object.values(c.pbqs || {}).flat()].forEach(i => { if (i.obj) cover[primary(i.obj)] = (cover[primary(i.obj)] || 0) + 1; });
 const objs = Object.keys(cover).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 console.log(`pack ${id}: ${c.cards.length} cards · ${(c.exq || []).length} exq · ${(c.twins || []).length} twins · ${(c.lab || []).length} lab + ${(c.generators || []).length} generators · banks ${Object.values(c.banks || {}).map(b => b.length).join("/")} · exam PBQs ${Object.values(c.pbqs || {}).map(b => b.length).join("/")}`);
 console.log("objective coverage: " + objs.map(o => `${o}:${cover[o]}`).join(" "));
-const examOnly = {}; [...Object.values(c.banks || {}).flat(), ...Object.values(c.pbqs || {}).flat()].forEach(i => { examOnly[i.obj] = (examOnly[i.obj] || 0) + 1; });
+const examOnly = {}; [...Object.values(c.banks || {}).flat(), ...Object.values(c.pbqs || {}).flat()].forEach(i => { examOnly[primary(i.obj)] = (examOnly[primary(i.obj)] || 0) + 1; });
 const missing = objs.filter(o => !examOnly[o]); if (missing.length) console.log("WARN objectives with no exam-bank items: " + missing.join(", "));
 if (problems.length) { console.log(`FAIL (${problems.length})`); problems.slice(0, 60).forEach(p => console.log(" - " + p)); process.exit(1); }
 console.log("PASS");

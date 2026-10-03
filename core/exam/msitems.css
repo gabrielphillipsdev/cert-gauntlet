@@ -1,0 +1,77 @@
+/* Cert Gauntlet — styles for the Microsoft exam item types + Learn pane (loaded by core/exam/msitems.js; tokens from core/styles.css). */
+/* case study: pinned scenario tabs */
+.cs{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:0 0 10px;overflow:hidden}
+.cs-head{display:flex;justify-content:space-between;gap:8px;padding:8px 12px 0;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.cs-title{color:var(--teal)}.cs-n{color:var(--muted)}
+.cs-tabs{display:flex;gap:4px;padding:8px 8px 0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.cs-tabs button{flex:none;border:none;background:var(--panel-2);color:var(--muted);border-radius:9px 9px 0 0;padding:8px 11px;font-size:12.5px;font-weight:800}
+.cs-tabs button.on{background:var(--bg);color:var(--ink);box-shadow:inset 0 2px 0 var(--teal)}
+.cs-tabs .cs-toggle{margin-left:auto;background:none;color:var(--dim);font-size:11.5px}
+.cs-body{background:var(--bg);padding:12px 14px;font-size:13.5px;line-height:1.55;white-space:pre-line;max-height:38vh;overflow-y:auto;border-top:1px solid var(--line)}
+.cs-body.closed{display:none}
+/* solution series */
+.sr{background:var(--panel);border-radius:16px;padding:14px 16px;margin-bottom:10px}
+.sr-head{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+.sr-scn{font-size:14px;line-height:1.5;color:var(--muted);white-space:pre-line}
+.sr-sol{font-size:15.5px;font-weight:700;line-height:1.45;margin-top:12px;padding:12px;background:var(--bg);border-radius:12px;border-left:4px solid var(--amber)}
+.sr-q{font-size:14px;font-weight:800;margin-top:12px}
+.sr-yn{display:flex;gap:10px;margin-bottom:12px}
+.sr-yn .xm-opt{flex:1;justify-content:center;font-size:17px;font-weight:800;padding:18px}
+.sr-key{font-size:14px;margin-bottom:8px}.sr-key .ox{font-weight:500;color:var(--muted);margin-top:6px;line-height:1.45}
+/* drag-drop / build list */
+.dnd-sub{font-size:12.5px;color:var(--muted);font-weight:650;line-height:1.45;margin:0 0 8px}
+.dnd{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.dnd-col{background:var(--panel);border-radius:14px;padding:10px}
+.dnd-h{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:0 2px 8px}
+.dnd-h span{color:var(--amber);margin-left:6px}
+.dnd-list{display:flex;flex-direction:column;gap:7px;min-height:44px}
+.dnd-item{display:flex;align-items:center;gap:9px;width:100%;border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 11px;color:var(--ink);font-size:14px;font-weight:650;text-align:left;line-height:1.35}
+.dnd-item .t{flex:1;min-width:0}
+.dnd-item .arr{color:var(--amber);font-weight:800;flex:none}
+.dnd-item .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--amber);color:#0B1220;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:850;touch-action:none;cursor:grab}
+.dnd-item.placed{border-color:var(--line-2);cursor:default}
+.dnd-item.dragging{opacity:.5}.dnd-item.over{border-color:var(--teal)}
+.dnd-item .ctl{display:flex;gap:4px;flex:none}
+.dnd-item .ctl button{width:32px;height:32px;border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink);border-radius:8px;font-size:12px;font-weight:800}
+.dnd-item .ctl button:disabled{opacity:.3}
+.dnd-item.static{cursor:default}.dnd-item.static.ok{border-color:var(--green)}.dnd-item.static.bad{border-color:var(--red)}
+.dnd-empty{font-size:12.5px;color:var(--dim);font-weight:650;padding:10px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+.dnd-key{display:flex;flex-direction:column;gap:10px;margin:8px 0}
+.dnd-keycol{display:flex;flex-direction:column;gap:6px}
+.dnd-alt{font-size:12px;color:var(--muted);margin-top:4px}
+/* hot area */
+.hot-screen{background:var(--panel);border-radius:14px;padding:12px 14px;font-size:13.5px;line-height:1.5;margin-bottom:10px;white-space:pre-line}
+.hot-h{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.hot-img{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);margin-bottom:12px}
+.hot-img img{display:block;width:100%;height:auto}
+.hot-rect{position:absolute;border:2px dashed rgba(255,180,84,.0);background:rgba(255,180,84,.0);border-radius:6px;cursor:pointer;transition:background .12s}
+.hot-rect:hover{border-color:rgba(255,180,84,.6)}
+.hot-rect.sel{border-color:var(--amber);border-style:solid;background:rgba(255,180,84,.25)}
+.hot-rect.right{border-color:var(--green);border-style:solid;background:rgba(67,217,123,.25)}.hot-rect.wrong{border-color:var(--red);border-style:solid;background:rgba(255,93,82,.25)}
+.hot-portal{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.hot-portal-tag{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--teal);background:rgba(46,230,214,.12);padding:3px 8px;border-radius:9px}
+.hot-path{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:12.5px;font-weight:700}
+.hot-path span{background:var(--panel-2);border-radius:7px;padding:3px 8px}.hot-path i{color:var(--dim);font-style:normal}
+.hot-pathbtn{font-size:11.5px}
+/* learn pane */
+.learnbtn{border:1px solid var(--teal);color:var(--teal);background:rgba(46,230,214,.1);border-radius:9px;padding:6px 10px;font-size:12.5px;font-weight:800;margin-right:6px}
+.learn-live{display:flex;align-items:center;gap:10px;background:rgba(46,230,214,.12);border:1px solid var(--teal);border-radius:12px;padding:9px 12px;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--teal)}
+.learn-live span:first-child{flex:1;line-height:1.35}
+.learn-t{font-variant-numeric:tabular-nums;font-weight:850}
+.learn-live button{border:none;background:var(--teal);color:#0B1220;border-radius:9px;padding:8px 12px;font-weight:850;font-size:13px}
+.learn-note{font-size:11.5px;color:var(--muted);font-weight:650;margin-bottom:8px}
+/* locked grid cells */
+.xm-grid button.lk{opacity:.35;cursor:not-allowed;border-style:dotted}
+.xm-grid button.sec-case{box-shadow:inset 0 -3px 0 var(--teal)}
+.xm-grid button.sec-series{box-shadow:inset 0 -3px 0 var(--amber)}
+@media(min-width:768px){
+  .dnd{flex-direction:row;align-items:flex-start}.dnd-col{flex:1;min-width:0}
+  .dnd-key{flex-direction:row}.dnd-keycol{flex:1}
+  .cs-body{max-height:30vh}
+}
+@media(min-width:1024px){
+  .view.wide .xm-wrap.has-case{grid-template-columns:200px minmax(0,1fr)}
+  .cs-body{max-height:none;min-height:120px}
+}
+/* Microsoft stems carry long resource paths and permission names: wrap them instead of overflowing a phone screen */
+.xm-q,.xm-opt span,.sr-scn,.sr-sol,.cs-body,.dnd-item .t,.hot-screen{overflow-wrap:anywhere}
