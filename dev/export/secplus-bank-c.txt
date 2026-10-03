@@ -3,7 +3,7 @@
 
 ==== PBQs (presented first) ====
 
-[pc1] sim=hardening domain=4 obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security)
+[pc1] sim=hardening domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
 TITLE: MSP: harden a client's file server
 PROMPT: Apply the MSP's server baseline to the client's file server. Users must still reach their shares.
 TASK:

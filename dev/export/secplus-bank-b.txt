@@ -59,7 +59,7 @@ CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1;
     ! Host firewall: start=On  [crit: keep]   // It enforces the RDP source restriction; nothing asked you to turn it off.
 TAKEAWAY: OT hardening: no dual-homing, no radios, no removable media, least privilege, remote access from one VLAN, patches in the outage window. Availability of the production link is non-negotiable.
 
-[pb3] sim=fwrule domain=3 obj=3.2 (Given a scenario, apply security principles to secure enterprise infrastructure)
+[pb3] sim=fwrule domain=4 obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security)
 TITLE: Firewall rule evaluation
 PROMPT: Walk the rule table top-down for the packet shown.
 TASK:

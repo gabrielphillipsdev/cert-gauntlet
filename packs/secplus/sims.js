@@ -69,16 +69,16 @@ export const LAB_SIMS = [
  prompt:"Change only what the requirement asks for. Every unnecessary change costs points.",device:"AP-HQ-01",deviceSub:"Corporate wireless profile",
  task:["SSID: CorpSecure, 5 GHz only.","Use the strongest security mode that authenticates each user individually against the corporate RADIUS server.","Clients have machine certificates from the internal CA; choose the EAP method that uses them (no passwords).","RADIUS server 10.0.5.20, port 1812, shared secret Kr9!vault-Ridge.","Protected management frames must be mandatory. Push-button setup must be off."],
  start:{ssid:"Linksys-Setup",hidden:false,band:"2.4 + 5 GHz",mode:"WPA2-Personal",psk:"password123",eap:"PEAP (MSCHAPv2)",radiusHost:"",radiusPort:"1645",radiusSecret:"",pmf:"Optional",wps:true,macFilter:"Off",isolation:false,mgmtWifi:false,adminDefault:"Changed to a unique strong password"},
- want:{ssid:"CorpSecure",band:"5 GHz",mode:"WPA3-Enterprise",eap:"EAP-TLS",radiusHost:"10.0.5.20",radiusPort:"1812",radiusSecret:"Kr9!vault-Ridge",pmf:"Required",wps:false},
+ want:{ssid:"CorpSecure",band:"5 GHz",mode:["WPA3-Enterprise","WPA3-Enterprise 192-bit"],eap:"EAP-TLS",radiusHost:"10.0.5.20",radiusPort:"1812",radiusSecret:"Kr9!vault-Ridge",pmf:"Required",wps:false},
  fieldWhy:{mode:"Per-user authentication against RADIUS is Enterprise mode; WPA3 is the strongest available.",eap:"EAP-TLS is the certificate-based, mutual-authentication method; PEAP and EAP-TTLS tunnel a password.",pmf:"WPA3 requires 802.11w; 'Required' also stops deauthentication/disassociation spoofing.",wps:"WPS PINs are brute-forceable in hours; it has no place on a corporate SSID."},
  why:"Enterprise = 802.1X + RADIUS; EAP-TLS = certificates both ways; WPA3 mandates PMF; WPS always off. Hidden SSID, MAC filtering and client isolation were not requested, so leave them alone."},
 
 {id:"ap-guest",obj:"4.1",d:4,cat:"harden",type:"appanel",title:"Set up the guest network",
  prompt:"Build the visitor SSID. Touch only the fields the ticket names.",device:"AP-LOBBY-02",deviceSub:"Guest wireless profile",
- task:["SSID: Visitor-WiFi, broadcast on both bands.","Visitors must not need a passphrase, but the air must still be encrypted so nobody can sniff a neighbor.","Guests must never be able to reach each other's devices.","The AP's admin page must not be reachable from the guest wireless side."],
- start:{ssid:"Guest",hidden:false,band:"2.4 + 5 GHz",mode:"WPA2-Personal",psk:"guest1234",eap:"PEAP (MSCHAPv2)",radiusHost:"",radiusPort:"1812",radiusSecret:"",pmf:"Optional",wps:false,macFilter:"Off",isolation:false,mgmtWifi:true,adminDefault:"Changed to a unique strong password"},
- want:{ssid:"Visitor-WiFi",mode:"OWE (Enhanced Open)",isolation:true,mgmtWifi:false},
- fieldWhy:{mode:"OWE (Wi-Fi Enhanced Open) encrypts each client's session with no passphrase at all; plain Open sends everything in the clear.",isolation:"Client isolation blocks client-to-client forwarding on the AP, so a visitor cannot scan or attack other visitors.",mgmtWifi:"Management interfaces belong on a wired admin VLAN; never expose them to untrusted clients."},
+ task:["SSID: Visitor-WiFi, broadcast on both bands.","Visitors must not need a passphrase, but the air must still be encrypted so nobody can sniff a neighbor.","Guests must never be able to reach each other's devices.","Management frames must be protected for every client.","The AP's admin page must not be reachable from the guest wireless side."],
+ start:{ssid:"Guest",hidden:false,band:"2.4 + 5 GHz",mode:"WPA2-Personal",psk:"guest1234",eap:"PEAP (MSCHAPv2)",radiusHost:"",radiusPort:"1812",radiusSecret:"",pmf:"Disabled",wps:false,macFilter:"Off",isolation:false,mgmtWifi:true,adminDefault:"Changed to a unique strong password"},
+ want:{ssid:"Visitor-WiFi",mode:"OWE (Enhanced Open)",pmf:"Required",isolation:true,mgmtWifi:false},
+ fieldWhy:{mode:"OWE (Wi-Fi Enhanced Open) encrypts each client's session with no passphrase at all; plain Open sends everything in the clear.",pmf:"Enhanced Open and WPA3 both mandate 802.11w; Required also blocks deauthentication spoofing against guests.",isolation:"Client isolation blocks client-to-client forwarding on the AP, so a visitor cannot scan or attack other visitors.",mgmtWifi:"Management interfaces belong on a wired admin VLAN; never expose them to untrusted clients."},
  why:"Open-but-encrypted is OWE. Guest networks get client isolation and no path to management. Hidden SSID and MAC filtering were not asked for, and would not help a guest network anyway."},
 
 {id:"ap-clinic",obj:"4.1",d:4,cat:"harden",type:"appanel",title:"One SSID for old scanners and new laptops",
@@ -89,12 +89,12 @@ export const LAB_SIMS = [
  fieldWhy:{mode:"WPA3 transition (mixed) mode lets WPA3-capable laptops use SAE while WPA2-only scanners still join with the PSK on the same SSID.",pmf:"Transition mode requires PMF to be 'Optional': WPA3 clients negotiate it, legacy WPA2 clients that cannot are still admitted. 'Required' would drop the scanners; 'Disabled' breaks WPA3.",wps:"WPS is a brute-force target regardless of the mode in use."},
  why:"Mixed/transition mode is the bridge between WPA2 and WPA3 fleets, and it needs PMF set to Optional. Replacing a weak passphrase with a long passphrase and killing WPS are the two cheapest wins."},
 
-{id:"ap-byod",obj:"4.6",d:4,cat:"iam",type:"appanel",title:"BYOD SSID with domain credentials",
+{id:"ap-byod",obj:"4.1",d:4,cat:"harden",type:"appanel",title:"BYOD SSID with domain credentials",
  prompt:"Staff phones must log in with their Active Directory username and password.",device:"AP-FLOOR3-04",deviceSub:"BYOD wireless profile",
  task:["SSID: Staff-BYOD, visible so onboarding instructions work.","Users authenticate with their domain username and password; personal devices have no certificates installed.","The identity team runs Microsoft NPS (RADIUS) at radius.corp.example, port 1812, secret Byod#Fern-9182.","Use the strongest Enterprise mode the NPS server supports: standard WPA3-Enterprise."],
  start:{ssid:"Staff-BYOD",hidden:true,band:"2.4 + 5 GHz",mode:"WPA2-Personal",psk:"Welcome2024",eap:"EAP-TLS",radiusHost:"",radiusPort:"1645",radiusSecret:"",pmf:"Required",wps:false,macFilter:"Off",isolation:false,mgmtWifi:false,adminDefault:"Changed to a unique strong password"},
- want:{hidden:false,mode:"WPA3-Enterprise",eap:"PEAP (MSCHAPv2)",radiusHost:"radius.corp.example",radiusPort:"1812",radiusSecret:"Byod#Fern-9182"},
- fieldWhy:{eap:"PEAP wraps MSCHAPv2 (a password exchange) in a TLS tunnel that only needs a server certificate; EAP-TLS would require a certificate on every phone.",radiusPort:"RADIUS authentication listens on UDP 1812 (1813 accounting); 1645/1646 are the legacy ports.",hidden:"Hiding the SSID adds no security and makes onboarding harder."},
+ want:{hidden:false,mode:"WPA3-Enterprise",eap:["PEAP (MSCHAPv2)","EAP-TTLS"],radiusHost:"radius.corp.example",radiusPort:"1812",radiusSecret:"Byod#Fern-9182"},
+ fieldWhy:{eap:"PEAP (or EAP-TTLS) wraps a password exchange in a TLS tunnel that only needs a server certificate; EAP-TLS would require a certificate on every phone.",radiusPort:"RADIUS authentication listens on UDP 1812 (1813 accounting); 1645/1646 are the legacy ports.",hidden:"Hiding the SSID adds no security and makes onboarding harder."},
  why:"No client certificates → PEAP-MSCHAPv2 (or EAP-TTLS). Certificates on clients → EAP-TLS. RADIUS auth is UDP 1812. Enterprise mode means each user has their own credential, so one leaked password does not expose the whole network."},
 
 {id:"ap-printers",obj:"4.1",d:4,cat:"harden",type:"appanel",title:"Lock down the printer SSID",
@@ -136,7 +136,7 @@ export const LAB_SIMS = [
 
 {id:"hd-finance",obj:"4.1",d:4,cat:"harden",type:"hardening",title:"Apply the workstation baseline",
  prompt:"Bring the accounting PC to the corporate baseline without stopping the user from working.",host:{name:"FIN-WS-17",os:"Windows 11 Pro",role:"Accounting workstation: prints invoices, opens shares on FIN-FS01, runs the ERP client"},
- task:["Protect data at rest if the PC is stolen, turn on the host firewall, and keep it patched automatically.","The user must not be a local administrator.","Nobody remotes in to this PC; close every inbound remote-access path.","Remove the built-in accounts the baseline says must be disabled, and the obsolete file-sharing protocol.","Policy: no USB mass storage, screen locks after 10 minutes. Do not touch anything the user needs to print or reach the file server."],
+ task:["Protect data at rest if the PC is stolen, turn on the host firewall, and keep it patched automatically.","The user must not be a local administrator.","Nobody remotes in to this PC; close every inbound remote-access path.","Disable the built-in accounts the baseline names (Administrator, Guest) and remove the obsolete file-sharing protocol.","Policy: no USB mass storage, screen locks after 10 minutes. Do not touch anything the user needs to print or reach the file server."],
  groups:[{id:"enc",label:"Encryption & updates"},{id:"acct",label:"Accounts"},{id:"remote",label:"Remote access"},{id:"svc",label:"Services & protocols"},{id:"policy",label:"Device policy"}],
  controls:[
   {id:"bitlocker",g:"enc",l:"BitLocker full-disk encryption",t:"toggle",start:false,want:true,why:"Data at rest on a stolen laptop or PC is only protected by encryption."},
@@ -158,7 +158,7 @@ export const LAB_SIMS = [
  ],
  why:"A secure baseline is a checklist of settings applied the same way everywhere: encryption, patching, firewall, least privilege, disabled default accounts, no unnecessary remote access, removable-media control. The user still has to print and reach the file server when you are done."},
 
-{id:"hd-camera",obj:"3.1",d:3,cat:"arch",type:"hardening",title:"Secure an IP camera",
+{id:"hd-camera",obj:"4.1",d:4,cat:"harden",type:"hardening",title:"Secure an IP camera",
  prompt:"Embedded devices ship insecure. Fix this one without blinding the security office.",host:{name:"CAM-LOBBY-3",os:"Vendor firmware 5.2 (embedded Linux)",role:"Streams RTSP video to the on-site NVR; staff view it only through the NVR"},
  task:["The NVR must keep receiving the video stream.","Nothing on this camera may still use the vendor's default credentials.","Remove every plaintext or discovery protocol the role does not need.","The camera must not phone home to the vendor's cloud relay.","Firmware must update automatically, the admin interface must be encrypted-only, and the camera belongs on the isolated IoT VLAN."],
  groups:[{id:"acct",label:"Accounts"},{id:"svc",label:"Services"},{id:"net",label:"Network"},{id:"upd",label:"Updates"}],
@@ -178,7 +178,7 @@ export const LAB_SIMS = [
  ],
  why:"IoT/embedded hardening: change defaults, kill Telnet/UPnP/discovery/cloud relays, keep only the protocol the role needs (RTSP to the NVR), encrypt management, segment onto an IoT VLAN, patch automatically. Devices that cannot be hardened get isolated instead."},
 
-{id:"hd-sql",obj:"4.5",d:4,cat:"harden",type:"hardening",title:"Lock down the database server",
+{id:"hd-sql",obj:"4.1",d:4,cat:"harden",type:"hardening",title:"Lock down the database server",
  prompt:"Tighten the SQL host for the PCI audit without breaking the web application that depends on it.",host:{name:"SQL-PRD-02",os:"Windows Server 2022",role:"Runs the orders database for the web tier (10.0.20.0/24); DBAs manage it from the admin VLAN (10.0.5.0/24)"},
  task:["The web tier must keep reaching the database; nothing else may.","DBAs administer the host only from the admin VLAN, over an encrypted session.","Remove the components, protocols and accounts the audit flagged: SQL Browser, IIS, the sa login, SQL (mixed-mode) authentication, unencrypted client connections.","Encrypt the volumes. Patch during the monthly maintenance window, never with automatic reboots.","Leave the SQL Server engine and its service account alone."],
  groups:[{id:"svc",label:"Services & components"},{id:"net",label:"Network access"},{id:"auth",label:"Authentication"},{id:"data",label:"Data protection & patching"}],
@@ -202,7 +202,7 @@ export const LAB_SIMS = [
 
 {id:"hd-legacy",obj:"2.5",d:2,cat:"vulns",type:"hardening",title:"Compensating controls for an unpatchable HMI",
  prompt:"This box cannot be upgraded. Reduce the risk around it instead.",host:{name:"HMI-LINE2",os:"Windows 7 (vendor-locked, no patches available)",role:"Operator screen for the bottling line PLC; vendor supports it over VNC through the engineering jump host; the HMI software needs SMBv1 to the historian"},
- task:["The HMI must keep talking to the PLC and the historian, and the vendor must keep its VNC support path through the jump host.","Updates cannot be enabled, so isolate the host: put it on the OT VLAN and allow inbound connections only from the engineering jump host.","Turn on the host firewall and the application allow list, and remove the vendor's default account password.","Disable protocols and media paths the role does not need."],
+ task:["The HMI must keep talking to the PLC and the historian, and the vendor must keep its VNC support path through the jump host.","Updates cannot be enabled, so isolate the host: put it on the OT VLAN and allow inbound connections only from the engineering jump host.","Turn on the host firewall and the application allow list, and remove the vendor's default account password.","Disable protocols and media paths the role does not need, and remove the host's Internet access entirely."],
  groups:[{id:"net",label:"Network"},{id:"ctrl",label:"Host controls"},{id:"acct",label:"Accounts"},{id:"svc",label:"Services & media"}],
  controls:[
   {id:"vlan",g:"net",l:"VLAN assignment",t:"select",o:["VLAN 10 (office LAN)","VLAN 200 (OT, isolated)"],start:"VLAN 10 (office LAN)",want:"VLAN 200 (OT, isolated)",why:"Segmentation is the primary compensating control for a host you cannot patch."},

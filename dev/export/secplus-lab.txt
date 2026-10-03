@@ -103,7 +103,7 @@ DEVICE: AP-HQ-01 — fields not listed under KEY must stay at their START value 
     * SSID (network name): start=Linksys-Setup  →  KEY=CorpSecure
       Hide SSID (disable broadcast): start=Off
     * Band: start=2.4 + 5 GHz  →  KEY=5 GHz
-    * Security mode: start=WPA2-Personal  →  KEY=WPA3-Enterprise   // Per-user authentication against RADIUS is Enterprise mode; WPA3 is the strongest available.
+    * Security mode: start=WPA2-Personal  →  KEY=WPA3-Enterprise | WPA3-Enterprise 192-bit   // Per-user authentication against RADIUS is Enterprise mode; WPA3 is the strongest available.
       Passphrase (pre-shared key): start=password123
     * EAP method: start=PEAP (MSCHAPv2)  →  KEY=EAP-TLS   // EAP-TLS is the certificate-based, mutual-authentication method; PEAP and EAP-TTLS tunnel a password.
     * RADIUS server: start=  →  KEY=10.0.5.20
@@ -124,7 +124,8 @@ TASK:
     1. SSID: Visitor-WiFi, broadcast on both bands.
     2. Visitors must not need a passphrase, but the air must still be encrypted so nobody can sniff a neighbor.
     3. Guests must never be able to reach each other's devices.
-    4. The AP's admin page must not be reachable from the guest wireless side.
+    4. Management frames must be protected for every client.
+    5. The AP's admin page must not be reachable from the guest wireless side.
 DEVICE: AP-LOBBY-02 — fields not listed under KEY must stay at their START value (changing them costs ½ point):
     * SSID (network name): start=Guest  →  KEY=Visitor-WiFi
       Hide SSID (disable broadcast): start=Off
@@ -135,7 +136,7 @@ DEVICE: AP-LOBBY-02 — fields not listed under KEY must stay at their START val
       RADIUS server: start=
       RADIUS authentication port: start=1812
       RADIUS shared secret: start=
-      Protected management frames (802.11w): start=Optional
+    * Protected management frames (802.11w): start=Disabled  →  KEY=Required   // Enhanced Open and WPA3 both mandate 802.11w; Required also blocks deauthentication spoofing against guests.
       WPS push-button / PIN setup: start=Off
       MAC filtering: start=Off
     * Client isolation (block client-to-client): start=Off  →  KEY=On   // Client isolation blocks client-to-client forwarding on the AP, so a visitor cannot scan or attack other visitors.
@@ -170,7 +171,7 @@ DEVICE: AP-CLINIC-01 — fields not listed under KEY must stay at their START va
       Admin password: start=Changed to a unique strong password
 TAKEAWAY: Mixed/transition mode is the bridge between WPA2 and WPA3 fleets, and it needs PMF set to Optional. Replacing a weak passphrase with a long passphrase and killing WPS are the two cheapest wins.
 
-[ap-byod] sim=appanel domain=4 obj=4.6 (Given a scenario, implement and maintain identity and access management)
+[ap-byod] sim=appanel domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
 TITLE: BYOD SSID with domain credentials
 PROMPT: Staff phones must log in with their Active Directory username and password.
 TASK:
@@ -184,7 +185,7 @@ DEVICE: AP-FLOOR3-04 — fields not listed under KEY must stay at their START va
       Band: start=2.4 + 5 GHz
     * Security mode: start=WPA2-Personal  →  KEY=WPA3-Enterprise
       Passphrase (pre-shared key): start=Welcome2024
-    * EAP method: start=EAP-TLS  →  KEY=PEAP (MSCHAPv2)   // PEAP wraps MSCHAPv2 (a password exchange) in a TLS tunnel that only needs a server certificate; EAP-TLS would require a certificate on every phone.
+    * EAP method: start=EAP-TLS  →  KEY=PEAP (MSCHAPv2) | EAP-TTLS   // PEAP (or EAP-TTLS) wraps a password exchange in a TLS tunnel that only needs a server certificate; EAP-TLS would require a certificate on every phone.
     * RADIUS server: start=  →  KEY=radius.corp.example
     * RADIUS authentication port: start=1645  →  KEY=1812   // RADIUS authentication listens on UDP 1812 (1813 accounting); 1645/1646 are the legacy ports.
     * RADIUS shared secret: start=  →  KEY=Byod#Fern-9182
@@ -267,7 +268,7 @@ TASK:
     1. Protect data at rest if the PC is stolen, turn on the host firewall, and keep it patched automatically.
     2. The user must not be a local administrator.
     3. Nobody remotes in to this PC; close every inbound remote-access path.
-    4. Remove the built-in accounts the baseline says must be disabled, and the obsolete file-sharing protocol.
+    4. Disable the built-in accounts the baseline names (Administrator, Guest) and remove the obsolete file-sharing protocol.
     5. Policy: no USB mass storage, screen locks after 10 minutes. Do not touch anything the user needs to print or reach the file server.
 HOST: FIN-WS-17 · Windows 11 Pro · Accounting workstation: prints invoices, opens shares on FIN-FS01, runs the ERP client
 CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1; unmarked = leave alone, −½ if changed):
@@ -294,7 +295,7 @@ CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1;
       Bluetooth: start=On  [leave alone]   // Not mentioned in the baseline; the user may have a wireless headset or mouse.
 TAKEAWAY: A secure baseline is a checklist of settings applied the same way everywhere: encryption, patching, firewall, least privilege, disabled default accounts, no unnecessary remote access, removable-media control. The user still has to print and reach the file server when you are done.
 
-[hd-camera] sim=hardening domain=3 obj=3.1 (Compare and contrast security implications of different architecture models)
+[hd-camera] sim=hardening domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
 TITLE: Secure an IP camera
 PROMPT: Embedded devices ship insecure. Fix this one without blinding the security office.
 TASK:
@@ -323,7 +324,7 @@ CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1;
       NTP time sync: start=On  [leave alone]   // Accurate timestamps on video are valuable; nothing asked you to change it.
 TAKEAWAY: IoT/embedded hardening: change defaults, kill Telnet/UPnP/discovery/cloud relays, keep only the protocol the role needs (RTSP to the NVR), encrypt management, segment onto an IoT VLAN, patch automatically. Devices that cannot be hardened get isolated instead.
 
-[hd-sql] sim=hardening domain=4 obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security)
+[hd-sql] sim=hardening domain=4 obj=4.1 (Given a scenario, apply common security techniques to computing resources)
 TITLE: Lock down the database server
 PROMPT: Tighten the SQL host for the PCI audit without breaking the web application that depends on it.
 TASK:
@@ -361,7 +362,7 @@ TASK:
     1. The HMI must keep talking to the PLC and the historian, and the vendor must keep its VNC support path through the jump host.
     2. Updates cannot be enabled, so isolate the host: put it on the OT VLAN and allow inbound connections only from the engineering jump host.
     3. Turn on the host firewall and the application allow list, and remove the vendor's default account password.
-    4. Disable protocols and media paths the role does not need.
+    4. Disable protocols and media paths the role does not need, and remove the host's Internet access entirely.
 HOST: HMI-LINE2 · Windows 7 (vendor-locked, no patches available) · Operator screen for the bottling line PLC; vendor supports it over VNC through the engineering jump host; the HMI software needs SMBv1 to the historian
 CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1; unmarked = leave alone, −½ if changed):
   Network

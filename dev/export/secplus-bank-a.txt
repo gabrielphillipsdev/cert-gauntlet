@@ -33,7 +33,7 @@ DEVICE: AP-HS-LIB-02 — fields not listed under KEY must stay at their START va
       SSID (network name): start=District-Students
       Hide SSID (disable broadcast): start=Off
       Band: start=2.4 + 5 GHz
-    * Security mode: start=WPA2-Personal  →  KEY=WPA3-Enterprise
+    * Security mode: start=WPA2-Personal  →  KEY=WPA3-Enterprise | WPA3-Enterprise 192-bit
       Passphrase (pre-shared key): start=students2024
     * EAP method: start=PEAP (MSCHAPv2)  →  KEY=EAP-TLS   // Certificate on the client = EAP-TLS. PEAP/EAP-TTLS carry a password inside the TLS tunnel.
     * RADIUS server: start=  →  KEY=10.20.0.15

