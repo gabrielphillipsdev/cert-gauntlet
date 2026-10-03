@@ -39,5 +39,5 @@ function startPbq(A, id) {
     $("#fbnext", A.el).onclick = () => { const i = items.findIndex(x => x.id === cur.id); startPbq(A, items[(i + 1) % items.length].id); };
     fb.scrollIntoView({ behavior: "smooth", block: "end" });
   };
-  A.el.scrollTop = 0;
+  A.el.scrollTop = 0; window.scrollTo(0, 0);   // the tile list may have been scrolled far down; open the item at its top (task pane visible)
 }

@@ -1,6 +1,6 @@
 # Sec+ pack — content spec (SY0-701)
 
-Pack: `packs/secplus/`. Manifest: `pack.js`. Objectives for tagging: `dev/specs/secplus-objectives.md`. Validate with `node dev/check-pack.mjs secplus` and `node dev/tests/sims.test.mjs` until PASS. Export for review: `node dev/export-secplus.mjs`. Fidelity checklist: `dev/FIDELITY-secplus.md`.
+Pack: `packs/secplus/`. Manifest: `pack.js`. Objectives for tagging: `dev/specs/secplus-objectives.md`. Validate with `node dev/check-pack.mjs secplus` until PASS, then `node dev/tests/sims.test.mjs` (diagram / appanel / hardening graders) and `node dev/tests/sims-lab.test.mjs` (console / fweditor / logview / drag-drop graders; `python3 dev/tests/sims-e2e.py` drives each one at iPhone and iPad sizes). Export for review: `node dev/export-secplus.mjs`. Fidelity checklist: `dev/FIDELITY-secplus.md`.
 
 All text original (never copy Dion, Messer, CompTIA samples or any published practice exam). Every fact must be correct for SY0-701. Neutral tone, no real company names, RFC 5737/1918 addresses. Escape `"` inside strings; no HTML (content is escaped on render). Every item carries `obj:"n.n"` — the single objective it tests.
 
@@ -10,8 +10,8 @@ All text original (never copy Dion, Messer, CompTIA samples or any published pra
 | `cards-d12.js`, `cards-d34.js`, `cards-d45.js` | `CARDS_D12/D34/D45` | 398 cards, 16 categories |
 | `exq.js` | `EXQ` | 92 exam-style questions |
 | `twins.js` | `TWINS` | 45 confusable pairs |
-| `lab.js` | `LAB_PBQS` | 25 PBQ Lab items (match/order/scenario; Chat 2 converts match/order to drag-drop) |
-| `sims.js` | `LAB_SIMS` | 15 PBQ Lab sims: 5 `diagram`, 5 `appanel`, 5 `hardening` (Chat 2 adds console/fweditor/logview) |
+| `lab.js` + `lab/*.js` | `LAB_PBQS` (concatenates `LAB_CONSOLE`, `LAB_FWEDITOR`, `LAB_LOGVIEW`, `LAB_DRAGDROP` + the ported match/order/scenario items) | 33 PBQ Lab items; match/order are drag-and-drop |
+| `sims.js` | `LAB_SIMS` | 15 PBQ Lab sims: 5 `diagram`, 5 `appanel`, 5 `hardening` |
 | `bank-a.js`, `bank-b.js`, `bank-c.js` | `EXAM_BANK_A/B/C` | 85 questions each |
 | `pbqs.js` | `EXAM_PBQS` `{a,b,c}` | 5 PBQs per exam (`d` required) — mix rule below |
 | `extras.js` | `DIAGRAMS`, `ACRONYMS`, `REFERENCE` | 16 SVG diagrams, 79 acronyms, 12 reference tables |
@@ -47,7 +47,7 @@ First option is correct (the app shuffles). Quotas by domain: 11/20/17/26/18. St
 Per bank: 85 questions, domain quotas 10/19/15/24/17, ≥8 `ms`, ≥10 with `ex`, order shuffled across domains, exactly one `ok` for mc / exactly `pick` for ms. Bank letter = id prefix. Topic checklist per domain: see the original EXAM_SPEC coverage list reproduced in `dev/PLAN.md` §3 and the objectives doc — every objective should appear in every bank at least once (4.2 and 4.9 currently thin).
 
 ## PBQ / sim items (lab, generators, exam)
-Common: `{id, obj, type, title, prompt|setup, d?, cat?, why?}`. `d` is required for exam PBQs (domain scoring). Ids: lab `m-…` `o-…` `s-…`, exam `pa1…pc5`, generators `g-…`.
+Common: `{id, obj, type, title, prompt|setup, d?, cat?, why?}`. `d` is required for exam PBQs (domain scoring). Ids: lab `m-…` `o-…` `s-…` `c-…` (console) `f-…` (fweditor) `l-…` (logview), exam `pa1…pc5`, generators `g-…`. Sim items should carry `tasks` (rendered in the floating Tasks pane) and `why`.
 
 | type | fields | notes |
 |---|---|---|
@@ -59,7 +59,10 @@ Common: `{id, obj, type, title, prompt|setup, d?, cat?, why?}`. `d` is required 
 | `diagram` | `nodes:[{id,label,x,y,k?,w?,h?}]`, `links:[[a,b]]`, `slots:[{id,label,x,y,want,why?}] (≥3)`, `palette:[device ids]`, `w?,h? (viewBox, default 480×300)`, `reuse?`, `devices?:{id:{n,s}}`, `task:[…]` | `want` = device id or `[alternatives]`; every want must be in the palette; palette carries distractors. Device ids: see `DEVICES` in `core/sims/diagram.js`. Per-slot credit |
 | `appanel` | `start:{field…}`, `want:{field: value \| [alts] \| {re,label}}`, `fieldWhy?:{field: text}`, `device?`, `deviceSub?`, `task:[…]` | Fields: ssid hidden band mode psk eap radiusHost radiusPort radiusSecret pmf wps macFilter isolation mgmtWifi adminDefault (see `FIELDS`). Every scored field must differ from `start` (blank = 0). Unscored fields changed = −½ each; fields hidden by the final mode are ignored |
 | `hardening` | `host:{name,os,role}`, `groups:[{id,label}]`, `controls:[{id,g,l,d?,t:"toggle"\|"select",o?,on?,off?,start,want?,crit?,why?}]`, `task:[…]` | `want` → scored (+1). No `want` → must stay: `crit:true` = breaks the business function (−1), else unnecessary change (−½). Toggle `start` is boolean; select `start`/`want` must be in `o` |
-| Chat 2 types | `console`, `fweditor`, `logview`, `dragmatch` — see their sim definitions in `core/sims/` and extend this table | |
+| `console` | `tasks:[…]`, `iocs:{ports,procs,ips}`, `requireDisable?`, `hosts:[{id, os:"linux"|"windows", name, ip, user?, domain?, services:[{name, display?, proc, pid, port?, proto?, bind?, user?, cmd?, remote?:"ip:port", bad?, keep?}], conns?, files?:{path:text}, ufw?}]` | ≥1 Linux + ≥1 Windows host. `bad:true` = must be stopped (and disabled when `requireDisable`); `keep:true` = must stay running (−1 if stopped); other legit services −½ if stopped. Every `iocs.ips` entry must appear as a `remote` on some host; it must be blocked on every host that talks to it. Graded by end state only (`core/sims/console.js`, `exec()` is the interpreter). |
+| `fweditor` | `tasks:[policy lines]`, `nets:[{v,l}]`, `ports:[…]`, `protos?`, `rules:[{act,src,dst,port,proto}]` starting table, `packets:[{src,dst,port,proto,want,note}]` hidden set (≥8, both allow and deny), `maxRules?` | Score = (packets handled as `want` − packets the starting table already handled) / (packets − baseline), floored at 0, so the untouched table scores 0. Starting rules may only use values present in `nets`/`ports`. First match wins; implicit deny shown. |
+| `logview` | `tasks?`, `sources:[{name, lines:[…]}] (≥2)`, `evidence:[[src,line]] (≥3)`, `qs:[{k:"attack"|"account"|"host"|"first", q, o:[4, first correct], x}] (≥3)` | Evidence part = (hits − ½·noise) / evidence, floored at 0; each `qs` entry 1 point; f = total / (1 + qs). Must include an `attack`, an `account` or `host`, and a `first` question. |
+| `match` / `order` (drag-and-drop) | as above; `order` `eq:[[i,j]]` = interchangeable step indexes | Rendering is drag-and-drop (touch + mouse, tap-to-pair kept as a fallback). State shape unchanged. Prompts say "drag", never "tap". |
 
 Exam PBQ mix per bank: ≥1 console, ≥1 firewall editor (enforced via `exam.pbqMust` once those types exist; swap plan in `dev/FIDELITY-secplus.md`), the rest from the other sims; no two generated sims of the same type in one exam (validator enforces). Every exam PBQ carries `d`.
 
