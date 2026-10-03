@@ -11,7 +11,7 @@ const hostnameGuards = (...devs) => devs.map((d, i) => G(`gh${i}`, 0, "hostname"
 export const LABS = [
   /* ---------------------------------------------------------------- 1 · VLANs + trunking */
   {
-    id: "lab-vlans-trunking", type: "ccna-lab", obj: "2.1", d: 2, title: "VLANs and an 802.1Q trunk", timeTargetMin: 6,
+    id: "lab-vlans-trunking", type: "ccna-lab", topic: "vlan", obj: "2.1", d: 2, title: "VLANs and an 802.1Q trunk", timeTargetMin: 6,
     topology: {
       devices: {
         SW1: { type: "switch", x: 140, y: 70 }, SW2: { type: "switch", x: 340, y: 70 },
@@ -46,7 +46,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 2 · router-on-a-stick */
   {
-    id: "lab-router-on-a-stick", type: "ccna-lab", obj: "2.1", d: 2, title: "Inter-VLAN routing: router-on-a-stick", timeTargetMin: 6,
+    id: "lab-router-on-a-stick", type: "ccna-lab", topic: "intervlan", obj: "2.1", d: 2, title: "Inter-VLAN routing: router-on-a-stick", timeTargetMin: 6,
     topology: {
       devices: { R1: { type: "router", x: 240, y: 50 }, SW1: { type: "switch", x: 240, y: 160 }, PC1: pc("10.1.10.11", "10.1.10.1", 130, 270), PC2: pc("10.1.20.12", "10.1.20.1", 350, 270) },
       links: [["R1", "g0/0", "SW1", "g0/1"], ["SW1", "f0/1", "PC1"], ["SW1", "f0/2", "PC2"]],
@@ -75,7 +75,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 3 · SVI routing on a Layer 3 switch */
   {
-    id: "lab-svi-routing", type: "ccna-lab", obj: "2.1", d: 2, title: "Inter-VLAN routing with SVIs", timeTargetMin: 6,
+    id: "lab-svi-routing", type: "ccna-lab", topic: "intervlan", obj: "2.1", d: 2, title: "Inter-VLAN routing with SVIs", timeTargetMin: 6,
     topology: {
       devices: { SW1: { type: "l3switch", x: 240, y: 60 }, PC1: pc("10.1.10.11", "10.1.10.1", 90, 230), PC2: pc("10.1.20.12", "10.1.20.1", 240, 230), PC3: pc("10.1.30.13", "10.1.30.1", 390, 230) },
       links: [["SW1", "g1/0/1", "PC1"], ["SW1", "g1/0/2", "PC2"], ["SW1", "g1/0/3", "PC3"]],
@@ -100,7 +100,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 4 · static, default and floating routes */
   {
-    id: "lab-static-routes", type: "ccna-lab", obj: "3.3", d: 3, title: "Static, default and floating static routes", timeTargetMin: 7,
+    id: "lab-static-routes", type: "ccna-lab", topic: "static", obj: "3.3", d: 3, title: "Static, default and floating static routes", timeTargetMin: 7,
     topology: {
       devices: {
         R1: { type: "router", x: 110, y: 90 }, R2: { type: "router", x: 240, y: 40 }, R3: { type: "router", x: 370, y: 90 },
@@ -133,7 +133,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 5 · single-area OSPFv2 */
   {
-    id: "lab-ospf-single-area", type: "ccna-lab", obj: "3.4", d: 3, title: "Single-area OSPFv2", timeTargetMin: 7,
+    id: "lab-ospf-single-area", type: "ccna-lab", topic: "ospf", obj: "3.4", d: 3, title: "Single-area OSPFv2", timeTargetMin: 7,
     topology: {
       devices: {
         R1: { type: "router", x: 120, y: 120 }, R2: { type: "router", x: 240, y: 40 }, R3: { type: "router", x: 360, y: 120 }, ISP: { type: "router", x: 120, y: 20 },
@@ -169,7 +169,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 6 · standard + extended ACLs */
   {
-    id: "lab-acls", type: "ccna-lab", obj: "5.6", d: 5, title: "Standard and extended ACLs", timeTargetMin: 7,
+    id: "lab-acls", type: "ccna-lab", topic: "acl", obj: "5.6", d: 5, title: "Standard and extended ACLs", timeTargetMin: 7,
     topology: {
       devices: {
         R1: { type: "router", x: 240, y: 120 },
@@ -204,7 +204,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 7 · static NAT + PAT */
   {
-    id: "lab-nat-pat", type: "ccna-lab", obj: "4.1", d: 4, title: "Static NAT and PAT", timeTargetMin: 6,
+    id: "lab-nat-pat", type: "ccna-lab", topic: "nat", obj: "4.1", d: 4, title: "Static NAT and PAT", timeTargetMin: 6,
     topology: {
       devices: {
         R1: { type: "router", x: 240, y: 130 }, ISP: { type: "router", x: 400, y: 130 }, SW1: { type: "switch", x: 110, y: 130 },
@@ -234,7 +234,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 8 · EtherChannel */
   {
-    id: "lab-etherchannel", type: "ccna-lab", obj: "2.4", d: 2, title: "LACP EtherChannel trunk", timeTargetMin: 5,
+    id: "lab-etherchannel", type: "ccna-lab", topic: "etherchannel", obj: "2.4", d: 2, title: "LACP EtherChannel trunk", timeTargetMin: 5,
     topology: {
       devices: { SW1: { type: "switch", x: 130, y: 100 }, SW2: { type: "switch", x: 350, y: 100 }, PC1: pc("10.1.10.11", "10.1.10.1", 130, 240), PC2: pc("10.1.10.12", "10.1.10.1", 350, 240) },
       links: [["SW1", "g0/1", "SW2", "g0/1"], ["SW1", "g0/2", "SW2", "g0/2"], ["SW1", "f0/1", "PC1"], ["SW2", "f0/1", "PC2"]],
@@ -262,7 +262,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 9 · DHCP server + relay */
   {
-    id: "lab-dhcp", type: "ccna-lab", obj: "4.6", d: 4, title: "DHCP server and relay", timeTargetMin: 6,
+    id: "lab-dhcp", type: "ccna-lab", topic: "dhcp", obj: "4.6", d: 4, title: "DHCP server and relay", timeTargetMin: 6,
     topology: {
       devices: {
         R1: { type: "router", x: 170, y: 110 }, R2: { type: "router", x: 330, y: 110 }, SW1: { type: "switch", x: 80, y: 200 },
@@ -298,7 +298,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 10 · port security */
   {
-    id: "lab-port-security", type: "ccna-lab", obj: "5.7", d: 5, title: "Port security and unused ports", timeTargetMin: 6,
+    id: "lab-port-security", type: "ccna-lab", topic: "portsec", obj: "5.7", d: 5, title: "Port security and unused ports", timeTargetMin: 6,
     topology: {
       devices: { SW1: { type: "switch", x: 240, y: 70 }, PC1: pc("10.1.10.11", "10.1.10.1", 90, 230), PC2: pc("10.1.10.12", "10.1.10.1", 240, 230), PC3: pc("10.1.10.13", "10.1.10.1", 390, 230) },
       links: [["SW1", "f0/1", "PC1"], ["SW1", "f0/2", "PC2"], ["SW1", "f0/3", "PC3"]],
@@ -325,7 +325,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 11 · SSH + device hardening */
   {
-    id: "lab-ssh-hardening", type: "ccna-lab", obj: "4.8", d: 4, title: "SSH access and basic hardening", timeTargetMin: 6,
+    id: "lab-ssh-hardening", type: "ccna-lab", topic: "ssh", obj: "4.8", d: 4, title: "SSH access and basic hardening", timeTargetMin: 6,
     topology: {
       devices: { R1: { type: "router", x: 240, y: 60 }, SW1: { type: "switch", x: 240, y: 160 }, PC1: pc("10.1.10.11", "10.1.10.1", 240, 260) },
       links: [["R1", "g0/0", "SW1", "g0/1"], ["SW1", "f0/1", "PC1"]],
@@ -353,7 +353,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 12 · IPv6 addressing + static routes */
   {
-    id: "lab-ipv6", type: "ccna-lab", obj: "1.8", d: 1, title: "IPv6 addressing and static routes", timeTargetMin: 7,
+    id: "lab-ipv6", type: "ccna-lab", topic: "ipv6", obj: "1.8", d: 1, title: "IPv6 addressing and static routes", timeTargetMin: 7,
     topology: {
       devices: { R1: { type: "router", x: 150, y: 100 }, R2: { type: "router", x: 330, y: 100 }, SW1: { type: "switch", x: 150, y: 230 }, SW2: { type: "switch", x: 330, y: 230 } },
       links: [["R1", "g0/1", "R2", "g0/1"], ["R1", "g0/0", "SW1", "g0/1"], ["R2", "g0/0", "SW2", "g0/1"]],
@@ -386,7 +386,7 @@ export const LABS = [
   },
   /* ---------------------------------------------------------------- 13 · analyze show output (show running-config blocked) */
   {
-    id: "lab-analyze-show", type: "ccna-lab", obj: "3.1", d: 3, title: "Troubleshoot from show output only", timeTargetMin: 6,
+    id: "lab-analyze-show", type: "ccna-lab", topic: "showread", obj: "3.1", d: 3, title: "Troubleshoot from show output only", timeTargetMin: 6,
     topology: {
       devices: {
         SW1: { type: "switch", x: 110, y: 70 }, SW2: { type: "switch", x: 370, y: 70 }, SW3: { type: "switch", x: 240, y: 190 },

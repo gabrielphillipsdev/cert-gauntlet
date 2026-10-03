@@ -1,0 +1,1881 @@
+# CCNA 200-301 v1.1 — Exam B (Branch + WAN edge: inter-VLAN, statics, NAT, wireless. Labs: inter-VLAN, static, NAT, port security.)
+# 100 questions. Export for second-model review: '*' marks the keyed answer. Multi-response and drag-drop items are graded all-or-nothing.
+# Report any item where the key or an explanation is wrong (cite a cisco.com configuration guide or command reference), any exhibit that IOS would not print that way, and any item with two defensible answers.
+# Lab slots for this exam (filled from Chat 8's labs): intervlan (2.1.c), static (3.3), nat (4.1), portsec (5.7)
+
+[b001] type=mc domain=2 obj=2.1.a (Configure and verify VLANs (normal range) spanning multiple switches — Access ports (data and voice))
+Q: Refer to the exhibit. An IP phone is cabled to BSW1 Fa0/7 and a staff PC is cabled to the phone's PC port. The phone keeps leasing an address from the VLAN 10 staff scope instead of the 10.20.20.0/24 voice scope. VLAN 20 (VOICE) exists on BSW1 and is allowed on the uplink trunk. Which command on Fa0/7 fixes the problem and keeps the PC in VLAN 10?
+EXHIBIT:
+    BSW1# show interfaces fa0/7 switchport
+    Name: Fa0/7
+    Switchport: Enabled
+    Administrative Mode: static access
+    Operational Mode: static access
+    Administrative Trunking Encapsulation: dot1q
+    Operational Trunking Encapsulation: native
+    Negotiation of Trunking: Off
+    Access Mode VLAN: 10 (STAFF)
+    Trunking Native Mode VLAN: 1 (default)
+    Administrative Native VLAN tagging: enabled
+    Voice VLAN: none
+  * A. switchport voice vlan 20
+        why: Voice VLAN: none means the switch never tells the phone (through CDP or LLDP-MED) to tag its traffic, so the phone sends untagged frames into access VLAN 10. With voice VLAN 20 set, the phone tags voice in VLAN 20 and the PC stays untagged in VLAN 10.
+    B. switchport access vlan 20
+        why: This moves all untagged traffic, and the PC with it, into VLAN 20. The phone would get a voice address but the PC would land in the voice subnet.
+    C. switchport mode trunk
+        why: Trunking does not tell the phone which VLAN to use for voice. With no voice VLAN advertised the phone still sends untagged frames, which a trunk places in its native VLAN.
+    D. switchport trunk native vlan 20
+        why: The native VLAN only matters when the port is trunking. Fa0/7 is a static access port, so this changes nothing for the phone.
+TAKEAWAY: Phone port: switchport mode access, switchport access vlan <data>, switchport voice vlan <voice>. The switch advertises the voice VLAN in CDP/LLDP-MED; the phone tags voice and passes the PC's frames untagged.
+
+[b002] type=mc domain=1 obj=1.6 (Configure and verify IPv4 addressing and subnetting)
+Q: The branch warehouse is getting a scanner VLAN on BR1 subinterface Gi0/0.60. It must hold 300 handheld scanners, the address plan assigns the block starting at 10.20.64.0, the gateway must use the first usable address, and the subnet must leave the fewest unused addresses. Which interface command meets the requirements?
+  * A. ip address 10.20.64.1 255.255.254.0
+        why: 300 hosts need 9 host bits (2^9 - 2 = 510), so the mask is /23. 10.20.64.0/23 runs from 10.20.64.0 to 10.20.65.255, and the first usable address is 10.20.64.1.
+    B. ip address 10.20.64.1 255.255.255.0
+        why: A /24 gives only 254 usable addresses, fewer than the 300 scanners.
+    C. ip address 10.20.64.1 255.255.252.0
+        why: A /22 (1022 usable) fits, but it leaves more than 700 addresses unused. A /23 meets the need with far less waste.
+    D. ip address 10.20.65.1 255.255.254.0
+        why: 10.20.65.1 is inside 10.20.64.0/23, but it is not the first usable address. That is 10.20.64.1.
+TAKEAWAY: Find the smallest n where 2^n - 2 covers the hosts (300 → n = 9 → /23). Check the boundary: a /23 starts on an even third octet (64 is). First usable = network + 1; broadcast = next network - 1.
+
+[b003] type=mc domain=6 obj=6.6 (Recognize the capabilities of configuration management mechanisms such as Ansible and Terraform)
+Q: Refer to the exhibit. The network team runs this file to update all branch routers. Which statement describes how it works?
+EXHIBIT:
+    ---
+    - name: Branch NTP baseline
+      hosts: branch_routers
+      gather_facts: no
+      connection: ansible.netcommon.network_cli
+    
+      tasks:
+        - name: Point routers at the HQ NTP server
+          cisco.ios.ios_config:
+            lines:
+              - ntp server 10.10.1.123
+    
+        - name: Save the configuration if it changed
+          cisco.ios.ios_config:
+            save_when: modified
+  * A. A control node pushes the lines over SSH to each router in the inventory group branch_routers; no agent is installed
+        why: This is an Ansible playbook in YAML. The control node connects with network_cli (SSH to the IOS CLI), runs each task in order against every host in the group, and nothing has to be installed on the routers.
+    B. Each router runs an agent that periodically pulls this manifest from a central server
+        why: That pull model describes Puppet and Chef. Ansible is agentless and pushes changes when someone runs the playbook.
+    C. It is a Terraform configuration written in HCL, and the apply step records the routers in a state file
+        why: The file is YAML with hosts and tasks, which is Ansible's playbook format. Terraform files are HCL resource blocks with a state file and plan/apply.
+    D. The routers must expose a REST API, because this tool cannot manage devices through the CLI
+        why: network_cli drives the device CLI over SSH. Ansible can also use NETCONF or REST modules, but this playbook does not need them.
+TAKEAWAY: Ansible: agentless, push, SSH or APIs, YAML playbooks of tasks run against inventory groups, modules such as cisco.ios.ios_config. Puppet/Chef: agent-based pull. Terraform: declarative HCL, plan/apply, state file.
+
+[b004] type=mc domain=1 obj=1.4 (Identify interface and cable issues (collisions, errors, mismatch duplex, and/or speed))
+Q: Refer to the exhibit. Users at the desk on BSW1 Fa0/12 complain about slow file transfers. The PC's NIC reports an auto-negotiated 100 Mb/s full-duplex link, and the error counters keep rising after clear counters. What is the most likely cause?
+EXHIBIT:
+    BSW1# show interfaces fa0/12
+    FastEthernet0/12 is up, line protocol is up (connected)
+      Hardware is Fast Ethernet, address is 0001.4200.020c (bia 0001.4200.020c)
+      MTU 1500 bytes, BW 100000 Kbit/sec, DLY 100 usec,
+         reliability 238/255, txload 1/255, rxload 3/255
+      Encapsulation ARPA, loopback not set
+      Keepalive set (10 sec)
+      Full-duplex, 100Mb/s, media type is 10/100BaseTX
+      5 minute input rate 412000 bits/sec, 61 packets/sec
+      5 minute output rate 389000 bits/sec, 58 packets/sec
+         1840212 packets input, 1288140211 bytes, 0 no buffer
+         Received 2214 broadcasts (1876 multicasts)
+         0 runts, 0 giants, 0 throttles
+         4127 input errors, 4127 CRC, 0 frame, 0 overrun, 0 ignored
+         1702334 packets output, 1190455721 bytes, 0 underruns
+         0 output errors, 0 collisions, 1 interface resets
+         0 babbles, 0 late collision, 0 deferred
+  * A. Damaged cabling or electrical interference between the PC and the switch
+        why: CRC errors mean frames arrived with a bad frame check sequence. Both ends agree on full duplex, and there are no runts, collisions or buffer drops, which points at the physical path: a crushed cable, a bad patch cord or interference.
+    B. A duplex mismatch between the switch port and the PC
+        why: Both sides negotiated full duplex. A mismatch would show late collisions on the half-duplex side and usually runts on the full-duplex side, and neither appears.
+    C. A speed mismatch between the switch port and the PC
+        why: With mismatched speeds the link does not come up at all. The port is up/up at 100 Mb/s, the same as the NIC.
+    D. The switch is overloaded and dropping frames it has no buffer space for
+        why: Buffer shortage shows up as no buffer, overrun or ignored counts, which are all zero. The load is under 0.5 Mb/s on a 100 Mb/s port.
+TAKEAWAY: CRC errors with no collisions on a full-duplex link = physical layer (cable, connector, EMI, NIC). CRC/runts on one end plus late collisions on the other = duplex mismatch. Speed mismatch = link down.
+
+[b005] type=mc domain=2 obj=2.5.b (Interpret basic operations of Rapid PVST+ Spanning Tree Protocol — Port states and roles)
+Q: Refer to the exhibit. BSW1 is the root bridge for VLAN 10 and connects to BSW2 Gi0/1 and BSW3 Gi0/1. BSW2 Gi0/2 connects to BSW3 Gi0/2. All links are 1 Gb/s. Which statement describes BSW3 Gi0/2?
+EXHIBIT:
+    BSW3# show spanning-tree vlan 10
+    VLAN0010
+      Spanning tree enabled protocol rstp
+      Root ID    Priority    24586
+                 Address     0001.4200.0100
+                 Cost        4
+                 Port        25 (GigabitEthernet0/1)
+                 Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+    
+      Bridge ID  Priority    32778  (priority 32768 sys-id-ext 10)
+                 Address     0001.4200.0300
+                 Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+                 Aging Time  300 sec
+    
+    Interface           Role Sts Cost      Prio.Nbr Type
+    ------------------- ---- --- --------- -------- -----------------------
+    Gi0/1               Root FWD 4         128.25   P2p
+    Gi0/2               Altn BLK 4         128.26   P2p
+  * A. It is an alternate port that discards frames and can become the root port immediately if Gi0/1 fails
+        why: Gi0/2 offers a path to the root through BSW2 (cost 8), worse than Gi0/1's direct path (cost 4). RSTP makes it an alternate port, kept discarding (shown as BLK), ready to take over as root port at once.
+    B. It is a backup port because BSW3 has two paths to the root bridge
+        why: A backup port is a second port onto a segment where the same switch already has the designated port, as through a hub. Gi0/2 hears a better BPDU from another switch, so it is alternate.
+    C. It is in the listening state and will forward after two forward-delay intervals
+        why: Listening exists only in legacy 802.1D. Rapid PVST+ uses discarding, learning and forwarding, and an alternate port is promoted without waiting on timers.
+    D. It is the designated port for the BSW2-BSW3 link because BSW3 has the higher bridge ID
+        why: Both switches advertise root path cost 4 onto that link, so the lower bridge ID wins. Gi0/2 being Altn shows BSW2 sent the superior BPDU, so BSW2 has the lower bridge ID and owns the designated port.
+TAKEAWAY: RSTP roles: root, designated, alternate (a backup path to the root through another switch), backup (a redundant port onto a segment this switch already serves). States: discarding, learning, forwarding.
+
+[b006] type=mc domain=1 obj=1.10 (Verify IP parameters for Client OS (Windows, Mac OS, Linux))
+Q: Refer to the exhibit. A user typed a static IPv4 configuration on this Mac in VLAN 10 (10.20.10.0/24). It reaches the internet and HQ servers, but not the branch camera server 10.20.30.15, which other staff PCs reach without problems. Proxy ARP is disabled on BR1's LAN interfaces. What explains the problem?
+EXHIBIT:
+    mac$ ifconfig en0
+    en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+            ether 3c:22:fb:5e:10:21
+            inet6 fe80::1c4d:2a9:5e11:8f02%en0 prefixlen 64 secured scopeid 0x6
+            inet 10.20.10.88 netmask 0xffff0000 broadcast 10.20.255.255
+            status: active
+    mac$ netstat -rn -f inet
+    Routing tables
+    
+    Internet:
+    Destination        Gateway            Flags        Netif Expire
+    default            10.20.10.1         UGScg          en0
+    10.20/16           link#6             UCS            en0
+  * A. The 0xffff0000 (/16) mask makes the Mac treat 10.20.30.15 as on-link, so it ARPs for it instead of using 10.20.10.1
+        why: With /16, every 10.20.x.x address looks local, so the Mac ARPs for 10.20.30.15 on VLAN 10. The server is in another VLAN and never answers, and with proxy ARP off BR1 does not answer for it either. The mask should be 0xffffff00.
+    B. The default gateway 10.20.10.1 is wrong for this subnet
+        why: 10.20.10.1 is BR1's VLAN 10 gateway, and internet and HQ traffic reaches it. The gateway is right; it simply isn't used for 10.20.x.x destinations.
+    C. BR1 has no route to the 10.20.30.0/24 camera subnet
+        why: Other staff PCs reach the camera server through BR1, so BR1 can route to that subnet.
+    D. The 10.20.255.255 broadcast lets the Mac's ARP requests reach every branch VLAN
+        why: Switches keep a broadcast inside its VLAN and routers do not forward it. That is exactly why the ARP for 10.20.30.15 goes unanswered.
+TAKEAWAY: Client checks: Windows ipconfig /all; macOS ifconfig and netstat -rn; Linux ip addr and ip route. A mask that is too short makes remote hosts look local (ARP, no gateway); too long makes local hosts look remote.
+
+[b007] type=build ordered=true domain=2 obj=2.1.c (Configure and verify VLANs (normal range) spanning multiple switches — InterVLAN connectivity)
+Q: Cameras will use VLAN 30 (10.20.30.0/24). BSW1 already carries VLAN 30, tagged, on its trunk to BR1 Gi0/0, which is up. Starting in global configuration mode on BR1, drag the commands needed to route VLAN 30 with 10.20.30.1 as the gateway into the answer area in the order they must be entered. Not all commands are used.
+POOL:
+  [0] encapsulation dot1Q 30
+  [1] switchport mode trunk
+  [2] interface GigabitEthernet0/0.30
+  [3] ip address 10.20.30.1 255.255.255.0
+  [4] encapsulation dot1Q 30 native
+  [5] interface vlan 30
+KEY (ordered subset): [2] -> [0] -> [3]
+why: Router-on-a-stick uses one subinterface per VLAN. The subinterface must be tied to its VLAN with encapsulation dot1Q before IOS accepts an IP address on it. switchport and interface vlan are switch commands, and the native keyword would make BR1 expect VLAN 30 untagged while BSW1 tags it.
+TAKEAWAY: ROAS per VLAN: interface g0/0.N, encapsulation dot1Q N, ip address. The subinterface number is only a label; the VLAN comes from the encapsulation command. The physical interface must be up.
+
+[b008] type=ms pick=2 domain=1 obj=1.1.a (Explain the role and function of network components — Routers)
+Q: The branch has BR1, an ISR router, and BSW1, a Layer 2 access switch. Which two functions does BR1 perform that BSW1 does not? (Choose two.)
+  * A. Forwarding packets between different IP subnets based on the destination IP address
+        why: Routing between subnets is a Layer 3 function. BSW1 forwards frames only within a VLAN; VLAN-to-VLAN traffic must go through BR1.
+  * B. Translating branch private addresses to a public address for internet traffic
+        why: NAT/PAT runs on the router at the internet edge. A Layer 2 switch does not look at or rewrite IP addresses.
+    C. Learning source MAC addresses to build a MAC address table
+        why: MAC learning is the switch's core job. A router keeps an ARP table but does not learn MAC addresses to forward frames.
+    D. Flooding frames whose destination MAC address is unknown
+        why: Unknown-unicast flooding is switch behaviour. A router never floods; it routes or drops.
+    E. Placing end devices into VLANs through access ports
+        why: Access ports and VLAN membership are configured on the switch.
+    F. Supplying PoE to IP phones
+        why: Phones are powered by the switch ports they plug into, not by the router.
+TAKEAWAY: Router: Layer 3 forwarding between subnets, WAN links, NAT, broadcast boundary. Layer 2 switch: MAC learning, forwarding, flooding and filtering inside VLANs, access ports, PoE. A Layer 3 switch adds routing with SVIs.
+
+[b009] type=ms pick=2 domain=2 obj=2.3 (Configure and verify Layer 2 discovery protocols (Cisco Discovery Protocol and LLDP))
+Q: Refer to the exhibit. Which two statements are true? (Choose two.)
+EXHIBIT:
+    BSW1# show cdp entry BSW2
+    -------------------------
+    Device ID: BSW2
+    Entry address(es):
+      IP address: 10.20.90.12
+    Platform: cisco WS-C2960,  Capabilities: Switch IGMP
+    Interface: GigabitEthernet0/2,  Port ID (outgoing port): GigabitEthernet0/1
+    Holdtime : 155 sec
+    
+    Version :
+    Cisco IOS Software, C2960 Software (C2960-LANBASEK9-M), Version 15.2(4)E7,
+    RELEASE SOFTWARE (fc1)
+    
+    advertisement version: 2
+    Native VLAN: 10
+    Duplex: full
+    Management address(es):
+      IP address: 10.20.90.12
+  * A. BSW1 connects to BSW2 through BSW1's own GigabitEthernet0/2
+        why: 'Interface' is the local port on the switch where the command was run. 'Port ID (outgoing port)' is the neighbor's port.
+  * B. BSW2 advertises 10.20.90.12 as its management address
+        why: The entry and management addresses come from BSW2's own advertisement, here its VLAN 90 management SVI. CDP is a quick way to find a neighbor's address for SSH without a diagram.
+    C. BSW2's port facing BSW1 is GigabitEthernet0/2
+        why: That is BSW1's local port. BSW2 sent the advertisement out its Gi0/1, shown as the Port ID.
+    D. BSW2 may be several router hops away, because CDP travels in IP packets
+        why: CDP is a Layer 2 protocol sent to a multicast MAC address and never routed. Every CDP neighbor is directly connected.
+    E. The output comes from LLDP, which IOS runs on all ports by default
+        why: This is CDP output. LLDP is disabled by default on IOS and is read with show lldp neighbors.
+TAKEAWAY: show cdp neighbors: device, local interface, holdtime, capability, platform, port ID. show cdp neighbors detail or show cdp entry NAME adds IP addresses, IOS version, native VLAN and duplex.
+
+[b010] type=mc domain=6 obj=6.2 (Compare traditional networks with controller-based networking)
+Q: Today each branch router runs OSPF and builds its own routing table, and engineers configure each device separately over SSH. The company is evaluating a controller-based design. Which statement correctly compares the two approaches?
+  * A. Traditionally each device runs its own control plane; a controller centralizes policy and programs devices through APIs
+        why: In the current design every router computes its own view and is configured box by box. A controller holds a network-wide view, turns intent into device configuration and pushes it through southbound APIs.
+    B. With a controller, the controller forwards all user traffic, so devices no longer need a data plane
+        why: Forwarding stays on the routers and switches. The controller works in the control and management planes.
+    C. Traditional networks already centralize the control plane in a management server, and controllers distribute it
+        why: This reverses the two. Traditional devices each run their own control plane.
+    D. A controller-based design requires removing every routing protocol from the network
+        why: Controller-based fabrics still run routing in the underlay (SD-Access uses IS-IS, for example). The controller automates and orchestrates on top of it.
+TAKEAWAY: Traditional: per-device control plane, per-box CLI, change by hand. Controller-based: central view and policy, templates, southbound APIs to devices, northbound REST APIs to apps; the data plane stays on the devices.
+
+[b011] type=mc domain=1 obj=1.8 (Configure and verify IPv6 addressing and prefix)
+Q: Refer to the exhibit. The branch is moving to dual stack, and BR1 Gi0/0 serves VLAN 10. PCs should build global IPv6 addresses with SLAAC, but they have only link-local IPv6 addresses and no IPv6 default gateway. IPv4 works. Which command fixes the problem?
+EXHIBIT:
+    BR1# show running-config | include ipv6
+     ipv6 address FE80::1 link-local
+     ipv6 address 2001:DB8:B1:10::1/64
+    
+    C:\> ipconfig
+    
+    Ethernet adapter Ethernet:
+    
+       Connection-specific DNS Suffix  . : branch.example
+       Link-local IPv6 Address . . . . . : fe80::5d2a:91c4:7e10:3b6f%12
+       IPv4 Address. . . . . . . . . . . : 10.20.10.37
+       Subnet Mask . . . . . . . . . . . : 255.255.255.0
+       Default Gateway . . . . . . . . . : 10.20.10.1
+  * A. ipv6 unicast-routing in global configuration mode
+        why: Without it IOS acts as an IPv6 host: it sends no router advertisements and forwards no IPv6 packets. The filter shows no ipv6 unicast-routing line. Once enabled, BR1 advertises 2001:db8:b1:10::/64 and the PCs autoconfigure with FE80::1 as gateway.
+    B. ipv6 enable on Gi0/0
+        why: Configuring an IPv6 address already enables IPv6 on the interface. ipv6 enable only creates a link-local address, and BR1 already has one.
+    C. ipv6 address autoconfig on Gi0/0
+        why: This makes BR1 itself a SLAAC client that learns an address from another router. BR1 would still send no RAs to the PCs.
+    D. ipv6 nd managed-config-flag on Gi0/0
+        why: This RA flag tells hosts to use stateful DHCPv6. BR1 is not sending RAs at all, and the branch has no DHCPv6 server.
+TAKEAWAY: Router IPv6 basics: ipv6 unicast-routing (global), then interface addresses. RAs then go out LAN interfaces automatically, and hosts use SLAAC with the router's link-local address as default gateway.
+
+[b012] type=mc domain=2 obj=2.6 (Describe Cisco Wireless Architectures and AP modes)
+Q: The branch has no local wireless controller; its lightweight APs join the WLC at HQ across the WAN. Staff traffic must be switched onto VLAN 10 at the branch instead of being tunneled to HQ, and connected clients must stay online if the WAN fails. Which AP mode meets these requirements?
+  * A. FlexConnect
+        why: FlexConnect APs keep CAPWAP control to the central WLC but can switch WLAN traffic locally onto branch VLANs. If the WAN drops, they go standalone and keep serving connected clients on locally switched WLANs.
+    B. Local
+        why: Local mode tunnels all client data in CAPWAP to the WLC, so staff traffic would hairpin through HQ, and clients drop when the WAN fails.
+    C. Bridge
+        why: Bridge (mesh) mode links APs to each other wirelessly to extend coverage. It does not provide local switching for a WAN-connected branch.
+    D. Monitor
+        why: A monitor-mode AP serves no clients at all; it only scans channels for rogues and intrusion detection.
+TAKEAWAY: AP modes: local (default, client data in CAPWAP to the WLC), FlexConnect (branch, local switching, survives WAN loss), monitor, sniffer, rogue detector, SE-Connect, bridge/mesh.
+
+[b013] type=ms pick=2 domain=1 obj=1.3.a (Compare physical interface and cabling types — Single-mode fiber, multimode fiber, copper)
+Q: BSW1 needs a 1-Gb/s uplink to a new switch in the warehouse, a 160 m cable run from the branch wiring closet. Which two cabling options support this link? (Choose two.)
+  * A. 1000BASE-SX transceivers over multimode fiber
+        why: 1000BASE-SX reaches roughly 220 to 550 m over multimode fiber depending on the fiber grade, so 160 m is well within range.
+  * B. 1000BASE-LX transceivers over single-mode fiber
+        why: 1000BASE-LX over single-mode fiber reaches several kilometers. It is more reach than needed, but it works.
+    C. 1000BASE-T over Cat 6 UTP
+        why: Twisted-pair Ethernet is limited to 100 m per segment, whatever the cable category.
+    D. 1000BASE-T over Cat 6a shielded cable
+        why: Better cable improves noise immunity and supports 10GBASE-T, but the 100 m limit still applies.
+    E. A Cat 5e crossover cable, with auto-MDIX disabled on both ends
+        why: Crossover or straight-through only changes which pairs transmit and receive. It does not extend the 100 m limit.
+TAKEAWAY: Copper twisted pair (10BASE-T to 10GBASE-T): 100 m. Multimode fiber (SX, larger core, cheaper optics): hundreds of meters inside buildings and campuses. Single-mode fiber (LX/LR, laser, 9-micron core): kilometers.
+
+[b014] type=mc domain=2 obj=2.2.a (Configure and verify interswitch connectivity — Trunk ports)
+Q: Refer to the exhibit. Guest users on BSW2 Fa0/13-20 (VLAN 50) get no DHCP lease. BSW2 Gi0/1 trunks to BSW1 Gi0/2, and BSW1 Gi0/1 trunks to BR1, which routes VLAN 50 on Gi0/0.50. Staff and voice VLANs work, and both switches use VTP transparent mode. What is the cause?
+EXHIBIT:
+    BSW1# show interfaces trunk
+    Port        Mode             Encapsulation  Status        Native vlan
+    Gi0/1       on               802.1q         trunking      10
+    Gi0/2       on               802.1q         trunking      10
+    
+    Port        Vlans allowed on trunk
+    Gi0/1       10,20,40,50,90
+    Gi0/2       10,20,40,50,90
+    
+    Port        Vlans allowed and active in management domain
+    Gi0/1       10,20,40,90
+    Gi0/2       10,20,40,90
+    
+    Port        Vlans in spanning tree forwarding state and not pruned
+    Gi0/1       10,20,40,90
+    Gi0/2       10,20,40,90
+  * A. VLAN 50 does not exist in BSW1's VLAN database, so BSW1 does not forward its frames
+        why: VLAN 50 is allowed but missing from 'allowed and active in management domain'. A switch only carries VLANs that exist locally, so guest frames die at BSW1. Creating it with vlan 50 on BSW1 fixes the path.
+    B. VLAN 50 is not in the allowed list on BSW1's trunks
+        why: Both trunks list 10,20,40,50,90 as allowed. The allowed list is not the problem.
+    C. The trunks use native VLAN 10, which blocks tagged VLAN 50 frames
+        why: The native VLAN only decides which VLAN crosses the link untagged. Every other allowed VLAN is tagged and carried normally.
+    D. VTP pruning removed VLAN 50 because no BSW1 access port uses it
+        why: Pruning does not apply in transparent mode, and pruning would only affect the last list. VLAN 50 is already missing from the 'active' list.
+TAKEAWAY: show interfaces trunk has three VLAN lists: allowed (configured), allowed and active (also exists locally), forwarding and not pruned (also STP forwarding). A VLAN dropping out of the second list does not exist on that switch.
+
+[b015] type=ms pick=3 domain=6 obj=6.7 (Recognize components of JSON-encoded data)
+Q: Refer to the exhibit. A script receives this record for BR1 from the branch controller. Which three statements are true? (Choose three.)
+EXHIBIT:
+    {
+      "hostname": "BR1",
+      "managementIp": "10.20.90.1",
+      "reachable": true,
+      "uptimeDays": "212",
+      "interfaces": [
+        { "name": "GigabitEthernet0/0", "vlan": 10, "ipv4": "10.20.10.1" },
+        { "name": "GigabitEthernet0/0.20", "vlan": 20, "ipv4": "10.20.20.1" }
+      ],
+      "location": null
+    }
+  * A. The value of "interfaces" is an array that contains two objects
+        why: Square brackets mark an array; each element in braces is an object with its own key/value pairs.
+  * B. The value of "reachable" is a Boolean
+        why: true is written without quotes, which makes it the JSON Boolean literal rather than a string.
+  * C. The value of "vlan" is a number in both interface objects
+        why: 10 and 20 have no quotes, so they are numbers.
+    D. The value of "uptimeDays" is a number
+        why: "212" is in double quotes, so it is a string. A script that does math on it must convert it first.
+    E. The record is invalid because "location" has no value
+        why: null is a valid JSON value meaning 'no value'. The record parses correctly.
+    F. The outermost element is an array of key/value pairs
+        why: The record starts with a brace, so it is an object. Arrays use square brackets.
+TAKEAWAY: JSON: objects {} hold key/value pairs with double-quoted keys; arrays [] hold ordered values; value types are string (quoted), number, true/false, null, object, array. A number in quotes is a string.
+
+[b016] type=mc domain=1 obj=1.13.d (Describe switching concepts — MAC address table)
+Q: Refer to the exhibit. On BSW1, Fa0/1-12 are access ports in VLAN 10, and Gi0/1 and Gi0/2 are trunks carrying VLANs 10 and 20. The PC on Fa0/7 sends a unicast frame with destination MAC address 00e0.4c00.0c22. What does BSW1 do with the frame?
+EXHIBIT:
+    BSW1# show mac address-table dynamic
+              Mac Address Table
+    -------------------------------------------
+    
+    Vlan    Mac Address       Type        Ports
+    ----    -----------       --------    -----
+      10    0001.4200.0101    DYNAMIC     Gi0/1
+      10    00e0.4c00.0401    DYNAMIC     Fa0/5
+      10    00e0.4c00.0517    DYNAMIC     Fa0/7
+      20    0001.4200.0101    DYNAMIC     Gi0/1
+      20    00e0.4c00.0c22    DYNAMIC     Gi0/2
+    Total Mac Addresses for this criterion: 5
+  * A. Floods it out every other port that carries VLAN 10, because that address is unknown in VLAN 10
+        why: The lookup uses only the frame's own VLAN. 00e0.4c00.0c22 is known in VLAN 20, not VLAN 10, so this is an unknown unicast: it leaves all VLAN 10 access ports and both trunks except Fa0/7.
+    B. Forwards it only out Gi0/2, where that address was learned
+        why: That entry belongs to VLAN 20. A switch never uses another VLAN's entry, which is what keeps VLANs separate.
+    C. Forwards it out Gi0/1 to BR1 so it can be routed into VLAN 20
+        why: Only frames addressed to BR1's own MAC (0001.4200.0101) are sent to the router. A Layer 2 switch does not redirect traffic between VLANs.
+    D. Drops it because the destination is in a different VLAN
+        why: The switch has no VLAN 10 entry for the address, so it cannot conclude anything about where it lives. Unknown unicasts are flooded, not dropped.
+TAKEAWAY: The MAC table is keyed by VLAN plus MAC. Known unicast goes out one port; unknown unicast, broadcast and most multicast are flooded within the VLAN, never back out the receiving port.
+
+[b017] type=mc domain=2 obj=2.5.a (Interpret basic operations of Rapid PVST+ Spanning Tree Protocol — Root port, root bridge (primary/secondary), and other port names)
+Q: Refer to the exhibit. BSW1 must become the root bridge for VLAN 20, and BSW2's configuration must not change. Which command on BSW1 achieves this?
+EXHIBIT:
+    BSW1# show spanning-tree vlan 20
+    VLAN0020
+      Spanning tree enabled protocol rstp
+      Root ID    Priority    24596
+                 Address     0001.4200.0100
+                 Cost        4
+                 Port        26 (GigabitEthernet0/2)
+                 Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+    
+      Bridge ID  Priority    28692  (priority 28672 sys-id-ext 20)
+                 Address     0001.4200.0200
+                 Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+                 Aging Time  300 sec
+    
+    Interface           Role Sts Cost      Prio.Nbr Type
+    ------------------- ---- --- --------- -------- -----------------------
+    Gi0/2               Root FWD 4         128.26   P2p
+  * A. spanning-tree vlan 20 priority 20480
+        why: BSW1's bridge priority becomes 20500 (20480 + VLAN 20), lower than the root's 24596, so BSW1 wins the election whatever the MAC addresses.
+    B. spanning-tree vlan 20 priority 24576
+        why: That gives BSW1 24596, a tie with the current root. The tie goes to the lower MAC, and the root's 0001.4200.0100 is lower than BSW1's 0001.4200.0200, so the root does not change.
+    C. spanning-tree vlan 20 priority 24000
+        why: Bridge priority must be a multiple of 4096 from 0 to 61440. IOS rejects 24000.
+    D. spanning-tree vlan 20 root secondary
+        why: root secondary sets priority 28672, which BSW1 already has. It prepares a backup root, not a new primary.
+TAKEAWAY: Bridge ID = priority (multiple of 4096) + VLAN ID (sys-id-ext) + MAC. Lowest wins; a priority tie falls to the lowest MAC. root primary sets 24576, or 4096 below the current root if that is not low enough.
+
+[b018] type=mc domain=1 obj=1.5 (Compare TCP to UDP)
+Q: A branch PC sends three 1000-byte TCP segments to an HQ server with relative sequence numbers 1, 1001 and 2001. The segment with sequence number 1001 is lost; the other two arrive. Which acknowledgment number does the server send after the third segment arrives?
+  * A. 1001
+        why: TCP acknowledgments are cumulative and name the next byte the receiver expects. Bytes 1 to 1000 arrived and byte 1001 did not, so the server keeps asking for 1001 even though bytes 2001 to 3000 are buffered.
+    B. 2001
+        why: That would acknowledge bytes 1001 to 2000, which never arrived.
+    C. 3001
+        why: That would acknowledge everything, including the lost segment, and the PC would never resend it.
+    D. 1000
+        why: The acknowledgment number is the next byte expected, not the last byte received.
+TAKEAWAY: Sequence number = first byte in the segment; ACK = next byte expected (cumulative). A gap holds the ACK in place, and duplicate ACKs or a timeout trigger a resend. UDP has no sequencing, ACKs or retransmission.
+
+[b019] type=build ordered=false domain=2 obj=2.1.a (Configure and verify VLANs (normal range) spanning multiple switches — Access ports (data and voice))
+Q: BSW1 Fa0/9 is a new desk port. A staff PC (VLAN 10) connects through an IP phone that must use voice VLAN 20, the port must never negotiate a trunk, and it must start forwarding as soon as the link comes up. Interface configuration mode for Fa0/9 is already entered. Drag the commands that are required into the answer area. Leave the commands that do not apply.
+POOL:
+  [0] switchport mode access
+  [1] switchport trunk native vlan 20
+  [2] switchport access vlan 10
+  [3] switchport mode trunk
+  [4] switchport voice vlan 20
+  [5] spanning-tree portfast
+  [6] switchport access vlan 20
+KEY (unordered subset): [0] + [2] + [4] + [5]
+why: A phone port stays an access port: the PC's untagged frames go to access VLAN 10 and the phone tags voice in VLAN 20 once the switch advertises it. PortFast makes this edge port forward immediately. Trunk mode and a native VLAN are not used for a phone, and access VLAN 20 would put the PC into the voice subnet.
+TAKEAWAY: Data + voice on one access port: mode access, access vlan (data), voice vlan (voice), portfast. The phone tags voice with 802.1Q, yet the port stays an access port, not a trunk.
+
+[b020] type=mc domain=1 obj=1.2.d (Describe characteristics of network topology architectures — WAN)
+Q: The company has 40 branches. Each branch router has one private WAN circuit to HQ and none to other branches, so a call between two branches passes through the HQ router. Which WAN topology does this describe?
+  * A. Hub and spoke
+        why: HQ is the hub and each branch is a spoke with a single circuit to it. Branch-to-branch traffic crosses the hub, which is cheap to build but adds a hop and makes the hub critical.
+    B. Full mesh
+        why: In a full mesh every site links to every other site. With 41 sites that would be 820 circuits.
+    C. Partial mesh
+        why: A partial mesh adds direct links between some important site pairs. Here no branch has a link to another branch.
+    D. Spine-leaf
+        why: Spine-leaf is a data center switching design where every leaf connects to every spine. It does not describe WAN circuits.
+TAKEAWAY: Hub and spoke: fewest circuits, central control, hub is a single point of failure. Full mesh: n(n-1)/2 links, most resilient and costly. Partial mesh: only the pairs that matter. Single-homed vs dual-homed describes a site's internet links.
+
+[b021] type=order domain=6 obj=6.5 (Describe characteristics of REST-based APIs (authentication types, CRUD, HTTP verbs, and data encoding))
+Q: A script must list the branch devices known to the controller. The controller issues tokens at /api/v1/auth/token and returns devices at /api/v1/network-device. Drag the steps into the order the script performs them.
+POOL:
+  [0] Send a GET to /api/v1/network-device with the token in the X-Auth-Token header
+  [1] Send a POST to /api/v1/auth/token with the username and password in a Basic authorization header
+  [2] Parse the device list from the JSON body of the 200 OK response
+  [3] Read the token value from the JSON body of the authentication response
+KEY (full order): [1] -> [3] -> [0] -> [2]
+why: Token-based REST APIs authenticate once: the credentials go in an HTTP Basic header on a POST to the token endpoint, and the reply carries a token. Later requests present the token in a header instead of the password. The GET reads the resource, and a 200 OK carries the JSON data.
+TAKEAWAY: REST auth types: HTTP Basic (base64 user:password, use HTTPS), token in a header after login, API key, OAuth. CRUD: POST create, GET read, PUT/PATCH update, DELETE delete.
+
+[b022] type=mc domain=2 obj=2.2.c (Configure and verify interswitch connectivity — Native VLAN)
+Q: Refer to the exhibit. BSW1 was replaced and its trunk to BR1 rebuilt. Phones in VLAN 20 still reach 10.20.20.1, but staff PCs in VLAN 10 cannot reach their gateway, 10.20.10.1. BR1 must not be changed. Which command on BSW1 Gi0/1 restores connectivity?
+EXHIBIT:
+    BR1# show running-config interface g0/0
+    interface GigabitEthernet0/0
+     description BRANCH-LAN-TRUNK
+     ip address 10.20.10.1 255.255.255.0
+     ip nat inside
+    end
+    
+    BR1# show running-config interface g0/0.20
+    interface GigabitEthernet0/0.20
+     encapsulation dot1Q 20
+     ip address 10.20.20.1 255.255.255.0
+    end
+    
+    BSW1# show interfaces trunk
+    Port        Mode             Encapsulation  Status        Native vlan
+    Gi0/1       on               802.1q         trunking      1
+    
+    Port        Vlans allowed on trunk
+    Gi0/1       10,20,30,40,50,90
+  * A. switchport trunk native vlan 10
+        why: BR1 serves VLAN 10 on the physical interface, which only handles untagged frames. With native VLAN 1, BSW1 tags VLAN 10 frames, and BR1 has no dot1Q 10 subinterface to accept them. Making VLAN 10 native sends it untagged, as BR1 expects.
+    B. switchport trunk allowed vlan add 10
+        why: VLAN 10 is already in the allowed list.
+    C. switchport trunk native vlan 20
+        why: Voice would then arrive untagged on BR1's physical interface and the phones would break, while VLAN 10 would still be tagged.
+    D. switchport mode access and switchport access vlan 10
+        why: An access port carries only VLAN 10, so the voice, camera, guest and management VLANs would lose their path to BR1.
+TAKEAWAY: On a router-on-a-stick trunk, untagged frames go to the physical interface (or a subinterface with encapsulation dot1Q N native). The switch's native VLAN on that link must match, or that VLAN arrives tagged where the router expects none.
+
+[b023] type=mc domain=1 obj=1.9.a (Describe IPv6 address types — Unicast (global, unique local, and link local))
+Q: Refer to the exhibit. A PC in VLAN 10 configures itself with SLAAC from BR1's router advertisements. Which address does the PC use as its IPv6 default gateway?
+EXHIBIT:
+    BR1# show ipv6 interface g0/0
+    GigabitEthernet0/0 is up, line protocol is up
+      IPv6 is enabled, link-local address is FE80::1
+      No Virtual link-local address(es):
+      Global unicast address(es):
+        2001:DB8:B1:10::1, subnet is 2001:DB8:B1:10::/64
+      Joined group address(es):
+        FF02::1
+        FF02::2
+        FF02::1:FF00:1
+      MTU is 1500 bytes
+      ICMP error messages limited to one every 100 milliseconds
+      ICMP redirects are enabled
+      ICMP unreachables are sent
+      ND DAD is enabled, number of DAD attempts: 1
+      ND reachable time is 30000 milliseconds (using 30000)
+      ND advertised reachable time is 0 (unspecified)
+      ND advertised retransmit interval is 0 (unspecified)
+      ND router advertisements are sent every 200 seconds
+      ND router advertisements live for 1800 seconds
+      Hosts use stateless autoconfig for addresses.
+  * A. FE80::1
+        why: Hosts take the gateway from the source address of the router advertisement, and routers always source RAs from their link-local address. A short fixed link-local such as FE80::1 makes the gateway easy to recognize.
+    B. 2001:DB8:B1:10::1
+        why: The global address is reachable, but RAs are sourced from the link-local address, so that is what the PC installs as its gateway.
+    C. FF02::2
+        why: FF02::2 is the all-routers multicast group that hosts send router solicitations to. A gateway must be a unicast address.
+    D. FF02::1:FF00:1
+        why: This is the solicited-node multicast group for addresses ending in ::1, used by Neighbor Discovery. It cannot be a gateway.
+TAKEAWAY: IPv6 hosts learn the prefix, prefix length and default gateway from RAs; the gateway is the router's link-local (FE80::/10) address. Global unicast 2000::/3, unique local FC00::/7, multicast FF00::/8.
+
+[b024] type=mc domain=2 obj=2.3 (Configure and verify Layer 2 discovery protocols (Cisco Discovery Protocol and LLDP))
+Q: Refer to the exhibit. A third-party AP on BSW1 Fa0/18 supports LLDP but not CDP. The team wants it listed as a neighbor on BSW1. What should the engineer configure?
+EXHIBIT:
+    BSW1# show lldp neighbors
+    % LLDP is not enabled
+    
+    BSW1# show cdp neighbors
+    Capability Codes: R - Router, T - Trans Bridge, B - Source Route Bridge
+                      S - Switch, H - Host, I - IGMP, r - Repeater, P - Phone
+    
+    Device ID        Local Intrfce     Holdtme    Capability  Platform  Port ID
+    BR1              Gig 0/1           160        R I         ISR4321   Gig 0/0
+    BSW2             Gig 0/2           155        S I         WS-C2960  Gig 0/1
+  * A. lldp run in global configuration mode
+        why: LLDP is disabled by default on IOS. lldp run turns it on globally, and every interface then sends and receives LLDP by default.
+    B. lldp enable under interface Fa0/18
+        why: There is no lldp enable interface command. Per-interface control uses lldp transmit and lldp receive, and neither works while LLDP is off globally.
+    C. cdp run in global configuration mode
+        why: CDP is already running, as the CDP output shows, and the AP does not speak CDP.
+    D. no cdp enable on Fa0/18 so the port falls back to LLDP
+        why: Disabling CDP does not start LLDP. The two protocols are configured independently.
+TAKEAWAY: CDP: Cisco-proprietary, on by default, cdp run / cdp enable. LLDP (IEEE 802.1AB): vendor-neutral, off by default on IOS, lldp run / lldp transmit / lldp receive, shown with show lldp neighbors [detail].
+
+[b025] type=mc domain=1 obj=1.11.b (Describe wireless principles — SSID)
+Q: A branch AP advertises the BR-STAFF and BR-GUEST SSIDs on its 5-GHz radio. A wireless survey shows both SSIDs on channel 36 from that AP, with BSSIDs that differ only in the last hex digit. What explains this?
+  * A. The AP gives each SSID on a radio its own BSSID, a MAC address derived from the radio's base MAC
+        why: One radio can serve several WLANs. Each gets its own BSSID so clients can tell the networks apart, and vendors derive them from the radio MAC, which is why they are nearly identical.
+    B. Two physical APs are mounted in the same spot, one for each SSID
+        why: A single radio can advertise several SSIDs. Consecutive BSSIDs on the same channel point to one radio.
+    C. The BSSID is the network name, and it changes with each SSID's security setting
+        why: The SSID is the name. The BSSID is a 48-bit MAC address that identifies one SSID on one AP radio.
+    D. One of the SSIDs is a rogue AP impersonating the branch network
+        why: Both SSIDs are the branch's own WLANs on the same radio. A rogue would normally show an unrelated MAC address.
+TAKEAWAY: SSID: the network name (up to 32 characters). BSSID: the MAC address of one SSID on one AP radio. ESS: several APs sharing an SSID so clients can roam. IBSS: ad hoc, no AP.
+
+[b026] type=ms pick=2 domain=2 obj=2.1.b (Configure and verify VLANs (normal range) spanning multiple switches — Default VLAN)
+Q: Refer to the exhibit. BSW1 Gi0/1 and Gi0/2 are operating as trunks. Which two statements are true? (Choose two.)
+EXHIBIT:
+    BSW1# show vlan brief
+    
+    VLAN Name                             Status    Ports
+    ---- -------------------------------- --------- -------------------------
+    1    default                          active    Fa0/6, Fa0/7, Fa0/8, Fa0/9
+                                                    Fa0/10, Fa0/11, Fa0/12, Fa0/13
+                                                    Fa0/14, Fa0/15, Fa0/16, Fa0/17
+                                                    Fa0/18, Fa0/19, Fa0/20, Fa0/21
+                                                    Fa0/22, Fa0/23, Fa0/24
+    10   STAFF                            active    Fa0/1, Fa0/2, Fa0/3, Fa0/4
+                                                    Fa0/5
+    20   VOICE                            active
+    90   MGMT                             active
+    1002 fddi-default                     act/unsup
+    1003 token-ring-default               act/unsup
+    1004 fddinet-default                  act/unsup
+    1005 trnet-default                    act/unsup
+  * A. A device plugged into Fa0/20 is placed in VLAN 1
+        why: Every switch port starts in VLAN 1, the default VLAN, until it is assigned elsewhere. Unused ports are best moved to an unused VLAN and shut down.
+  * B. Gi0/1 and Gi0/2 are missing because show vlan brief does not list trunk ports
+        why: show vlan brief lists access ports under their VLAN. Trunks are checked with show interfaces trunk.
+    C. VLAN 1 can be deleted with no vlan 1 once every port has been moved out of it
+        why: VLAN 1 can never be deleted or renamed, and neither can VLANs 1002-1005.
+    D. VLAN 20 is not carried on the trunks because no access port is assigned to it
+        why: A VLAN with no access ports still exists and is carried on any trunk that allows it.
+    E. Fa0/23 and Fa0/24 are disabled because they are still in the default VLAN
+        why: Being in VLAN 1 does not disable a port. The ports forward normally in the default VLAN.
+    F. VLAN 1 can be renamed to UNUSED to mark it as a parking VLAN
+        why: IOS refuses to rename the default VLAN. Create a separate VLAN for parking unused ports.
+TAKEAWAY: VLAN 1: default for every port, default native VLAN, cannot be deleted or renamed. Best practice: assign every used port, park unused ports in an unused VLAN and shut them down, and use a native VLAN other than 1.
+
+[b027] type=build ordered=false domain=6 obj=6.3.a (Describe controller-based, software defined architecture (overlay, underlay, and fabric) — Separation of control plane and data plane)
+Q: Controller-based architectures separate the control plane from the data plane. Drag the functions that BR1 performs in its data plane into the answer area. Leave the functions that do not apply.
+POOL:
+  [0] Exchanging OSPF hello packets with HQ1
+  [1] Forwarding a packet out the interface chosen by the routing table
+  [2] Building the routing table by running SPF
+  [3] Rewriting the Ethernet header for the next hop before sending a packet
+  [4] Accepting an SSH session from an administrator
+  [5] Dropping a transit packet that matches a deny entry in an inbound ACL
+  [6] Sending CDP advertisements to BSW1
+KEY (unordered subset): [1] + [3] + [5]
+why: The data plane does the per-packet work: look up the destination, apply ACL or NAT actions, rewrite the Layer 2 header and send the packet out. OSPF hellos, SPF and CDP build the information the data plane uses, which is control plane work. An SSH session to the router is management plane.
+TAKEAWAY: Data plane: forwarding, encapsulation, ACL/NAT/QoS actions on transit traffic. Control plane: routing protocols, STP, ARP, CDP/LLDP. Management plane: SSH, SNMP, syslog, APIs. SDN moves much of the control plane into a controller.
+
+[b028] type=ms pick=2 domain=1 obj=1.6 (Configure and verify IPv4 addressing and subnetting)
+Q: BR1 subinterface Gi0/0.40 is configured with ip address 10.20.40.97 255.255.255.224 for AP management. Which two addresses can be assigned to APs in this subnet? (Choose two.)
+  * A. 10.20.40.126
+        why: /27 blocks are 32 addresses. 10.20.40.97 is in 10.20.40.96/27, which runs to broadcast 10.20.40.127, so .126 is the last usable host.
+  * B. 10.20.40.100
+        why: 10.20.40.100 falls between .97 and .126, the usable range of 10.20.40.96/27.
+    C. 10.20.40.127
+        why: 10.20.40.127 is the subnet's broadcast address.
+    D. 10.20.40.96
+        why: 10.20.40.96 is the network address of the subnet.
+    E. 10.20.40.128
+        why: 10.20.40.128 starts the next /27 (.128-.159) and is that subnet's network address.
+    F. 10.20.40.95
+        why: 10.20.40.95 is the broadcast address of the previous /27 (.64-.95).
+TAKEAWAY: /27 = mask 255.255.255.224, block size 256 - 224 = 32. Subnets start at multiples of 32: 10.20.40.96/27 has network .96, hosts .97-.126, broadcast .127.
+
+[b029] type=mc domain=2 obj=2.5.d (Interpret basic operations of Rapid PVST+ Spanning Tree Protocol — Root guard, loop guard, BPDU filter, and BPDU guard)
+Q: Refer to the exhibit. BSW1 is the root bridge for VLAN 10. Fa0/24 was configured with spanning-tree guard root because it connects to a contractor's lab switch. The contractor then set that switch's VLAN 10 priority to 0. What is the state of Fa0/24?
+EXHIBIT:
+    %SPANTREE-2-ROOTGUARD_BLOCK: Root guard blocking port FastEthernet0/24 on
+     VLAN0010.
+    
+    BSW1# show spanning-tree vlan 10 | begin Interface
+    Interface           Role Sts Cost      Prio.Nbr Type
+    ------------------- ---- --- --------- -------- -----------------------
+    Gi0/1               Desg FWD 4         128.25   P2p
+    Fa0/5               Desg FWD 19        128.5    P2p Edge
+    Fa0/24              Desg BKN*19        128.24   P2p *ROOT_Inc
+  * A. It is root-inconsistent and forwards nothing; it recovers by itself once the superior BPDUs stop
+        why: Root guard blocks a port that receives a superior BPDU instead of letting the other switch take over as root. The port shows BKN with ROOT_Inc and returns to forwarding automatically when those BPDUs stop.
+    B. It is error-disabled and must be reset with shutdown and no shutdown
+        why: That is BPDU guard's action. Root guard only blocks while superior BPDUs keep arriving and needs no manual recovery.
+    C. The contractor's switch is now the root bridge, and Fa0/24 is BSW1's root port
+        why: Preventing that is the whole point of root guard. BSW1 stays root and Fa0/24 stays a designated port that is blocked.
+    D. It stops sending and receiving BPDUs but keeps forwarding user traffic
+        why: That describes BPDU filter, which can create loops. Fa0/24 is blocked (BKN), so nothing is forwarded.
+TAKEAWAY: Root guard: on designated ports that must never lead to the root; superior BPDU = root-inconsistent, auto-recovery. BPDU guard: on PortFast edge ports; any BPDU = err-disabled. Loop guard: stops a port going designated when BPDUs stop. BPDU filter: stops BPDUs.
+
+[b030] type=mc domain=1 obj=1.7 (Describe private IPv4 addressing)
+Q: BR1's NAT access list must match every source address in the private 172.16.0.0/12 block with one entry. Which entry does this?
+  * A. access-list 10 permit 172.16.0.0 0.15.255.255
+        why: A /12 mask is 255.240.0.0, and the wildcard is its inverse, 0.15.255.255. The entry matches 172.16.0.0 through 172.31.255.255, exactly the RFC 1918 block.
+    B. access-list 10 permit 172.16.0.0 0.0.255.255
+        why: This matches only 172.16.0.0/16 and misses 172.17.0.0 through 172.31.255.255.
+    C. access-list 10 permit 172.16.0.0 0.31.255.255
+        why: Ignoring 5 bits of the second octet matches 172.0.0.0 to 172.31.255.255, which includes public 172.0-172.15 addresses.
+    D. access-list 10 permit 172.16.0.0 255.240.0.0
+        why: That is the subnet mask, not a wildcard. Read as a wildcard it ignores the first 12 bits and requires the last 20 to be zero, matching addresses like 10.16.0.0, not the private block.
+TAKEAWAY: RFC 1918: 10.0.0.0/8 (wildcard 0.255.255.255), 172.16.0.0/12 (0.15.255.255, so 172.16-172.31), 192.168.0.0/16 (0.0.255.255). Private addresses are not routed on the internet and need NAT to get there.
+
+[b031] type=ms pick=2 domain=2 obj=2.4 (Configure and verify (Layer 2/Layer 3) EtherChannel (LACP))
+Q: Refer to the exhibit. BSW1 Fa0/23 and Fa0/24 connect to BSW2 Fa0/23 and Fa0/24. Which two channel-group modes on BSW2's ports allow the bundle to form with LACP? (Choose two.)
+EXHIBIT:
+    BSW1# show running-config interface fa0/23
+    interface FastEthernet0/23
+     switchport mode trunk
+     channel-group 1 mode active
+    end
+    
+    BSW1# show running-config interface fa0/24
+    interface FastEthernet0/24
+     switchport mode trunk
+     channel-group 1 mode active
+    end
+  * A. active
+        why: Both sides send LACPDUs and negotiate the bundle.
+  * B. passive
+        why: A passive port answers LACPDUs but never starts the exchange. BSW1 is active, so it starts and BSW2 answers.
+    C. on
+        why: on builds a static channel with no negotiation protocol. BSW1 sends LACPDUs that BSW2 never answers, so the modes do not match and the bundle does not form correctly.
+    D. desirable
+        why: desirable is a PAgP mode. LACP on one side and PAgP on the other never negotiate.
+    E. auto
+        why: auto is the passive PAgP mode and cannot negotiate with LACP.
+TAKEAWAY: LACP (802.3ad, open): active+active or active+passive. PAgP (Cisco): desirable+desirable or desirable+auto. Static: on+on only. passive+passive and auto+auto never form. Members must match speed, duplex and VLAN settings.
+
+[b032] type=order domain=1 obj=1.13.b (Describe switching concepts — Frame switching)
+Q: A store-and-forward switch receives a unicast frame on an access port. Drag the steps into the order the switch performs them.
+POOL:
+  [0] Look up the destination MAC address in the MAC table for the frame's VLAN
+  [1] Receive the entire frame and check its FCS, discarding it if the check fails
+  [2] Send the frame out the matching port, or flood it in the VLAN if the destination is unknown
+  [3] Add or refresh the source MAC address with the incoming port and VLAN, resetting its aging timer
+KEY (full order): [1] -> [3] -> [0] -> [2]
+why: A store-and-forward switch buffers the whole frame and verifies the FCS before acting on it, so damaged frames go no further. It learns from the source address, then makes its forwarding decision from the destination: a known unicast leaves one port, an unknown unicast is flooded within the VLAN.
+TAKEAWAY: Learn from the source, forward on the destination. Dynamic entries age out after 300 seconds of silence by default. Cut-through switching starts forwarding once it has read the destination MAC and does not check the FCS first.
+
+[b033] type=mc domain=6 obj=6.5 (Describe characteristics of REST-based APIs (authentication types, CRUD, HTTP verbs, and data encoding))
+Q: Refer to the exhibit. A script uses one token to read and then rename a branch VLAN on the controller. What explains the result of the second request?
+EXHIBIT:
+    10:41:02 >> GET /api/v1/sites/branch-14/vlans/30 HTTP/1.1
+                X-Auth-Token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+    10:41:02 << HTTP/1.1 200 OK
+    
+    10:41:05 >> PUT /api/v1/sites/branch-14/vlans/30 HTTP/1.1
+                X-Auth-Token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+                Content-Type: application/json
+                {"vlanId": 30, "name": "CAMERAS"}
+    10:41:05 << HTTP/1.1 403 Forbidden
+  * A. The token is valid, but its account is not authorized to change VLANs
+        why: 403 Forbidden means the server knows who is calling and refuses the action. The same token worked for the GET three seconds earlier, so authentication succeeded; the role behind it lacks write rights.
+    B. The token has expired, and the script must request a new one
+        why: A missing, invalid or expired token returns 401 Unauthorized, and this token worked three seconds earlier.
+    C. PUT is not allowed; changing an existing resource requires POST
+        why: PUT (or PATCH) is the update verb; POST creates a new resource. A method the resource does not support would return 405.
+    D. The JSON body is malformed
+        why: A malformed body returns 400 Bad Request. This body is valid JSON.
+TAKEAWAY: 2xx success (200 OK, 201 Created, 204 No Content). 4xx client error (400 bad request, 401 not authenticated, 403 authenticated but not allowed, 404 not found). 5xx server error (500).
+
+[b034] type=mc domain=2 obj=2.5.c (Interpret basic operations of Rapid PVST+ Spanning Tree Protocol — PortFast)
+Q: An engineer enters spanning-tree portfast default in global configuration mode on BSW1, which has access ports Fa0/1-24 and trunks Gi0/1-2. What is the effect?
+  * A. PortFast is enabled on every port operating in access mode; the trunk ports are not affected
+        why: The global default applies only to non-trunking ports. Each access port becomes an edge port and moves straight to forwarding when a device connects.
+    B. PortFast is enabled on every port, including Gi0/1 and Gi0/2
+        why: Trunks need spanning-tree portfast trunk on the interface. The global default skips them, which protects the uplinks.
+    C. Only ports already configured with spanning-tree portfast become edge ports
+        why: The point of the global default is to enable PortFast on access ports without per-port commands.
+    D. BPDU guard is enabled on every access port
+        why: That takes spanning-tree portfast bpduguard default. With PortFast alone, a port that receives a BPDU simply loses its edge status.
+TAKEAWAY: PortFast: edge ports skip discarding and learning at link-up. Per port: spanning-tree portfast. Global: spanning-tree portfast default (access ports only). Pair with BPDU guard: spanning-tree portfast bpduguard default.
+
+[b035] type=ms pick=2 domain=1 obj=1.12 (Explain virtualization fundamentals (server virtualization, containers, and VRFs))
+Q: The branch runs a small server that hosts both virtual machines and containers. Which two statements describe containers compared with virtual machines? (Choose two.)
+  * A. Containers on a host share the host operating system's kernel
+        why: A container engine isolates processes on one OS kernel. Each VM, by contrast, boots its own guest OS on virtual hardware from the hypervisor.
+  * B. Containers are lightweight and usually start in seconds because they package only the app and its dependencies
+        why: With no guest OS to boot, containers start quickly and many more fit on one host than VMs.
+    C. Each container includes a full guest operating system with its own kernel
+        why: That describes a virtual machine.
+    D. Containers can run only on a type 1 hypervisor
+        why: Containers run on a container engine on an ordinary OS, which may itself be on bare metal or inside a VM.
+    E. A container can run an app built for a different kernel than the host's, such as a Windows app on a Linux host
+        why: Because containers share the host kernel, the app must suit that kernel. Running a different OS needs a VM.
+TAKEAWAY: VM: hypervisor (type 1 bare metal, type 2 hosted) plus a full guest OS per VM; strong isolation, heavier. Container: engine on a host OS, shared kernel, app plus libraries; fast and dense. VRF: separate routing tables inside one router.
+
+[b036] type=mc domain=2 obj=2.8 (Describe network device management access (Telnet, SSH, HTTP, HTTPS, console, TACACS+/RADIUS, and cloud managed))
+Q: Refer to the exhibit. An audit requires that BR1's web management interface accept only encrypted sessions. SSH access must keep working. Which command meets the requirement?
+EXHIBIT:
+    BR1# show running-config | include http|line vty|transport
+    ip http server
+    ip http authentication local
+    ip http secure-server
+    line vty 0 4
+     transport input ssh
+  * A. no ip http server
+        why: ip http server is the clear-text HTTP listener on TCP 80. Removing it leaves ip http secure-server (HTTPS on TCP 443) as the only web access.
+    B. no ip http secure-server
+        why: This removes HTTPS and leaves the unencrypted HTTP listener, the opposite of the requirement.
+    C. transport input ssh under line vty 0 4
+        why: vty transport controls Telnet and SSH, and it is already SSH only. The web server does not use vty transport.
+    D. ip http authentication enable
+        why: This changes which password the web server checks, not whether the session is encrypted.
+TAKEAWAY: Management access: console (local, out of band), Telnet TCP 23 (clear text), SSH TCP 22, HTTP TCP 80 (clear text), HTTPS TCP 443, cloud-managed dashboards. Central AAA: TACACS+ (TCP 49) or RADIUS (UDP 1812/1813).
+
+[b037] type=mc domain=1 obj=1.9.c (Describe IPv6 address types — Multicast)
+Q: A PC in the branch camera VLAN must send a packet to the camera server 2001:db8:b1:30::5c:3a10 on its own subnet and has no neighbor cache entry for it. To which destination address does the PC send its Neighbor Solicitation?
+  * A. FF02::1:FF5C:3A10
+        why: The solicited-node group is FF02::1:FF followed by the last 24 bits of the target. The address ends in ...:005c:3a10, so the last 24 bits are 5C:3A10.
+    B. FF02::1:FF00:3A10
+        why: This uses only the last 16 bits. The solicited-node group takes 24 bits, which includes the 5C.
+    C. FF02::1
+        why: All-nodes multicast would interrupt every host on the link, like an IPv4 ARP broadcast. Neighbor Discovery uses the solicited-node group to avoid that.
+    D. FF02::2
+        why: All-routers is where hosts send router solicitations, not address resolution requests.
+TAKEAWAY: Solicited-node = FF02::1:FF + last 24 bits of the unicast address. Other link-local groups: FF02::1 all nodes, FF02::2 all routers, FF02::1:2 DHCPv6 servers and relays.
+
+[b038] type=ms pick=2 domain=2 obj=2.6 (Describe Cisco Wireless Architectures and AP modes)
+Q: A new branch will use cloud-managed APs: an engineer configures SSIDs and policies on a vendor web dashboard, and the APs pull their configuration from it. Which two statements describe this design? (Choose two.)
+  * A. Client data is switched locally at the branch and does not pass through the cloud
+        why: Only management and monitoring traffic goes to the cloud. User traffic goes from the AP to the local switch like any wired traffic.
+  * B. Each AP needs outbound internet access to reach the dashboard for configuration and monitoring
+        why: The APs open connections to the cloud service to fetch configuration and report status, so the branch firewall must allow them out.
+    C. All client traffic is tunneled in CAPWAP to the cloud dashboard before it is forwarded
+        why: That would send every packet across the internet and back. Cloud-managed APs keep the data plane local.
+    D. Clients are disconnected as soon as the internet link fails
+        why: The APs keep their last configuration and keep serving clients. Only changes and monitoring stop until the link returns.
+    E. Each AP is configured individually through its own CLI or web page
+        why: That is the autonomous model. A cloud dashboard configures every AP from one place.
+TAKEAWAY: Autonomous: each AP configured alone. Lightweight + WLC: CAPWAP to a controller (local mode tunnels data, FlexConnect switches locally). Cloud-managed: management plane in the cloud, data plane local, APs need outbound internet.
+
+[b039] type=mc domain=6 obj=6.3.b (Describe controller-based, software defined architecture (overlay, underlay, and fabric) — Northbound and Southbound APIs)
+Q: The controller that manages the branch pushes configuration templates to BR1 and BSW1 and collects their state using NETCONF and SSH. Which interface does this describe?
+  * A. Southbound API
+        why: Southbound interfaces connect the controller to the devices it programs. NETCONF, RESTCONF, CLI over SSH, SNMP and OpenFlow are examples.
+    B. Northbound API
+        why: Northbound APIs face the applications and scripts above the controller, usually REST over HTTPS with JSON.
+    C. East-west interface between clustered controllers
+        why: East-west traffic synchronizes peer controllers. It does not program BR1 or BSW1.
+    D. The data plane
+        why: Pushing configuration and reading state are control and management functions. The data plane forwards user traffic.
+TAKEAWAY: Northbound: apps and scripts to the controller (REST, JSON). Southbound: controller to devices (NETCONF, RESTCONF, OpenFlow, SNMP, CLI/SSH). The controller in the middle holds the network-wide view.
+
+[b040] type=mc domain=1 obj=1.8 (Configure and verify IPv6 addressing and prefix)
+Q: The branch has been assigned 2001:db8:b1::/48. The plan writes the VLAN number as the 16-bit subnet ID, so VLAN 30 uses subnet ID 0030. Which command gives BR1 Gi0/0.30 the first address in the VLAN 30 /64?
+  * A. ipv6 address 2001:db8:b1:30::1/64
+        why: The fourth hextet is the subnet ID (0030, written 30), and ::1 fills the interface ID with zeros and a final 1. The prefix length is /64.
+    B. ipv6 address 2001:db8:b1::30:1/64
+        why: The :: fills zeros before 30, so the subnet ID becomes 0 and 30 lands in the interface ID. The address is in 2001:db8:b1::/64.
+    C. ipv6 address 2001:db8:b1:30::1/48
+        why: /48 is the whole site prefix. The interface would treat every branch subnet as on-link.
+    D. ipv6 address 2001:db8:b1:3::1/64
+        why: Leading zeros can be dropped but trailing zeros cannot. :3: means 0003, a different subnet.
+TAKEAWAY: A /48 site plus a 16-bit subnet ID gives 65,536 /64s. Shortening rules: drop leading zeros in a hextet, replace one run of all-zero hextets with ::, never drop trailing zeros.
+
+[b041] type=mc domain=2 obj=2.7 (Describe physical infrastructure connections of WLAN components (AP, WLC, access/trunk ports, and LAG))
+Q: Branch APs run in FlexConnect mode. They get their management address untagged in VLAN 40 and switch the BR-STAFF and BR-GUEST WLANs locally to VLANs 10 and 50. How should the BSW1 port for each AP be configured?
+  * A. As an 802.1Q trunk with native VLAN 40, allowing VLANs 10, 40 and 50
+        why: The AP sends its own CAPWAP and management traffic untagged and tags locally switched client traffic with each WLAN's VLAN. A trunk with the AP management VLAN as native carries both.
+    B. As an access port in VLAN 40
+        why: An access port carries only VLAN 40, so the tagged client frames for VLANs 10 and 50 would be dropped.
+    C. As an access port in VLAN 10 with PortFast
+        why: The AP's management traffic would land in the staff VLAN, and guest frames tagged for VLAN 50 would be dropped.
+    D. As a trunk with native VLAN 1 that allows only VLANs 10 and 50
+        why: The AP's untagged management traffic would land in VLAN 1 instead of 40, and VLAN 40 is not allowed anyway.
+TAKEAWAY: AP in local mode: access port (client data rides the CAPWAP tunnel). FlexConnect with local switching: trunk, native = AP management VLAN. WLC distribution ports: trunks, often bundled as a LAG (EtherChannel mode on).
+
+[b042] type=mc domain=1 obj=1.11.c (Describe wireless principles — RF)
+Q: A laptop at the far end of the branch warehouse reports a received signal of -67 dBm from the AP, and the AP measures a noise floor of -92 dBm on that channel. What is the signal-to-noise ratio?
+  * A. 25 dB
+        why: SNR is the signal minus the noise floor: -67 - (-92) = 25 dB. The signal is 25 dB above the noise, which is generally enough for data and voice.
+    B. -25 dB
+        why: This subtracts the signal from the noise. A usable link always has the signal above the noise, so SNR is positive.
+    C. 159 dB
+        why: Adding the two magnitudes is not meaningful. In dB, a ratio is found by subtraction.
+    D. 67 dB
+        why: 67 is just the signal level with the sign dropped. SNR compares the signal with the noise floor.
+TAKEAWAY: dBm is absolute power; dB is a ratio. SNR (dB) = signal (dBm) - noise (dBm). +3 dB doubles power and -3 dB halves it; +10 dB is ten times. RSSI closer to 0 is stronger (-60 beats -75).
+
+[b043] type=mc domain=2 obj=2.1.c (Configure and verify VLANs (normal range) spanning multiple switches — InterVLAN connectivity)
+Q: Refer to the exhibit. Cameras in VLAN 30 cannot ping their gateway, 10.20.30.1. Hosts in VLANs 10 and 20 work normally. Which change fixes the problem?
+EXHIBIT:
+    BR1# show running-config | section interface GigabitEthernet0/0
+    interface GigabitEthernet0/0
+     description BRANCH-LAN-TRUNK
+     ip address 10.20.10.1 255.255.255.0
+     ip nat inside
+    interface GigabitEthernet0/0.20
+     encapsulation dot1Q 20
+     ip address 10.20.20.1 255.255.255.0
+    interface GigabitEthernet0/0.30
+     encapsulation dot1Q 3
+     ip address 10.20.30.1 255.255.255.0
+    
+    BSW1# show interfaces trunk
+    Port        Mode             Encapsulation  Status        Native vlan
+    Gi0/1       on               802.1q         trunking      10
+    
+    Port        Vlans allowed on trunk
+    Gi0/1       10,20,30,40,50,90
+    
+    Port        Vlans allowed and active in management domain
+    Gi0/1       10,20,30,40,50,90
+    
+    Port        Vlans in spanning tree forwarding state and not pruned
+    Gi0/1       10,20,30,40,50,90
+  * A. Change Gi0/0.30 to encapsulation dot1Q 30
+        why: BSW1 tags camera frames with VLAN 30, but Gi0/0.30 accepts only tag 3. The subinterface number is just a label; the encapsulation command decides which VLAN it serves.
+    B. Add VLAN 30 to the allowed list on BSW1 Gi0/1
+        why: VLAN 30 is already allowed, active and forwarding on the trunk.
+    C. Renumber the subinterface as Gi0/0.3 to match its encapsulation
+        why: The number does not have to match anything. Gi0/0.3 with dot1Q 3 would still ignore frames tagged for VLAN 30.
+    D. Make VLAN 30 the native VLAN on BSW1 Gi0/1
+        why: Untagged camera frames would reach BR1's physical interface, which serves 10.20.10.0/24, and VLAN 10 would arrive tagged and break.
+TAKEAWAY: Router-on-a-stick checks: on the router, encapsulation dot1Q N and an IP in the right subnet per subinterface; on the switch, the VLAN allowed, active and forwarding on the trunk, and native VLANs that match.
+
+[b044] type=mc domain=6 obj=6.1 (Explain how automation impacts network management)
+Q: The branch routers are provisioned from a controller template. A compliance report shows that 7 of 60 routers no longer match the template after engineers made local CLI changes during outages. Which benefit of automation does the report demonstrate?
+  * A. Detecting configuration drift so devices can be returned to a known standard
+        why: With templates as the source of truth, the controller can compare each device's running configuration with the intended one and flag or fix differences. Manual networks rarely notice drift until it causes an outage.
+    B. Faster forwarding, because the controller takes over packet switching
+        why: The controller does not forward user traffic. Compliance checking is a management function.
+    C. Removing any need for CLI access on network devices
+        why: The report itself shows engineers still used the CLI. Automation reduces manual changes; it does not remove the CLI.
+    D. Replacing routing protocols with static routes generated by the controller
+        why: The report is about configuration consistency, not about how routes are learned.
+TAKEAWAY: Automation brings consistent templates, fewer typing errors, fast rollout at scale, compliance and drift detection, and repeatable changes. Engineers shift from typing commands to defining intent and reviewing results.
+
+[b045] type=ms pick=2 domain=1 obj=1.1.h (Explain the role and function of network components — PoE)
+Q: IP phones and APs on BSW1 receive power over their Ethernet cables. Which two statements about PoE on BSW1 are true? (Choose two.)
+  * A. BSW1 is the power sourcing equipment (PSE), and the phones and APs are powered devices (PDs)
+        why: The switch port supplies the power and the end device draws it. A midspan injector can also act as the PSE when the switch lacks PoE.
+  * B. BSW1 applies power only after detecting a valid PoE signature, so a non-PoE laptop on the same port is not harmed
+        why: The PSE tests for the PD's signature resistance, then classifies the device before powering it. A device without a signature never gets power.
+    C. 802.3af PoE supplies up to 30 W per port
+        why: 802.3af supplies 15.4 W at the switch port. 30 W is 802.3at (PoE+), and 802.3bt raises it to 60 W or 90 W.
+    D. PoE requires a separate power cable alongside the data cable
+        why: PoE delivers power over the same twisted-pair cable that carries the data.
+    E. Every port draws its full class wattage from the budget whether or not a device is connected
+        why: Power is allocated only to ports with a detected PD, which is why the switch can track a total power budget.
+TAKEAWAY: PoE (802.3af) 15.4 W, PoE+ (802.3at) 30 W, 802.3bt 60 W or 90 W, measured at the PSE. The switch detects and classifies the PD before powering it and allocates from a total power budget.
+
+[b046] type=mc domain=2 obj=2.9 (Interpret the wireless LAN GUI configuration for client connectivity, such as WLAN creation, security settings, QoS profiles, and advanced settings)
+Q: Refer to the exhibit. Guests on the BR-GUEST WLAN can reach each other's laptops. The requirement is that the WLC must not pass traffic directly between guest clients. Which change meets the requirement?
+EXHIBIT:
+    WLANs > Edit 'BR-GUEST'
+     Advanced:
+       Allow AAA Override        : [ ] Enabled
+       Coverage Hole Detection   : [x] Enabled
+       Enable Session Timeout    : [x] 1800 (secs)
+       Aironet IE                : [x] Enabled
+       Override Interface ACL    : IPv4 None   IPv6 None
+       P2P Blocking Action       : Disabled
+       Client Exclusion          : [x] Enabled  60 (secs)
+       Maximum Allowed Clients   : 0
+       DHCP Server               : [ ] Override
+       DHCP Addr. Assignment     : [ ] Required
+  * A. Set P2P Blocking Action to Drop
+        why: Peer-to-peer blocking stops the controller from bridging traffic between clients on the same WLAN. Drop discards it; Forward-UpStream sends it to the upstream switch so a router or firewall can decide.
+    B. Check DHCP Addr. Assignment Required
+        why: This forces clients to get a DHCP address before they can pass traffic. It stops static-address users, not client-to-client traffic.
+    C. Lower the session timeout to 300 seconds
+        why: Clients would simply reauthenticate more often; their traffic to each other is unaffected.
+    D. Enable Allow AAA Override
+        why: AAA override lets a RADIUS server assign a VLAN, QoS or ACL per user. The guest WLAN uses no RADIUS server, and it would not block peer traffic.
+TAKEAWAY: WLC WLAN tabs: General (SSID, status, interface), Security (Layer 2 WPA2/WPA3 PSK or 802.1X, Layer 3 web auth), QoS (Platinum voice, Gold video, Silver best effort, Bronze background), Advanced (timeouts, P2P blocking, client exclusion, DHCP required).
+
+[b047] type=mc domain=1 obj=1.2.f (Describe characteristics of network topology architectures — On-premises and cloud)
+Q: The branch's file server will move from a rack in the branch closet to a virtual machine in a public cloud IaaS service. Which statement is true after the move?
+  * A. The provider maintains the physical hosts and hypervisor, while the company still manages the server's OS and application
+        why: In IaaS the provider runs the facility, hardware, storage and virtualization layer. The customer still owns everything from the guest OS up, including patching.
+    B. The company must buy the server hardware up front, so costs shift from operating to capital expense
+        why: This is reversed. Cloud services are rented, shifting spending from capital to operating expense.
+    C. Branch users reach the server without depending on the WAN or internet circuit
+        why: The server is now off site, so the branch's internet or WAN circuit becomes critical for reaching it.
+    D. The provider becomes responsible for patching the server's operating system
+        why: That is true of SaaS and largely of PaaS. With IaaS, the guest OS is still the customer's responsibility.
+TAKEAWAY: On premises: you own and run everything (capital expense). Cloud: provider runs the infrastructure, pay as you go. IaaS: you manage OS and up; PaaS: you manage apps and data; SaaS: you just use the application.
+
+[b048] type=ms pick=2 domain=6 obj=6.3 (Describe controller-based, software defined architecture (overlay, underlay, and fabric))
+Q: BR1 will join an SD-WAN fabric. It builds IPsec tunnels to HQ over both the internet circuit and a private MPLS circuit, and branch subnets are advertised only inside those tunnels. Which two statements are true? (Choose two.)
+  * A. The internet and MPLS networks form the underlay, which must provide reachability between the tunnel endpoints
+        why: The underlay is the transport. It only has to carry packets between the routers' WAN addresses; it never sees the traffic inside the tunnels.
+  * B. The tunnels form the overlay, so the providers never need routes for the branch's 10.20.0.0/16 subnets
+        why: Branch and HQ subnets are exchanged inside the overlay. The providers see only tunnel packets between the edge routers' transport addresses.
+    C. Because an overlay exists, BR1 no longer needs any routing in the underlay
+        why: The tunnel endpoints must still reach each other across each transport, for example with a default route toward each provider.
+    D. The SD-WAN controllers forward user traffic between the branch and HQ
+        why: The controllers handle control and management. User traffic flows edge to edge through the tunnels.
+    E. The underlay must use the same 10.20.0.0/16 addressing as the branch LAN
+        why: The underlay uses the providers' addressing, such as BR1's public address on Gi0/2. The overlay hides the LAN addressing from it.
+TAKEAWAY: Underlay: the physical or transport network and its routing. Overlay: virtual topology of tunnels (IPsec, VXLAN, GRE) built on top. Fabric: underlay plus overlay managed as one system, as in SD-Access or SD-WAN.
+
+[b049] type=order domain=2 obj=2.9 (Interpret the wireless LAN GUI configuration for client connectivity, such as WLAN creation, security settings, QoS profiles, and advanced settings)
+Q: On the WLC, an engineer must create a new WLAN with SSID BR-IOT that uses WPA2-Personal and places clients on the iot interface. Drag the steps into a valid order.
+POOL:
+  [0] Open the WLANs tab, choose Create New and click Go
+  [1] Click Apply to save the WLAN settings
+  [2] Enter the profile name and the SSID BR-IOT, then click Apply
+  [3] On the Security > Layer 2 tab, select WPA2 with PSK key management and enter the passphrase
+  [4] On the General tab, set the interface to iot and check Status Enabled
+KEY (full order): [0] -> [2] -> [4] -> [3] -> [1]
+ALSO ACCEPTED: [0] -> [2] -> [3] -> [4] -> [1]
+why: The WLAN must exist before it can be edited, so Create New and the profile/SSID page come first; that first Apply opens the WLAN's edit page. The General and Security tabs can be completed in either order, and the final Apply saves the settings from every tab.
+TAKEAWAY: WLC GUI: WLANs > Create New > Go, then profile name, SSID and ID, Apply, then General (status, interface), Security (Layer 2 WPA2/WPA3 with PSK or 802.1X), QoS and Advanced, then Apply.
+
+[b050] type=mc domain=6 obj=6.4 (Explain AI (generative and predictive) and machine learning in network operations)
+Q: An engineer asks a generative AI assistant to write the IOS configuration for a new branch router from a short text description. Which practice is most important before the output is used?
+  * A. Review and test the generated configuration, because generative AI can produce plausible but incorrect commands
+        why: Generative models predict likely text; they can invent commands, use the wrong syntax for the platform or miss security settings. Peer review and a lab test catch these before production.
+    B. Apply it directly, because AI output generated from vendor documentation is always valid
+        why: No generative model guarantees correctness. Treat the output like a draft from a new team member.
+    C. Feed it labeled traffic data first, because generative AI needs flow records to write configurations
+        why: Labeled flow data trains predictive models such as anomaly detectors. A text prompt is enough for a generative assistant to produce a draft.
+    D. Use the output only as a traffic baseline, because generative AI forecasts link utilization
+        why: Baselines and forecasts come from predictive AI and machine learning. Generative AI creates new content such as text or configuration.
+TAKEAWAY: Generative AI creates content (configs, summaries, chat answers) and can hallucinate, so validate it. Predictive AI/ML learns from data to forecast or flag anomalies, such as capacity trends or unusual client onboarding times.
+
+[b051] type=ms pick=2 domain=3 obj=3.2.a (Determine how a router makes a forwarding decision by default — Longest prefix match)
+Q: Refer to the exhibit. BR1 receives packets from branch hosts for several destinations. Which two statements describe how BR1 forwards them? (Choose two.)
+EXHIBIT:
+    BR1# show ip route
+    Codes: L - local, C - connected, S - static, O - OSPF
+           * - candidate default
+    
+    Gateway of last resort is 203.0.113.1 to network 0.0.0.0
+    
+    S*    0.0.0.0/0 [1/0] via 203.0.113.1
+          10.0.0.0/8 is variably subnetted, 10 subnets, 4 masks
+    S        10.10.0.0/16 [1/0] via 10.255.1.1
+    O        10.10.1.0/24 [110/2] via 10.255.1.1, 00:12:34, GigabitEthernet0/1
+    O        10.10.50.0/24 [110/2] via 10.255.1.1, 00:12:34, GigabitEthernet0/1
+    S        10.10.50.10/32 [1/0] via 10.255.2.1
+    C        10.20.10.0/24 is directly connected, GigabitEthernet0/0
+    L        10.20.10.1/32 is directly connected, GigabitEthernet0/0
+    C        10.255.1.0/30 is directly connected, GigabitEthernet0/1
+    L        10.255.1.2/32 is directly connected, GigabitEthernet0/1
+    C        10.255.2.0/30 is directly connected, Serial0/1/0
+    L        10.255.2.2/32 is directly connected, Serial0/1/0
+          203.0.113.0/24 is variably subnetted, 2 subnets, 2 masks
+    C        203.0.113.0/29 is directly connected, GigabitEthernet0/2
+    L        203.0.113.6/32 is directly connected, GigabitEthernet0/2
+  * A. A packet to 10.10.50.10 is sent to 10.255.2.1
+        why: Three routes match 10.10.50.10 (/16, /24 and /32). The /32 host route is the longest match, so it wins regardless of administrative distance.
+  * B. A packet to 10.10.50.25 is sent to 10.255.1.1 out GigabitEthernet0/1 using the OSPF route
+        why: 10.10.50.25 matches the /16 static and the /24 OSPF route but not the /32. The /24 is longer, so the OSPF entry is used even though its AD (110) is higher than the static's (1).
+    C. A packet to 10.10.1.20 uses the 10.10.0.0/16 static route because AD 1 beats OSPF's 110
+        why: AD only breaks ties between routes to the same prefix. 10.10.1.0/24 is more specific than 10.10.0.0/16, so the OSPF /24 is chosen first.
+    D. A packet to 10.10.99.5 is sent to 203.0.113.1 because no specific route matches
+        why: 10.10.99.5 falls inside 10.10.0.0/16, so the static route via 10.255.1.1 matches. The default route is only used when nothing longer matches.
+    E. A packet to 172.16.5.5 is dropped because the table has no 172.16.0.0 route
+        why: The S* 0.0.0.0/0 entry matches every destination, so 172.16.5.5 goes to the gateway of last resort, 203.0.113.1.
+    F. A packet to 10.10.50.10 is sent to 10.255.1.1 because OSPF routes are refreshed more recently
+        why: Route age plays no part in the forwarding decision. The /32 static route is the longest match for 10.10.50.10.
+TAKEAWAY: Forwarding order: longest prefix first; AD only decides between sources offering the same prefix; metric only decides within one source.
+
+[b052] type=mc domain=5 obj=5.5 (Describe IPsec remote access and site-to-site VPNs)
+Q: A new branch has 30 users who must reach HQ servers across the internet. The traffic must be encrypted, the tunnel must stay up permanently, and nothing may be installed or launched on the users' PCs. Which solution meets these requirements?
+  * A. A site-to-site IPsec VPN between the branch router and the HQ VPN gateway
+        why: Site-to-site IPsec is built between two gateways and protects every host behind them. The PCs send ordinary traffic to their default gateway and never know a tunnel exists.
+    B. A remote-access IPsec VPN with a client installed on each branch PC
+        why: Remote-access VPNs need client software and a per-user login on every PC, which the requirements rule out.
+    C. A GRE tunnel between the branch router and HQ without IPsec
+        why: GRE encapsulates traffic but does not encrypt it, so the confidentiality requirement fails.
+    D. A clientless TLS VPN portal that users open in a web browser
+        why: A clientless portal needs each user to sign in from a browser and only reaches published web applications; it is not a permanent network-to-network tunnel.
+TAKEAWAY: Site-to-site = gateway to gateway, always on, hosts unaware. Remote access = one user's device to a headend, per-user authentication.
+
+[b053] type=ms pick=2 domain=4 obj=4.1 (Configure and verify inside source NAT using static and pools)
+Q: Refer to the exhibit. BR1 performs NAT on its internet edge, GigabitEthernet0/2 (203.0.113.6/29). Which two statements are true? (Choose two.)
+EXHIBIT:
+    BR1# show ip nat translations
+    Pro  Inside global      Inside local       Outside local      Outside global
+    ---  203.0.113.5        10.20.10.50        ---                ---
+    icmp 203.0.113.6:1      10.20.10.21:1      198.51.100.20:1    198.51.100.20:1
+    icmp 203.0.113.6:2      10.20.10.21:2      198.51.100.20:2    198.51.100.20:2
+    icmp 203.0.113.6:6      10.20.10.22:6      198.51.100.20:6    198.51.100.20:6
+    icmp 203.0.113.6:7      10.20.10.22:7      198.51.100.20:7    198.51.100.20:7
+    
+    BR1# show ip nat statistics | include Total|access-list
+    Total active translations: 5 (1 static, 4 dynamic; 4 extended)
+    [Id: 1] access-list 10 interface GigabitEthernet0/2 refcount 4
+  * A. The branch server 10.20.10.50 is always represented on the internet as 203.0.113.5
+        why: The entry with no protocol or ports and dashes for the outside columns is a static one-to-one mapping. It exists whether or not traffic is flowing, so the server is reachable at 203.0.113.5.
+  * B. Hosts 10.20.10.21 and 10.20.10.22 share inside global address 203.0.113.6, told apart by port or ICMP ID
+        why: Both hosts are translated to the Gi0/2 address with different identifiers. That is PAT (overload) using the interface address, as the statistics line confirms.
+    C. 198.51.100.20 is an inside global address
+        why: 198.51.100.20 is the outside host. It appears in the outside local and outside global columns, which are equal because no outside NAT is configured.
+    D. 10.20.10.21 is the inside global address of the first PC
+        why: 10.20.10.21 is the PC's own private address, which is the inside local address. Its inside global is 203.0.113.6.
+    E. The dynamic translations draw from a pool of public addresses
+        why: The mapping references 'interface GigabitEthernet0/2', not a pool. Every dynamic flow uses the single interface address with overload.
+TAKEAWAY: Inside local = real private address; inside global = what the internet sees. Same global with different ports = PAT. A row with dashes and no ports = static NAT.
+
+[b054] type=mc domain=3 obj=3.4.d (Configure and verify single area OSPFv2 — Router ID)
+Q: Refer to the exhibit. The team expected BR1 to use 10.0.0.2 as its OSPF router ID. Why did BR1 choose 172.16.200.2?
+EXHIBIT:
+    BR1# show running-config | section router ospf
+    router ospf 10
+     network 10.0.0.2 0.0.0.0 area 0
+     network 10.20.10.0 0.0.0.255 area 0
+     network 10.255.1.0 0.0.0.3 area 0
+    
+    BR1# show ip interface brief | include up
+    GigabitEthernet0/0     10.20.10.1      YES manual up                    up
+    GigabitEthernet0/1     10.255.1.2      YES manual up                    up
+    GigabitEthernet0/2     203.0.113.6     YES manual up                    up
+    Loopback0              10.0.0.2        YES manual up                    up
+    Loopback1              172.16.200.2    YES manual up                    up
+    
+    BR1# show ip protocols | include Router ID
+      Router ID 172.16.200.2
+  * A. No router-id is configured, so OSPF took the highest IP on an up loopback, even one not in a network statement
+        why: With no router-id command, OSPF uses the highest IPv4 address on an up loopback. Lo1 (172.16.200.2) is higher than Lo0 (10.0.0.2). A loopback does not have to be advertised in OSPF to supply the router ID.
+    B. OSPF uses the highest address among interfaces matched by its network statements
+        why: The network statements only decide which interfaces run OSPF. Router ID selection looks at all up loopbacks first, and Lo1 is not even in a network statement.
+    C. OSPF uses the highest address on any up interface, physical or loopback
+        why: If that were true, the router ID would be 203.0.113.6 from Gi0/2. Loopbacks are preferred over physical interfaces when no router ID is configured.
+    D. Someone configured router-id 172.16.200.2 under the OSPF process
+        why: The OSPF section of the running-config has no router-id line, so the value was chosen automatically.
+TAKEAWAY: Router ID order: router-id command, then the highest up loopback, then the highest up physical interface. A change only takes effect after clear ip ospf process or a reload.
+
+[b055] type=mc domain=3 obj=3.3.d (Configure and verify IPv4 and IPv6 static routing — Floating static)
+Q: Refer to the exhibit. The output was captured after the branch fiber circuit on GigabitEthernet0/1 failed. Which statement explains the 10.10.0.0/16 entry?
+EXHIBIT:
+    BR1# show running-config | include ip route
+    ip route 0.0.0.0 0.0.0.0 203.0.113.1
+    ip route 10.10.0.0 255.255.0.0 10.255.1.1
+    ip route 10.10.0.0 255.255.0.0 10.255.2.1 5
+    
+    BR1# show ip route | begin Gateway
+    Gateway of last resort is 203.0.113.1 to network 0.0.0.0
+    
+    S*    0.0.0.0/0 [1/0] via 203.0.113.1
+          10.0.0.0/8 is variably subnetted, 5 subnets, 4 masks
+    S        10.10.0.0/16 [5/0] via 10.255.2.1
+    C        10.20.10.0/24 is directly connected, GigabitEthernet0/0
+    L        10.20.10.1/32 is directly connected, GigabitEthernet0/0
+    C        10.255.2.0/30 is directly connected, Serial0/1/0
+    L        10.255.2.2/32 is directly connected, Serial0/1/0
+          203.0.113.0/24 is variably subnetted, 2 subnets, 2 masks
+    C        203.0.113.0/29 is directly connected, GigabitEthernet0/2
+    L        203.0.113.6/32 is directly connected, GigabitEthernet0/2
+  * A. Next hop 10.255.1.1 is unreachable, so the floating static route with AD 5 was installed
+        why: With Gi0/1 down, 10.255.1.0/30 left the table and the primary route's next hop no longer resolves. The AD 5 route via the serial link, which was waiting in the background, is now the best route to 10.10.0.0/16.
+    B. Both static routes are installed and BR1 load-balances across the fiber and serial links
+        why: Routes with different ADs never share the load. Only the [5/0] route is listed, and its next hop is the serial link.
+    C. The serial route was chosen because its metric is lower than the fiber route's
+        why: Static routes have a metric of 0. The [5/0] shows AD 5, which only matters because the AD 1 route can no longer be used.
+    D. BR1 will keep using the serial route after Gi0/1 recovers until the routes are cleared
+        why: Floating statics are not sticky. As soon as 10.255.1.1 is reachable again, the AD 1 route returns and replaces the backup automatically.
+TAKEAWAY: A floating static is a normal static with a higher AD. It stays out of the table until the preferred route is withdrawn, and steps back as soon as that route returns.
+
+[b056] type=mc domain=5 obj=5.7 (Configure and verify Layer 2 security features (DHCP snooping, dynamic ARP inspection, and port security))
+Q: Refer to the exhibit. The desktop on BSW1 Fa0/5 has already been learned. The user connects a small unmanaged switch to Fa0/5 and plugs a personal laptop into it. What happens when the laptop sends frames?
+EXHIBIT:
+    BSW1# show port-security interface fa0/5
+    Port Security              : Enabled
+    Port Status                : Secure-up
+    Violation Mode             : Restrict
+    Aging Time                 : 0 mins
+    Aging Type                 : Absolute
+    SecureStatic Address Aging : Disabled
+    Maximum MAC Addresses      : 1
+    Total MAC Addresses        : 1
+    Configured MAC Addresses   : 0
+    Sticky MAC Addresses       : 1
+    Last Source Address:Vlan   : 00e0.4c00.0201:10
+    Security Violation Count   : 0
+  * A. Laptop frames are dropped, the violation count rises and a log message is sent; the desktop keeps working
+        why: Restrict mode drops frames from the extra MAC, increments the Security Violation Count, and generates a syslog message and SNMP trap. The port stays Secure-up, so the sticky desktop MAC is unaffected.
+    B. Fa0/5 is placed in the err-disabled state and both devices lose connectivity
+        why: Err-disable is what the default shutdown mode does. This port is in Restrict mode, which never shuts the port down.
+    C. Laptop frames are dropped silently and the violation count stays at 0
+        why: That describes Protect mode. Restrict also drops the frames, but it counts and logs each violation.
+    D. The laptop's MAC is learned as a second sticky address
+        why: The maximum is 1 and one sticky MAC is already learned. A new address beyond the maximum is a violation, not an addition.
+TAKEAWAY: Shutdown = err-disable plus a log message. Restrict = drop, count and log. Protect = drop silently. The default maximum is 1 MAC.
+
+[b057] type=mc domain=3 obj=3.5 (Describe the purpose, functions, and concepts of first hop redundancy protocols)
+Q: Refer to the exhibit. The branch LAN has two routers. BR1 Gi0/0 is 10.20.10.2 and BR2 Gi0/0 is 10.20.10.3. Which statement is correct?
+EXHIBIT:
+    BR1# show vrrp brief
+    Interface          Grp Pri Time  Own Pre State   Master addr     Group addr
+    Gi0/0              10  110 3570       Y  Master  10.20.10.2      10.20.10.1
+    
+    BR2# show vrrp brief
+    Interface          Grp Pri Time  Own Pre State   Master addr     Group addr
+    Gi0/0              10  100 3609       Y  Backup  10.20.10.2      10.20.10.1
+  * A. Hosts use 10.20.10.1 as their gateway, and BR1 answers ARP for it with MAC 0000.5e00.010a
+        why: 10.20.10.1 is the group's virtual address. The master replies with the VRRP virtual MAC 0000.5e00.01xx, where xx is the group number in hex (10 = 0a).
+    B. BR1 is master because it owns the virtual IP address
+        why: The Own column is blank. BR1's real address is 10.20.10.2, so it is master because its priority (110) is higher than BR2's (100), not because it owns 10.20.10.1.
+    C. If BR1 fails and later recovers, BR2 stays master because preemption is disabled
+        why: The Pre column shows Y on both routers. Preemption is on by default in VRRP, so BR1 takes back the master role when it returns.
+    D. Hosts should use 10.20.10.2 as their gateway so their traffic prefers BR1
+        why: Pointing hosts at BR1's real address removes the redundancy. If BR1 fails, nobody answers for 10.20.10.2.
+TAKEAWAY: VRRP: open standard, master/backup, virtual MAC 0000.5e00.01xx, preempt on by default, advertisements to 224.0.0.18.
+
+[b058] type=mc domain=4 obj=4.6 (Configure and verify DHCP client and relay)
+Q: Refer to the exhibit. Branch PCs on 10.20.10.0/24 receive 169.254.x.x addresses. The HQ DHCP server 10.10.1.20 has a scope for 10.20.10.0/24 and BR1 can ping it. What should the engineer do?
+EXHIBIT:
+    BR1# show running-config interface g0/0
+    interface GigabitEthernet0/0
+     description BRANCH-LAN
+     ip address 10.20.10.1 255.255.255.0
+     ip nat inside
+    end
+    
+    BR1# show running-config interface g0/1
+    interface GigabitEthernet0/1
+     description WAN-TO-HQ1
+     ip address 10.255.1.2 255.255.255.252
+     ip helper-address 10.10.1.20
+     ip ospf network point-to-point
+    end
+  * A. Remove the helper address from Gi0/1 and configure ip helper-address 10.10.1.20 on Gi0/0
+        why: The relay must sit on the interface that receives the clients' DHCPDISCOVER broadcasts, which is the LAN interface. BR1 then unicasts the request to 10.10.1.20 with giaddr 10.20.10.1, so the server picks the right scope.
+    B. Configure ip helper-address 10.20.10.1 on HQ1's WAN interface
+        why: The client broadcasts never leave the branch LAN, so nothing on HQ1 can see them. The relay belongs on the branch router's LAN interface.
+    C. Change the helper on Gi0/1 to 255.255.255.255 so broadcasts are flooded toward HQ
+        why: Gi0/1 never receives the client broadcasts, so a helper there does nothing whatever its address. Flooding broadcasts across the WAN is also not how relay works.
+    D. Configure ip address dhcp on Gi0/0 so BR1 learns the scope from HQ
+        why: That makes BR1 a DHCP client on its LAN interface. It would not forward anything for the PCs, and the gateway address would no longer be fixed.
+TAKEAWAY: ip helper-address goes on the interface facing the clients. The relay fills in giaddr, and the server uses it to choose the scope.
+
+[b059] type=order domain=3 obj=3.4.a (Configure and verify single area OSPFv2 — Neighbor adjacencies)
+Q: BR1 and HQ1 have just been connected over a new point-to-point WAN link with matching OSPF settings. Drag and drop the OSPF neighbor states into the order BR1 moves through them for HQ1, from first to last.
+POOL:
+  [0] Down
+  [1] Init
+  [2] 2-Way
+  [3] ExStart
+  [4] Exchange
+  [5] Loading
+  [6] Full
+KEY (full order): [0] -> [1] -> [2] -> [3] -> [4] -> [5] -> [6]
+why: BR1 starts in Down. It moves to Init when it receives HQ1's hello and to 2-Way when that hello lists BR1's own router ID. On a point-to-point link there is no DR election, so both routers go straight on: ExStart negotiates master/slave and the DBD sequence number, Exchange swaps DBD summaries, Loading requests the missing LSAs with LSRs, and Full means the LSDBs are synchronized.
+TAKEAWAY: Down, Init, 2-Way, ExStart, Exchange, Loading, Full. On broadcast links, DROTHERs stay in 2-Way with each other; P2P neighbors always go to Full.
+
+[b060] type=mc domain=5 obj=5.3 (Configure and verify device access control using local passwords)
+Q: Refer to the exhibit. An audit of the branch routers flags the protection of privileged EXEC mode on BR1 as weak. Which change addresses the finding?
+EXHIBIT:
+    BR1# show running-config | begin service password
+    service password-encryption
+    !
+    hostname BR1
+    !
+    enable password 7 08035E1A071A0D321C4A
+    !
+    line con 0
+     password 7 08021C401A160912515A
+     login
+    line vty 0 4
+     password 7 08175857442904040152
+     login
+     transport input telnet ssh
+  * A. Configure enable secret with a strong password and remove the enable password line
+        why: enable secret is stored as a one-way hash (type 5, 8 or 9) and takes priority over enable password. Type 7 is a reversible encoding that free tools decode instantly.
+    B. Enter service password-encryption again so the enable password is re-encrypted
+        why: The command is already on, and it only produces type 7, which is the weakness the audit found. Entering it again changes nothing.
+    C. Configure login local on the console line
+        why: That changes how users log in at the console. It does nothing for the enable password that protects privileged EXEC mode.
+    D. Change the vty lines to transport input ssh
+        why: Removing Telnet is good practice and protects the login in transit, but the enable password would still be a reversible type 7 string in the config.
+TAKEAWAY: Use enable secret, never enable password. service password-encryption only hides line and username passwords with reversible type 7.
+
+[b061] type=mc domain=3 obj=3.3.b (Configure and verify IPv4 and IPv6 static routing — Network route)
+Q: BR1 adds a new subnet, 10.20.30.0/24, for branch cameras. HQ1 reaches branch subnets with static routes across the fiber link, where HQ1 Gi0/1 is 10.255.1.1/30 and BR1 Gi0/1 is 10.255.1.2/30. Which command on HQ1 provides reachability to the new subnet?
+  * A. ip route 10.20.30.0 255.255.255.0 10.255.1.2
+        why: A network route needs the destination, its subnet mask and a next hop on a connected subnet. BR1's side of the /30 is 10.255.1.2.
+    B. ip route 10.20.30.0 0.0.0.255 10.255.1.2
+        why: Static routes take a subnet mask, not a wildcard mask. 0.0.0.255 is not a valid mask, so IOS rejects the command.
+    C. ip route 10.20.30.0 255.255.255.0 10.255.1.1
+        why: 10.255.1.1 is HQ1's own Gi0/1 address. A next hop must be the neighboring router, not the local interface.
+    D. ip route 10.20.0.0 255.255.255.0 10.255.1.2
+        why: 10.20.0.0/24 covers 10.20.0.0 to 10.20.0.255 and does not include 10.20.30.0/24.
+TAKEAWAY: ip route <network> <subnet mask> <next hop | exit interface> [AD]. Wildcards belong in ACLs and OSPF network statements, not in static routes.
+
+[b062] type=ms pick=2 domain=3 obj=3.4.b (Configure and verify single area OSPFv2 — Point-to-point)
+Q: Refer to the exhibit. BR1 connects to HQ1 over a fiber link (Gi0/1) and a serial link (Se0/1/0). Which two statements are true? (Choose two.)
+EXHIBIT:
+    BR1# show ip ospf neighbor
+    
+    Neighbor ID     Pri   State           Dead Time   Address         Interface
+    10.0.0.1          0   FULL/  -        00:00:37    10.255.1.1      GigabitEthernet0/1
+    10.0.0.1          0   FULL/  -        00:00:37    10.255.2.1      Serial0/1/0
+    
+    BR1# show ip ospf interface g0/1
+    GigabitEthernet0/1 is up, line protocol is up
+      Internet Address 10.255.1.2/30, Area 0, Attached via Network Statement
+      Process ID 10, Router ID 10.0.0.2, Network Type POINT_TO_POINT, Cost: 1
+      Transmit Delay is 1 sec, State POINT_TO_POINT
+      Timer intervals configured, Hello 10, Dead 40, Wait 40, Retransmit 5
+  * A. No DR or BDR is elected on either WAN link
+        why: The dash after FULL/ means the neighbor has no DR/BDR role, and Gi0/1 shows Network Type POINT_TO_POINT, State POINT_TO_POINT. Serial links with HDLC are point-to-point by default.
+  * B. BR1 is fully adjacent to the same neighbor, router ID 10.0.0.1, over both links
+        why: An OSPF router has one router ID for the whole process. HQ1 appears twice because BR1 has one adjacency per link, and both are FULL.
+    C. HQ1 uses two different router IDs because it has two OSPF interfaces
+        why: The router ID is per process, not per interface. Both rows show 10.0.0.1; only the neighbor's interface address differs.
+    D. The dash in FULL/ - means the adjacency has not finished forming
+        why: FULL means the databases are synchronized. The dash only shows that the neighbor holds no DR or BDR role.
+    E. Gi0/1 uses 30-second hellos because it is a point-to-point interface
+        why: The output shows Hello 10, Dead 40. Point-to-point and broadcast networks both default to 10/40; 30/120 is for NBMA types.
+    F. Se0/1/0 runs the broadcast network type because it was not configured as point-to-point
+        why: Serial interfaces default to the point-to-point network type, and the FULL/ - state on Se0/1/0 confirms there was no DR election.
+TAKEAWAY: FULL/ - = point-to-point adjacency, no DR or BDR. Ethernet defaults to broadcast (DR/BDR); serial defaults to point-to-point.
+
+[b063] type=build ordered=false domain=5 obj=5.9 (Describe wireless security protocols (WPA, WPA2, and WPA3))
+Q: The branch guest and staff SSIDs are being moved from WPA2-Personal to WPA3-Personal. Drag the characteristics of WPA3-Personal into the answer area. Leave the items that do not apply.
+POOL:
+  [0] Authenticates with SAE (Simultaneous Authentication of Equals)
+  [1] Requires Protected Management Frames (PMF)
+  [2] Gives forward secrecy, so captured traffic stays protected if the passphrase later leaks
+  [3] Uses TKIP with RC4 for backward compatibility
+  [4] Requires a RADIUS server to check each user's credentials
+  [5] Lets an attacker who captures one handshake run an offline dictionary attack
+  [6] Uses a static 40-bit or 104-bit key
+KEY (unordered subset): [0] + [1] + [2]
+why: WPA3-Personal replaces the PSK-derived key exchange with SAE, which blocks offline dictionary attacks and gives forward secrecy, and it makes PMF mandatory. TKIP/RC4 belongs to WPA, a per-user RADIUS check is Enterprise mode, offline cracking of a captured handshake is the WPA2-Personal weakness, and static 40/104-bit keys are WEP.
+TAKEAWAY: WPA3-Personal = SAE + mandatory PMF + forward secrecy. WPA2-Personal = PSK + AES-CCMP, open to offline guessing of weak passphrases.
+
+[b064] type=mc domain=4 obj=4.8 (Configure network devices for remote access using SSH)
+Q: Refer to the exhibit. An engineer is preparing BR1 for SSH-only management, and a local admin user already exists. Which two commands, entered in this order, will let SSH start?
+EXHIBIT:
+    BR1# show ip ssh
+    SSH Disabled - version 1.99
+    %Please create RSA keys to enable SSH (and of atleast 768 bits for SSH v2).
+    Authentication methods:publickey,keyboard-interactive,password
+    Authentication timeout: 120 secs; Authentication retries: 3
+    
+    BR1# show running-config | include hostname|domain
+    hostname BR1
+  * A. ip domain-name branch.example, then crypto key generate rsa modulus 2048
+        why: The RSA key is named from the hostname and domain name. The hostname is already set but no domain name is configured, so the domain name must come first, then the key. SSH enables itself once a key exists.
+    B. crypto key generate rsa modulus 2048, then ip ssh version 2
+        why: Key generation fails without a domain name; IOS asks you to define one first. ip ssh version 2 cannot help while no key exists.
+    C. ip ssh version 2, then transport input ssh under line vty 0 4
+        why: Neither command creates the RSA key pair the output says is missing, so SSH stays disabled.
+    D. hostname BR1, then crypto key generate rsa modulus 2048
+        why: The hostname is already BR1. The missing piece is the domain name, so key generation would still fail.
+TAKEAWAY: SSH on IOS: hostname (not the default 'Router'), ip domain-name, crypto key generate rsa (2048), a local user, then vty: login local and transport input ssh.
+
+[b065] type=mc domain=3 obj=3.2.c (Determine how a router makes a forwarding decision by default — Routing protocol metric)
+Q: Refer to the exhibit. OSPF runs over both WAN links, and HQ1's LAN interface Gi0/0 has the default cost. If the Gi0/1 fiber circuit fails, which entry will BR1 install for 10.10.1.0/24?
+EXHIBIT:
+    BR1# show ip ospf interface | include line protocol|Cost:
+    GigabitEthernet0/0 is up, line protocol is up
+      Process ID 10, Router ID 10.0.0.2, Network Type BROADCAST, Cost: 1
+    GigabitEthernet0/1 is up, line protocol is up
+      Process ID 10, Router ID 10.0.0.2, Network Type POINT_TO_POINT, Cost: 1
+    Serial0/1/0 is up, line protocol is up
+      Process ID 10, Router ID 10.0.0.2, Network Type POINT_TO_POINT, Cost: 64
+    
+    BR1# show ip route ospf | include 10.10.1.0
+    O        10.10.1.0/24 [110/2] via 10.255.1.1, 00:12:34, GigabitEthernet0/1
+  * A. O 10.10.1.0/24 [110/65] via 10.255.2.1, Serial0/1/0
+        why: OSPF cost is the sum of the outgoing interface costs along the path: Se0/1/0 (64) plus HQ1 Gi0/0 (1) = 65. The serial path was always in the database; it only loses to the cost-2 fiber path while Gi0/1 is up.
+    B. O 10.10.1.0/24 [110/64] via 10.255.2.1, Serial0/1/0
+        why: This counts only the serial link. The cost of HQ1's outgoing LAN interface (1) must also be added, giving 65.
+    C. O 10.10.1.0/24 [110/2] via 10.255.2.1, Serial0/1/0
+        why: The metric changes with the path. Over the T1-speed serial link (default cost 64) the total cannot stay at 2.
+    D. No route; OSPF only installs a backup path after clear ip ospf process
+        why: OSPF reruns SPF automatically when the topology changes. The serial adjacency is already FULL, so the new best path is installed without any manual step.
+TAKEAWAY: OSPF metric = sum of outgoing interface costs; default cost = 100 Mbps / interface bandwidth (minimum 1), so serial (1544 kbps) = 64 and Fa/Gi = 1.
+
+[b066] type=mc domain=5 obj=5.6 (Configure and verify access control lists)
+Q: Refer to the exhibit. What is the effect of this configuration on BR1?
+EXHIBIT:
+    BR1# show access-lists MGMT-HQ
+    Standard IP access list MGMT-HQ
+        10 permit 10.10.99.0, wildcard bits 0.0.0.255 (14 matches)
+        20 deny   any log (6 matches)
+    
+    BR1# show running-config | section line vty
+    line vty 0 4
+     access-class MGMT-HQ in
+     login local
+     transport input ssh
+    line vty 5 15
+     access-class MGMT-HQ in
+     login local
+     transport input ssh
+  * A. Only hosts in 10.10.99.0/24 can open SSH sessions to BR1, and traffic passing through BR1 is not filtered
+        why: access-class applies the ACL to connections to the vty lines only. All 16 lines carry it and only allow SSH, so the HQ management subnet is the only source that can log in. Transit traffic is unaffected.
+    B. Hosts in 10.10.99.0/24 can reach BR1 using either SSH or Telnet
+        why: transport input ssh disables Telnet on these lines, whatever the ACL allows.
+    C. All traffic entering BR1 from outside 10.10.99.0/24 is dropped and logged
+        why: That would need ip access-group on an interface. access-class only checks sessions to the router's own vty lines.
+    D. The ACL has no effect because vty filtering needs an extended ACL
+        why: A standard ACL is the usual choice for access-class because only the source address matters. The match counters show it is working.
+TAKEAWAY: ip access-group = filter traffic through an interface. access-class = filter who can open a vty session to the device. Apply it to every vty line.
+
+[b067] type=ms pick=2 domain=3 obj=3.3.b (Configure and verify IPv4 and IPv6 static routing — Network route)
+Q: Refer to the exhibit. Which two statements about BR1's IPv6 routing are true? (Choose two.)
+EXHIBIT:
+    BR1# show ipv6 route
+    IPv6 Routing Table - default - 7 entries
+    Codes: C - Connected, L - Local, S - Static
+    S   ::/0 [10/0]
+         via 2001:DB8:FF:1::1
+    S   2001:DB8:10::/48 [1/0]
+         via FE80::1, GigabitEthernet0/1
+    C   2001:DB8:20:10::/64 [0/0]
+         via GigabitEthernet0/0, directly connected
+    L   2001:DB8:20:10::1/128 [0/0]
+         via GigabitEthernet0/0, receive
+    C   2001:DB8:FF:1::/64 [0/0]
+         via GigabitEthernet0/1, directly connected
+    L   2001:DB8:FF:1::2/128 [0/0]
+         via GigabitEthernet0/1, receive
+    L   FF00::/8 [0/0]
+         via Null0, receive
+  * A. The route to 2001:DB8:10::/48 uses a link-local next hop, so its exit interface had to be specified
+        why: FE80::1 is only meaningful on one link, and every interface has link-local addresses in FE80::/10. IOS requires the exit interface with a link-local next hop, as the 'via FE80::1, GigabitEthernet0/1' entry shows.
+  * B. A packet to 2001:DB8:77::5 is forwarded to 2001:DB8:FF:1::1
+        why: No connected or static prefix covers 2001:DB8:77::5, so the ::/0 default route matches. It is the only default route, so its AD of 10 does not keep it out of the table.
+    C. The default route is not used because its AD of 10 is higher than the other static route's AD of 1
+        why: AD only compares routes to the same prefix. ::/0 and 2001:DB8:10::/48 are different prefixes, so both are installed.
+    D. A packet to 2001:DB8:10:5::20 follows the default route because /0 is checked before /48
+        why: Longest prefix match applies to IPv6 as well. 2001:DB8:10:5::20 is inside 2001:DB8:10::/48, which is far more specific than ::/0.
+    E. FE80::1 is routed across the WAN, so HQ1 can be several hops away
+        why: Link-local addresses are never forwarded off their link. FE80::1 must be HQ1's address on the segment attached to Gi0/1.
+TAKEAWAY: IPv6 static with a link-local next hop: ipv6 route prefix/len <interface> FE80::x. A global next hop can stand alone. Longest match and AD rules are the same as in IPv4.
+
+[b068] type=mc domain=3 obj=3.1.g (Interpret the components of routing table — Gateway of last resort)
+Q: Refer to the exhibit. BR1 has no other default route configured. After the messages appear, what happens to branch traffic destined for 198.51.100.80?
+EXHIBIT:
+    BR1# show ip route | include Gateway|0.0.0.0/0
+    Gateway of last resort is 203.0.113.1 to network 0.0.0.0
+    S*    0.0.0.0/0 [1/0] via 203.0.113.1
+    
+    %LINK-3-UPDOWN: Interface GigabitEthernet0/2, changed state to down
+    %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/2,
+     changed state to down
+    
+    BR1# show ip interface brief | include 0/2
+    GigabitEthernet0/2     203.0.113.6     YES manual down                  down
+  * A. The default route is withdrawn because 203.0.113.1 is no longer reachable, so the packets are dropped
+        why: 203.0.113.1 was reachable only through the connected 203.0.113.0/29, which disappears when Gi0/2 goes down. The static default no longer resolves and is removed, the gateway of last resort becomes 'not set', and BR1 drops traffic with no matching route.
+    B. The packets are sent to HQ over the 10.10.0.0/16 static route
+        why: 198.51.100.80 is not inside 10.10.0.0/16. Without a default route pointing at HQ, nothing in the table matches.
+    C. The default route stays in the table and the packets are queued until Gi0/2 returns
+        why: Routers do not hold packets waiting for a route. A static route whose next hop cannot be resolved is removed from the table.
+    D. BR1 sends an ARP request for 198.51.100.80 on every up interface
+        why: Routers do not ARP for off-subnet destinations they have no route to. They drop the packet and may send ICMP unreachable.
+TAKEAWAY: A static route stays in the table only while its next hop resolves. To keep internet access when the ISP link fails, add a floating default route that points elsewhere.
+
+[b069] type=ms pick=2 domain=4 obj=4.5 (Describe the use of syslog features, including facilities and severity levels)
+Q: Refer to the exhibit. BR1 is configured with logging host 10.10.1.50 and logging trap warnings. The listed messages are generated on BR1. Which two messages are sent to the syslog server? (Choose two.)
+EXHIBIT:
+    %LINK-3-UPDOWN: Interface Serial0/1/0, changed state to down
+    %LINEPROTO-5-UPDOWN: Line protocol on Interface Serial0/1/0,
+     changed state to down
+    %SEC_LOGIN-4-LOGIN_FAILED: Login failed [user: admin]
+     [Source: 10.20.10.37] [localport: 22] [Reason: Login Authentication Failed]
+    %SYS-5-CONFIG_I: Configured from console by netops on vty0 (10.10.99.25)
+  * A. %LINK-3-UPDOWN
+        why: Severity 3 (errors) is more severe than 4 (warnings). logging trap warnings sends levels 0 through 4, so this message goes to the server.
+  * B. %SEC_LOGIN-4-LOGIN_FAILED
+        why: Severity 4 is warnings itself, the configured threshold, so it is included.
+    C. %LINEPROTO-5-UPDOWN
+        why: Severity 5 (notifications) is less severe than warnings, so it stays local.
+    D. %SYS-5-CONFIG_I
+        why: Configuration events are severity 5 and fall below the warnings threshold.
+    E. None of them, because logging trap only controls console output
+        why: logging trap sets the severity threshold for messages sent to syslog servers. The console threshold is set with logging console.
+TAKEAWAY: The number in %FACILITY-SEVERITY-MNEMONIC is the severity. A trap level sends that level and every lower number: 0 emerg, 1 alert, 2 crit, 3 err, 4 warn, 5 notice, 6 info, 7 debug.
+
+[b070] type=ms pick=2 domain=5 obj=5.4 (Describe security password policy elements, such as management, complexity, and password alternatives (multifactor authentication, certificates, and biometrics))
+Q: Branch technicians currently log in to the VPN headend with a username and password. Security requires multifactor authentication. Which two login methods meet the requirement? (Choose two.)
+  * A. Password plus a one-time code from a hardware token
+        why: Something you know (password) plus something you have (a token generating codes) are two different factor types.
+  * B. Smart card holding a certificate, unlocked with a PIN
+        why: The card and its private key are something you have; the PIN is something you know. That is two factors.
+    C. Password plus the answer to a security question
+        why: Both are something you know. Two items from the same factor type are not multifactor.
+    D. A 20-character passphrase that changes every 30 days
+        why: A longer, rotated secret is still a single knowledge factor.
+    E. Two different passwords entered one after the other
+        why: Two knowledge factors are one factor type used twice, not MFA.
+TAKEAWAY: MFA = at least two DIFFERENT categories: something you know, something you have, something you are (biometrics).
+
+[b071] type=mc domain=3 obj=3.4.c (Configure and verify single area OSPFv2 — Broadcast (DR/BDR selection))
+Q: Refer to the exhibit. Routers BR1 (RID 10.0.0.21), BR2 (RID 10.0.0.22, priority 1) and BR3 (RID 10.0.0.23) share branch transit VLAN 99. BR3 reloads, and after it comes back all adjacencies re-form. What are the roles on VLAN 99 then?
+EXHIBIT:
+    BR2# show ip ospf neighbor
+    
+    Neighbor ID     Pri   State           Dead Time   Address         Interface
+    10.0.0.21         0   FULL/DROTHER    00:00:30    10.20.99.1      GigabitEthernet0/0
+    10.0.0.23         5   FULL/DR         00:00:30    10.20.99.3      GigabitEthernet0/0
+  * A. BR2 is DR, BR3 is BDR, BR1 is DROTHER
+        why: When BR3 drops, BR2 (the BDR) is promoted to DR. BR1 has priority 0 and cannot become BDR. When BR3 returns, the DR role is not preempted, so BR3 fills the empty BDR role.
+    B. BR3 is DR, BR2 is BDR, BR1 is DROTHER
+        why: That would need preemption. The DR/BDR election is non-preemptive, so a higher priority does not take back the DR role while the current DR is up.
+    C. BR2 is DR, BR1 is BDR, BR3 is DROTHER
+        why: BR1 has priority 0, so it can never be DR or BDR, whatever its router ID.
+    D. BR2 is DR and no BDR is elected while BR3 is a DROTHER
+        why: BR3 has priority 5 and is eligible. With no BDR on the segment, it is elected BDR when it rejoins.
+TAKEAWAY: DR/BDR: highest priority, then highest RID; priority 0 = never; non-preemptive, so the BDR is promoted when the DR fails and newcomers only fill empty roles.
+
+[b072] type=mc domain=3 obj=3.2.b (Determine how a router makes a forwarding decision by default — Administrative distance)
+Q: Refer to the exhibit. BR1 learns HQ's 10.10.1.0/24 through OSPF over the fiber link. To add a backup over the serial link, an engineer configured ip route 10.10.1.0 255.255.255.0 10.255.2.1 5. Now HQ traffic uses the serial link even though the fiber adjacency is FULL. What explains this?
+EXHIBIT:
+    BR1# show ip route 10.10.1.0
+    Routing entry for 10.10.1.0/24
+      Known via "static", distance 5, metric 0
+      Routing Descriptor Blocks:
+      * 10.255.2.1
+          Route metric is 0, traffic share count is 1
+  * A. The static route's AD of 5 is lower than OSPF's 110, so it replaces the OSPF route; its AD must be above 110
+        why: Both routes are for the same /24, so AD decides and the lower value wins. A floating static that backs up OSPF needs an AD higher than 110, for example 130.
+    B. Static routes are always preferred over dynamic routes, so the backup must be learned dynamically
+        why: Static routes win only because their default AD (1) is low. Raising the AD above 110 makes the static the backup.
+    C. The static route is more specific than the OSPF route, so longest match selects it
+        why: Both are 10.10.1.0/24. With equal prefix length, the tie is broken by administrative distance.
+    D. OSPF costs the serial link lower than the fiber link, so OSPF itself prefers the serial path
+        why: The table shows the route is known via static, not OSPF, and OSPF would cost the serial link 64 against the fiber's 1.
+TAKEAWAY: Floating static rule: its AD must be higher than the route it backs up. Backing up OSPF means AD above 110; backing up another static means AD above 1.
+
+[b073] type=ms pick=2 domain=5 obj=5.7 (Configure and verify Layer 2 security features (DHCP snooping, dynamic ARP inspection, and port security))
+Q: A contractor's device on branch switch BSW1 handed out bad DHCP leases. Legitimate leases come from the HQ server through BR1, which connects to BSW1 Gi0/1. Users are in VLAN 10 on Fa0/1-24. Which two actions on BSW1 are required to block rogue servers while users keep getting leases? (Choose two.)
+  * A. Enable DHCP snooping globally and for VLAN 10
+        why: ip dhcp snooping alone does nothing until it is also enabled per VLAN with ip dhcp snooping vlan 10. Then server messages arriving on untrusted ports are dropped.
+  * B. Configure ip dhcp snooping trust on Gi0/1, the uplink toward BR1
+        why: Every port is untrusted by default. The relayed OFFER and ACK from HQ arrive on Gi0/1, so it must be trusted or legitimate leases are dropped too.
+    C. Configure ip dhcp snooping trust on Fa0/1-24
+        why: Trusting the access ports would let the rogue server's OFFERs through, which defeats the purpose.
+    D. Enable dynamic ARP inspection on VLAN 10
+        why: DAI uses the snooping binding table to stop ARP spoofing. It is useful, but it does not block DHCP server messages and is not required here.
+    E. Configure ip helper-address on BSW1's VLAN 10 SVI
+        why: BR1 already relays DHCP for the VLAN. A second relay on the switch is not needed to block rogue servers.
+    F. Set switchport port-security maximum 1 on Fa0/1-24
+        why: Port security limits MAC addresses per port. A rogue server with one MAC would still be allowed to send OFFERs.
+TAKEAWAY: DHCP snooping: enable globally and per VLAN, trust only ports toward real servers or relays. Untrusted ports drop OFFER and ACK; the binding table it builds also feeds DAI.
+
+[b074] type=build ordered=true domain=3 obj=3.4.d (Configure and verify single area OSPFv2 — Router ID)
+Q: BR1's OSPF process 10 is using router ID 172.16.200.2. Starting in global configuration mode, drag the commands needed to make 10.0.0.2 the router ID and apply it immediately without a reload into the answer area, in order.
+POOL:
+  [0] router ospf 10
+  [1] router-id 10.0.0.2
+  [2] end
+  [3] clear ip ospf process
+  [4] ip ospf router-id 10.0.0.2
+  [5] network 10.0.0.2 0.0.0.0 area 0
+  [6] clear ip route *
+KEY (ordered subset): [0] -> [1] -> [2] -> [3]
+why: router-id is a router-configuration command, so enter router ospf 10 first. IOS accepts it but warns that a reload or clear ip ospf process is needed, because a running process keeps its RID. clear ip ospf process is a privileged EXEC command, so leave config mode with end first, then confirm the prompt. ip ospf router-id is not a valid interface command, advertising the loopback has no effect on the RID, and clearing the routing table does not restart OSPF.
+TAKEAWAY: router ospf N, router-id X, end, clear ip ospf process (confirm yes). Clearing the process resets every adjacency on the router, so do it in a maintenance window.
+
+[b075] type=mc domain=4 obj=4.3 (Explain the role of DHCP and DNS within the network)
+Q: Refer to the exhibit. A branch user can ping 10.10.1.80, the HQ intranet server, but the browser cannot open intranet.corp.example. BR1 only routes and relays DHCP; the HQ DNS server is 10.10.1.53. What is the most likely cause?
+EXHIBIT:
+    C:\> ipconfig /all
+    
+    Ethernet adapter Ethernet:
+    
+       Connection-specific DNS Suffix  . : branch.example
+       DHCP Enabled. . . . . . . . . . . : Yes
+       IPv4 Address. . . . . . . . . . . : 10.20.10.37(Preferred)
+       Subnet Mask . . . . . . . . . . . : 255.255.255.0
+       Default Gateway . . . . . . . . . : 10.20.10.1
+       DHCP Server . . . . . . . . . . . : 10.10.1.20
+       DNS Servers . . . . . . . . . . . : 10.20.10.1
+  * A. The DHCP scope gives clients 10.20.10.1 as DNS server, but BR1 does not answer DNS queries
+        why: Reaching the server by IP proves addressing, gateway and routing work. Only name resolution fails, and the client is sending queries to BR1, which is not a DNS server. The scope's DNS option should point to 10.10.1.53.
+    B. The default gateway is wrong, so packets to HQ are not routed
+        why: The ping to 10.10.1.80 succeeds, so the gateway and the routing path to HQ are working.
+    C. The DHCP relay is misconfigured, so the PC has an APIPA address
+        why: The PC has a valid 10.20.10.37 lease from 10.10.1.20, not a 169.254.x.x address, so the relay works.
+    D. DNS uses TCP 53 only, and BR1 blocks TCP from the branch
+        why: Ordinary DNS queries use UDP 53 (TCP for large replies and zone transfers). There is also no sign of an ACL; the client is simply asking the wrong server.
+TAKEAWAY: Ping by IP works but by name fails = DNS. Check the DNS server the client was given, usually the DHCP scope's dns-server option.
+
+[b076] type=mc domain=3 obj=3.3.a (Configure and verify IPv4 and IPv6 static routing — Default route)
+Q: BR1 sends internet traffic to its ISP with ip route 0.0.0.0 0.0.0.0 203.0.113.1. If the ISP link fails, internet traffic must be sent to HQ1 (10.255.1.1) over the fiber link instead, and only then. Which command meets the requirement?
+  * A. ip route 0.0.0.0 0.0.0.0 10.255.1.1 10
+        why: A second default route with a higher AD floats: it stays out of the table while the AD 1 route via the ISP is valid and is installed when 203.0.113.1 becomes unreachable.
+    B. ip route 0.0.0.0 0.0.0.0 10.255.1.1
+        why: Without an AD this route also has AD 1. Two equal default routes are both installed and traffic is shared across the ISP and HQ, which is not 'only then'.
+    C. ip route 0.0.0.0 255.255.255.255 10.255.1.1 10
+        why: A default route has mask 0.0.0.0. The command as written pairs network 0.0.0.0 with a /32 mask, so it is not a default route at all.
+    D. ip default-gateway 10.255.1.1
+        why: ip default-gateway is only used when IP routing is disabled, such as on a Layer 2 switch. A routing router ignores it.
+TAKEAWAY: Floating default route: ip route 0.0.0.0 0.0.0.0 <backup next hop> <AD higher than the primary>. An equal AD gives load sharing, not backup.
+
+[b077] type=mc domain=5 obj=5.10 (Configure and verify WLAN within the GUI using WPA2 PSK)
+Q: Refer to the exhibit. The BR-STAFF WLAN must use WPA2-Personal with a shared passphrase. Clients are being asked for a username, and the WLC has no RADIUS server defined. Which change is needed?
+EXHIBIT:
+    WLANs > Edit 'BR-STAFF'
+     General:  Status [x] Enabled   SSID: BR-STAFF   Interface: branch-staff
+     Security > Layer 2
+       Layer 2 Security     : WPA+WPA2
+       MAC Filtering        : [ ]
+       WPA+WPA2 Parameters
+         WPA Policy         : [ ]
+         WPA2 Policy        : [x]   WPA2 Encryption: [x] AES  [ ] TKIP
+       Authentication Key Management
+         802.1X             : [x] Enable
+         PSK                : [ ] Enable
+         PSK Format         : ASCII
+  * A. Disable 802.1X, enable PSK, enter an 8 to 63 character ASCII passphrase, and click Apply
+        why: WPA2-Personal is WPA2 with AES and PSK key management. With 802.1X selected, the WLAN expects EAP logins checked by a RADIUS server, which is why clients ask for a username.
+    B. Enable TKIP alongside AES in the WPA2 encryption settings
+        why: The cipher is not the problem. AES alone is correct for WPA2, and adding TKIP weakens the WLAN without changing the authentication method.
+    C. Set Layer 2 Security to None and enable MAC filtering
+        why: That creates an open, unencrypted WLAN. MAC filtering is easily spoofed and is not WPA2-Personal.
+    D. Enable WPA Policy in addition to WPA2 Policy
+        why: Turning on legacy WPA (TKIP) adds an older protocol but leaves 802.1X key management selected, so clients still prompt for credentials.
+TAKEAWAY: WLC WPA2-PSK: Security > Layer 2 = WPA+WPA2, WPA2 Policy with AES, Auth Key Mgmt = PSK, passphrase of 8 to 63 ASCII characters, Apply. 802.1X there means Enterprise.
+
+[b078] type=ms pick=2 domain=3 obj=3.5 (Describe the purpose, functions, and concepts of first hop redundancy protocols)
+Q: The branch is replacing HSRP with VRRP because the second LAN router comes from a different vendor. Which two statements about VRRP are true? (Choose two.)
+  * A. It is an open standard, so routers from different vendors can share one group
+        why: VRRP is defined by the IETF (RFC 5798), while HSRP is Cisco proprietary. That is the usual reason to choose VRRP in a mixed-vendor branch.
+  * B. Preemption is enabled by default, so a higher-priority router reclaims the master role
+        why: VRRP preempts by default, while HSRP needs the preempt command.
+    C. Hosts learn virtual MAC 0000.0c07.acxx for the default gateway
+        why: 0000.0c07.acxx is the HSRP version 1 virtual MAC. VRRP uses 0000.5e00.01xx.
+    D. Routers in the group are called active and standby
+        why: Active and standby are HSRP terms. VRRP uses master and backup.
+    E. One virtual IP is answered by several routers at once to spread the load
+        why: That describes GLBP, where the AVG hands out different virtual MACs belonging to several AVFs. A single VRRP group has one forwarding master.
+    F. The virtual IP can never be a real interface address on any router
+        why: VRRP allows the virtual IP to be a router's real address. That router is the address owner with priority 255.
+TAKEAWAY: HSRP: Cisco, active/standby, 0000.0c07.acxx, no preempt by default. VRRP: open, master/backup, 0000.5e00.01xx, preempt on. GLBP: Cisco, load balancing (AVG/AVF).
+
+[b079] type=mc domain=4 obj=4.2 (Configure and verify NTP operating in a client and server mode)
+Q: The HQ NTP server 10.10.1.123 is stratum 2. BR1 (LAN address 10.20.10.1) must take its time from HQ, and the branch switch BSW1 must take its time from BR1 so that switch NTP traffic never crosses the WAN. Which configuration meets the requirement?
+  * A. BR1: ntp server 10.10.1.123 / BSW1: ntp server 10.20.10.1
+        why: Each device acts as a client of the next device up. Once BR1 is synchronized (stratum 3) it answers NTP requests from BSW1, which becomes stratum 4. An IOS NTP client also serves time to others.
+    B. BR1: ntp master 3 / BSW1: ntp server 10.20.10.1
+        why: ntp master makes BR1 an authoritative source using its own internal clock. The branch would no longer follow HQ time.
+    C. BR1: ntp server 10.20.10.1 / BSW1: ntp server 10.10.1.123
+        why: This is reversed. BR1 points at its own address, and BSW1 sends its NTP traffic across the WAN to HQ.
+    D. BR1: ntp peer 10.10.1.123 / BSW1: ntp master
+        why: A peer relationship is for devices at the same level syncing with each other, and ntp master makes BSW1 a time source on its own clock.
+TAKEAWAY: ntp server X = be a client of X. A synchronized IOS client also serves time downstream, one stratum higher. ntp master = trust my own clock.
+
+[b080] type=mc domain=3 obj=3.4.a (Configure and verify single area OSPFv2 — Neighbor adjacencies)
+Q: Refer to the exhibit. The design is single-area OSPF, but BR1 and HQ1 do not form an adjacency over the serial link. Which change on BR1 fixes the problem?
+EXHIBIT:
+    BR1# show ip ospf interface serial0/1/0 | include Area|Neighbor Count
+      Internet Address 10.255.2.2/30, Area 1, Attached via Network Statement
+      Neighbor Count is 0, Adjacent neighbor count is 0
+    
+    HQ1# show ip ospf interface serial0/1/0 | include Area|Neighbor Count
+      Internet Address 10.255.2.1/30, Area 0, Attached via Network Statement
+      Neighbor Count is 0, Adjacent neighbor count is 0
+    
+    BR1# show running-config | section router ospf
+    router ospf 10
+     network 10.20.10.0 0.0.0.255 area 0
+     network 10.255.1.0 0.0.0.3 area 0
+     network 10.255.2.0 0.0.0.3 area 1
+  * A. Replace network 10.255.2.0 0.0.0.3 area 1 with network 10.255.2.0 0.0.0.3 area 0
+        why: The area ID is carried in every hello and must match on both ends of a link. BR1 puts Se0/1/0 in area 1 while HQ1 uses area 0, so the hellos are rejected.
+    B. Change BR1's OSPF process ID from 10 to 1 to match HQ1
+        why: The process ID only matters on the local router and is not sent in hellos. Different process IDs on neighbors are normal.
+    C. Configure ip ospf network point-to-point on Se0/1/0
+        why: Serial interfaces are already point-to-point by default. The network type is not what is blocking the adjacency.
+    D. Configure BR1 with the same router ID as HQ1
+        why: Router IDs must be unique. A duplicate RID would cause a new problem rather than fix this one.
+TAKEAWAY: Hello parameters that must match: area ID, subnet and mask, hello/dead timers, authentication, stub flag. Process ID and router ID do not match; RIDs must be unique.
+
+[b081] type=ms pick=2 domain=5 obj=5.5 (Describe IPsec remote access and site-to-site VPNs)
+Q: The branch manager travels and must reach HQ applications securely from a laptop at hotels and at home. HQ will deploy a remote-access IPsec VPN. Which two statements describe this solution? (Choose two.)
+  * A. The laptop runs VPN client software and the user authenticates individually to the HQ headend
+        why: Remote-access VPNs terminate on a headend such as a firewall or VPN concentrator, and each user signs in, often with MFA.
+  * B. The tunnel is built on demand from wherever the laptop has internet access
+        why: The client starts the tunnel when the user connects, from any network: hotel, home or mobile hotspot.
+    C. The manager's home router must support IPsec and build the tunnel to HQ
+        why: That describes site-to-site VPN. In remote access the endpoint itself is the tunnel end, so any home router works.
+    D. Every device on the manager's home network is protected by the tunnel
+        why: Only traffic from the laptop running the client goes through the tunnel. Other home devices are not involved.
+    E. The tunnel is set up automatically between two routers when they boot
+        why: Automatic, permanent router-to-router tunnels are site-to-site VPNs like the branch-to-HQ link.
+TAKEAWAY: Remote access: one device, client software, per-user authentication, on demand. Site-to-site: two gateways, whole networks, always on, hosts unaware.
+
+[b082] type=mc domain=3 obj=3.3.c (Configure and verify IPv4 and IPv6 static routing — Host route)
+Q: BR1 sends all HQ traffic over the fiber link with ip route 10.10.0.0 255.255.0.0 10.255.1.1. The HQ call-control server 10.10.50.10 must be reached only over the serial link (next hop 10.255.2.1), while the rest of HQ keeps using the fiber. Which command meets the requirement?
+  * A. ip route 10.10.50.10 255.255.255.255 10.255.2.1
+        why: A /32 host route is more specific than the /16, so longest match sends only that server's traffic over the serial link.
+    B. ip route 10.10.50.10 0.0.0.0 10.255.2.1
+        why: A host route needs mask 255.255.255.255. Mask 0.0.0.0 with a host address is an inconsistent address and mask, and IOS rejects it.
+    C. ip route 10.10.50.0 255.255.255.0 10.255.2.1
+        why: This moves the whole 10.10.50.0/24 subnet to the serial link, not just the one server.
+    D. ip route 10.10.50.10 255.255.255.255 10.255.1.1
+        why: This next hop is HQ1's fiber address, so the server's traffic would stay on the fiber link.
+TAKEAWAY: Host route = /32 (IPv4) or /128 (IPv6). Longest match lets one host take a different path from the rest of its network.
+
+[b083] type=mc domain=4 obj=4.7 (Explain the forwarding per-hop behavior (PHB) for QoS such as classification, marking, queuing, congestion, policing, and shaping)
+Q: BR1's internet circuit is delivered on a 1-Gbps Ethernet handoff, but the contract is 100 Mbps and the ISP polices everything above that. Bursts from the branch are dropped by the ISP, causing TCP retransmissions. What should be configured outbound on BR1 Gi0/2?
+  * A. Shaping to 100 Mbps, so bursts above the contract are queued and sent later
+        why: A shaper buffers excess traffic and releases it at the contracted rate, so the ISP policer never sees traffic above 100 Mbps. The cost is some extra delay instead of drops.
+    B. Policing to 100 Mbps, so traffic above the contract is dropped on BR1
+        why: An outbound policer drops or re-marks excess traffic just as the ISP's does. The drops simply move to BR1.
+    C. Marking all branch traffic DSCP EF so the ISP gives it priority
+        why: Marking only labels packets. It does not limit the rate, and the ISP is unlikely to honor customer EF on internet traffic.
+    D. The bandwidth 100000 interface command
+        why: bandwidth only informs routing protocol metrics and QoS calculations. It does not limit how fast the interface sends.
+TAKEAWAY: Shaping = buffer and delay the excess (smooth, adds latency), used outbound toward a slower contract. Policing = drop or re-mark the excess, typical at the provider edge.
+
+[b084] type=mc domain=3 obj=3.1.f (Interpret the components of routing table — Metric)
+Q: Refer to the exhibit. BR1 Gi0/1 and HQ1 Gi0/0 both have the default OSPF cost. Which statement describes the values in this route entry?
+EXHIBIT:
+    BR1# show ip route ospf | include 10.10.1.0
+    O        10.10.1.0/24 [110/2] via 10.255.1.1, 00:12:34, GigabitEthernet0/1
+  * A. 110 is the administrative distance and 2 is the total OSPF cost to reach 10.10.1.0/24
+        why: The bracket holds [AD/metric]. OSPF cost adds the outgoing interface costs along the path: BR1 Gi0/1 (1) plus HQ1 Gi0/0 (1) = 2.
+    B. 110 is the metric and 2 is the administrative distance
+        why: The order is [AD/metric]. 110 is OSPF's default AD.
+    C. 2 is the hop count to the destination network
+        why: OSPF uses cost based on bandwidth, not hop count. Here the two costs just happen to be 1 each.
+    D. 00:12:34 is the time left before the route expires unless it is refreshed
+        why: The timestamp is how long ago the route was learned or last changed. OSPF routes do not count down to expiry.
+TAKEAWAY: Route entry anatomy: code, prefix/length, [AD/metric], via next hop, age, outgoing interface.
+
+[b085] type=order domain=5 obj=5.7 (Configure and verify Layer 2 security features (DHCP snooping, dynamic ARP inspection, and port security))
+Q: Refer to the exhibit. Fa0/8 on BSW1 uses port security in the default violation mode. A visitor's laptop has been plugged in at the front desk. Drag and drop the steps into the order an engineer should follow to restore the port for the authorized PC.
+EXHIBIT:
+    BSW1# show interfaces status err-disabled
+    
+    Port      Name               Status       Reason               Err-disabled Vlans
+    Fa0/8     FRONT-DESK         err-disabled psecure-violation
+POOL:
+  [0] Confirm the violating MAC with show port-security interface fa0/8
+  [1] Remove the unauthorized laptop from the port
+  [2] In Fa0/8 interface configuration mode, enter shutdown
+  [3] In Fa0/8 interface configuration mode, enter no shutdown
+  [4] Verify Port Status shows Secure-up
+KEY (full order): [0] -> [1] -> [2] -> [3] -> [4]
+ALSO ACCEPTED: [0] -> [2] -> [1] -> [3] -> [4]
+why: The shutdown violation mode puts the port in err-disabled. Find out what caused it first, then remove the device; otherwise the port goes straight back to err-disabled. Recovery is a shutdown followed by no shutdown on the interface (or errdisable recovery if configured). Removing the laptop after the shutdown but before the no shutdown is equally valid. Finish by checking that the port is Secure-up.
+TAKEAWAY: Err-disabled by port security: fix the cause, then shutdown / no shutdown. Without errdisable recovery the port stays down until someone does this.
+
+[b086] type=mc domain=3 obj=3.4.d (Configure and verify single area OSPFv2 — Router ID)
+Q: Refer to the exhibit. BR1 was built from a copy of HQ1's configuration template, and HQ1's router ID is 10.0.0.1. Routes are not being exchanged between them. Which action resolves the problem?
+EXHIBIT:
+    %OSPF-4-DUP_RTRID_NBR: OSPF detected duplicate router-id 10.0.0.1
+     from 10.255.1.1 on interface GigabitEthernet0/1
+    
+    BR1# show running-config | section router ospf
+    router ospf 10
+     router-id 10.0.0.1
+     network 10.20.10.0 0.0.0.255 area 0
+     network 10.255.1.0 0.0.0.3 area 0
+  * A. Configure router-id 10.0.0.2 under router ospf 10 on BR1, then run clear ip ospf process
+        why: Every OSPF router needs a unique router ID, and neighbors with the same ID cannot form an adjacency. A new router-id applies only after the process is cleared or the router reloads.
+    B. Change BR1's OSPF process ID to 1 to match HQ1
+        why: The process ID is local to each router and is not compared between neighbors. The duplicate router ID would remain.
+    C. Configure ip ospf priority 0 on BR1 Gi0/1
+        why: Priority only affects DR/BDR election. It does nothing about two routers using the same ID.
+    D. Remove the router-id command; the new ID takes effect immediately
+        why: A running OSPF process keeps its current router ID until it is cleared or the router reloads, so the conflict would continue.
+TAKEAWAY: Duplicate RIDs break adjacencies and LSDB consistency. Give each router a unique router-id, then clear ip ospf process.
+
+[b087] type=mc domain=5 obj=5.1 (Define key security concepts (threats, vulnerabilities, exploits, and mitigation techniques))
+Q: BR1 runs an IOS release with a published flaw in its HTTP server, and ip http server is enabled on the internet-facing interface. A researcher posts a script that sends crafted HTTP requests to gain privilege level 15. Which statement uses the security terms correctly?
+  * A. The flaw is the vulnerability, the script is the exploit, and patching or disabling the HTTP server is the mitigation
+        why: A vulnerability is a weakness, an exploit is the code or technique that takes advantage of it, and a mitigation removes or reduces it. No ip http server, or an upgrade, removes the attack surface.
+    B. The script is the vulnerability, the flaw is the exploit, and the HTTP server is the mitigation
+        why: The terms are swapped. The weakness in the code is the vulnerability, and the script that abuses it is the exploit.
+    C. The flaw is the threat, the script is the vulnerability, and the researcher is the exploit
+        why: A threat is a potential danger, such as an attacker who might use the script. The script itself is the exploit, and a person is never an exploit.
+    D. The HTTP server is the exploit, and enabling HTTPS instead is the vulnerability
+        why: A service is not an exploit. Moving to HTTPS encrypts the session but would not fix a flaw in the same server code.
+TAKEAWAY: Vulnerability = weakness. Exploit = what uses it. Threat = who or what might. Mitigation = what reduces the risk. Turn off services you do not use.
+
+[b088] type=mc domain=3 obj=3.3.a (Configure and verify IPv4 and IPv6 static routing — Default route)
+Q: An engineer configures the branch default route as ip route 0.0.0.0 0.0.0.0 GigabitEthernet0/2, with no next-hop address. Gi0/2 connects to the ISP's multi-access Ethernet segment 203.0.113.0/29. What is the effect?
+  * A. BR1 treats every internet destination as directly connected on Gi0/2 and ARPs for each one, relying on ISP proxy ARP
+        why: With only an exit interface on a multi-access network, BR1 sends an ARP request for every destination address. This works only if the ISP router answers with proxy ARP, and it bloats the ARP cache, so a next hop is recommended on Ethernet.
+    B. It behaves exactly like a default route via 203.0.113.1
+        why: With a next hop, BR1 ARPs once for 203.0.113.1. With only an exit interface, it ARPs for each final destination.
+    C. IOS rejects the command because Ethernet static routes require a next-hop address
+        why: IOS accepts it. The route shows as directly connected, which works on point-to-point links but is a poor choice on Ethernet.
+    D. The route is installed with AD 0, so it overrides connected routes
+        why: A static route to an exit interface still has AD 1, and it cannot override connected routes, which are more specific anyway.
+TAKEAWAY: Exit-interface-only statics are fine on point-to-point serial links. On Ethernet, use a next hop (or interface plus next hop) to avoid ARPing for every destination.
+
+[b089] type=mc domain=4 obj=4.4 (Explain the function of SNMP in network operations)
+Q: The HQ network management station polls BR1's interface counters every five minutes, and it must also be told immediately when a WAN link goes down. Which statement describes the SNMP communication?
+  * A. The NMS sends Get requests to BR1's agent on UDP 161, and BR1 sends traps or informs to the NMS on UDP 162
+        why: Polling is manager-to-agent Get/GetNext/GetBulk on UDP 161. Unsolicited events go agent-to-manager as traps (no acknowledgment) or informs (acknowledged) on UDP 162.
+    B. BR1 sends unsolicited Get responses every five minutes to the NMS on UDP 162
+        why: Responses only answer requests. The NMS controls the polling interval, and UDP 162 is for notifications.
+    C. Traps need SNMPv3, because SNMPv2c supports only polling
+        why: SNMPv2c supports traps and adds informs. SNMPv3 adds authentication and encryption, not notifications.
+    D. The NMS reads the counters with Set requests on UDP 162
+        why: Set changes values on the agent, and agents listen on UDP 161. Reading uses Get.
+TAKEAWAY: SNMP: manager polls the agent (Get, Set) on UDP 161; the agent notifies the manager (Trap, Inform) on UDP 162. Data lives in the MIB, identified by OIDs.
+
+[b090] type=mc domain=3 obj=3.5 (Describe the purpose, functions, and concepts of first hop redundancy protocols)
+Q: Branch PCs use 10.20.10.1, the VRRP virtual address shared by BR1 (master) and BR2 (backup), as their default gateway. BR1 loses power. What happens on the branch PCs?
+  * A. Nothing changes on the PCs; BR2 takes over the same virtual IP and virtual MAC and announces it with gratuitous ARP
+        why: The PCs' gateway IP and its ARP entry still point to the virtual MAC, which BR2 now owns. Its gratuitous ARP updates the switches' MAC tables so frames reach the new master.
+    B. The PCs must renew their DHCP leases to learn BR2 as the new gateway
+        why: The gateway address handed out by DHCP is the virtual IP, which does not change. An FHRP exists so hosts need no change.
+    C. Traffic stops until each PC's ARP entry for the gateway ages out and is relearned
+        why: The virtual MAC moves with the virtual IP, so the existing ARP entries stay correct.
+    D. The PCs are redirected with ICMP to BR2's real address, 10.20.10.3
+        why: VRRP does not rely on ICMP redirects. Hosts keep using the virtual address.
+TAKEAWAY: FHRPs are invisible to hosts: same virtual IP, same virtual MAC, different physical router. The new master's gratuitous ARP fixes the switch MAC tables.
+
+[b091] type=mc domain=5 obj=5.6 (Configure and verify access control lists)
+Q: Refer to the exhibit. Guest VLAN 50 must not reach HQ (10.10.0.0/16) but must have internet access; guests use a public DNS resolver. After GUEST-IN was applied, guests can resolve names but no websites load. Which change fixes the problem?
+EXHIBIT:
+    BR1# show access-lists GUEST-IN
+    Extended IP access list GUEST-IN
+        10 deny ip 10.20.50.0 0.0.0.255 10.10.0.0 0.0.255.255 (42 matches)
+        20 permit udp 10.20.50.0 0.0.0.255 any eq domain (318 matches)
+    
+    BR1# show running-config interface g0/0.50
+    interface GigabitEthernet0/0.50
+     encapsulation dot1Q 50
+     ip address 10.20.50.1 255.255.255.0
+     ip access-group GUEST-IN in
+     ip nat inside
+  * A. Add 30 permit ip 10.20.50.0 0.0.0.255 any to GUEST-IN
+        why: Only DNS is permitted, so web traffic hits the implicit deny at the end. A permit after line 10 lets guests reach everything except HQ, which line 10 has already denied.
+    B. Apply GUEST-IN outbound on Gi0/0.50 instead of inbound
+        why: Outbound on the guest subinterface, the ACL would see return traffic toward the guests, whose source is not 10.20.50.0/24, so almost everything would hit the implicit deny.
+    C. Add 5 permit tcp any any eq www to GUEST-IN
+        why: Sequence 5 is checked before the deny, so guests could reach HQ web servers. HTTPS (443) would still be blocked.
+    D. Move GUEST-IN to Gi0/2 inbound
+        why: Inbound on the internet interface, the source addresses are internet hosts, not 10.20.50.0/24. Guest traffic would no longer be filtered toward HQ.
+TAKEAWAY: Every ACL ends in an implicit deny any. When an ACL exists to block one thing, end it with an explicit permit for everything else.
+
+[b092] type=mc domain=3 obj=3.4.b (Configure and verify single area OSPFv2 — Point-to-point)
+Q: BR1 Gi0/1 and HQ1 Gi0/1 are the two ends of an Ethernet WAN handoff in 10.255.1.0/30. show ip ospf neighbor on BR1 lists HQ1 as FULL/DR, and after every flap the adjacency waits for a DR election. Which command, on both interfaces, removes the election while keeping the adjacency FULL?
+  * A. ip ospf network point-to-point
+        why: With only two routers on the segment, the point-to-point network type skips the DR/BDR election and wait timer and goes straight to FULL. It must match on both ends.
+    B. ip ospf priority 0
+        why: With priority 0 on both routers, no DR can be elected. On a broadcast network the neighbors then stay in 2-WAY and never exchange LSAs.
+    C. ip ospf cost 1
+        why: Cost only affects path selection. Gi interfaces already cost 1, and the network type stays broadcast.
+    D. ip ospf hello-interval 1
+        why: Faster hellos speed up neighbor-loss detection but keep the broadcast network type and its DR election. They also must match on both ends.
+TAKEAWAY: Two routers on an Ethernet link: set ip ospf network point-to-point on both ends. No DR/BDR, faster adjacency, shown as FULL/ -.
+
+[b093] type=mc domain=5 obj=5.8 (Compare authentication, authorization, and accounting concepts)
+Q: Branch routers check administrator logins against a TACACS+ server at HQ. A junior technician logs in successfully, but when she types configure terminal the router replies 'Command authorization failed.' Which AAA function denied the command?
+  * A. Authorization
+        why: Authorization decides what an authenticated user may do. TACACS+ can authorize each command separately, which is why it is preferred for device administration.
+    B. Authentication
+        why: Authentication proves identity. It succeeded, because she logged in.
+    C. Accounting
+        why: Accounting records what users did, such as session times and commands entered. It does not allow or deny anything.
+    D. TACACS+ payload encryption
+        why: TACACS+ encrypts the whole payload, but that protects the exchange. It is not the function that refuses commands.
+TAKEAWAY: Authentication = who are you. Authorization = what may you do. Accounting = what did you do. TACACS+ (TCP 49) separates all three; RADIUS (UDP 1812/1813) combines authentication and authorization.
+
+[b094] type=mc domain=3 obj=3.3.d (Configure and verify IPv4 and IPv6 static routing — Floating static)
+Q: BR1 reaches the IPv6 internet through its ISP at 2001:db8:aa::1 on Gi0/2. If that path fails, IPv6 internet traffic must go to HQ1, whose link-local address on the Gi0/1 link is FE80::1. Which pair of commands meets the requirement?
+  * A. ipv6 route ::/0 2001:db8:aa::1 and ipv6 route ::/0 GigabitEthernet0/1 FE80::1 200
+        why: The ISP default has AD 1 and is preferred. The HQ default floats with AD 200 and names the exit interface, which is required with a link-local next hop.
+    B. ipv6 route ::/0 2001:db8:aa::1 and ipv6 route ::/0 GigabitEthernet0/1 FE80::1
+        why: Both routes have AD 1, so both are installed and traffic is shared between the ISP and HQ, not held in reserve.
+    C. ipv6 route ::/0 2001:db8:aa::1 200 and ipv6 route ::/0 GigabitEthernet0/1 FE80::1
+        why: The ADs are reversed. HQ would become the primary path and the ISP the backup.
+    D. ipv6 route ::/0 2001:db8:aa::1 and ipv6 route ::/0 FE80::1 200
+        why: A link-local next hop is ambiguous without an exit interface, because every interface has FE80::/10 addresses. IOS requires the interface.
+TAKEAWAY: IPv6 floating static works like IPv4: same prefix, higher AD. With a link-local next hop, always name the exit interface.
+
+[b095] type=mc domain=4 obj=4.9 (Describe the capabilities and functions of TFTP/FTP in the network)
+Q: An engineer backs up BR1's configuration with copy running-config tftp: to the HQ server 10.10.1.69. Which statement about the transfer is true?
+  * A. It uses UDP 69 with no authentication or encryption, so anyone capturing it on the path can read the configuration
+        why: TFTP has no login and no encryption. It relies on simple acknowledgments over UDP, which is why it suits IOS images and configs on trusted networks only.
+    B. TFTP prompts for a username and password before the transfer starts
+        why: TFTP has no authentication at all. FTP is the protocol that logs in with a username and password.
+    C. It uses TCP 20 and 21, so TCP retransmits any lost segments
+        why: TCP 20/21 is FTP. TFTP runs over UDP and handles loss with its own block acknowledgments.
+    D. The transfer is encrypted with the router's RSA key pair
+        why: The RSA keys serve SSH (and SCP). TFTP sends everything in clear text.
+TAKEAWAY: TFTP: UDP 69, no authentication, clear text, simple. FTP: TCP 21 control and 20 data, username and password, still clear text. Use SCP or SFTP when confidentiality matters.
+
+[b096] type=mc domain=5 obj=5.2 (Describe security program elements (user awareness, training, and physical access control))
+Q: The branch router and switches sit on an open shelf in a storeroom that cleaning and delivery staff use. The devices have strong enable secrets and SSH-only vty lines. Which control best addresses the remaining risk?
+  * A. Move the equipment into a locked room or rack with access limited to IT staff
+        why: With physical access, someone can use the console and the password-recovery procedure, unplug cables, or connect a rogue device. Physical access control closes that gap.
+    B. Configure an even longer enable secret on each device
+        why: Password recovery from the console bypasses the enable secret, so its length does not stop someone standing at the device.
+    C. Train the cleaning staff to report suspicious activity
+        why: Awareness helps, but it does not stop anyone from reaching the hardware. It supports physical security rather than replacing it.
+    D. Disable CDP on all branch devices
+        why: CDP hardening reduces information leakage on the network. It does nothing about people with physical access to the equipment.
+TAKEAWAY: Physical access defeats most logical controls through console password recovery. Lock the room or rack, and badge or log entry.
+
+[b097] type=mc domain=3 obj=3.5 (Describe the purpose, functions, and concepts of first hop redundancy protocols)
+Q: The branch adds a second internet-capable router. Management wants both BR1 and BR2 to forward branch traffic at the same time while every host keeps the same single default gateway address. Which first hop redundancy protocol meets this requirement natively?
+  * A. GLBP
+        why: GLBP's active virtual gateway answers ARP for the one virtual IP with different virtual MACs belonging to the active virtual forwarders. Hosts end up spread across both routers.
+    B. VRRP with one group
+        why: A single VRRP group has one master forwarding for the virtual IP; the backup is idle until failover.
+    C. HSRP with one group
+        why: One HSRP group has one active router. Load sharing with HSRP needs several groups and hosts split across different gateway addresses.
+    D. VRRP with preemption disabled
+        why: Preemption only controls whether a recovered router takes back the master role. Only one router forwards at a time either way.
+TAKEAWAY: Only GLBP load-balances with one virtual IP (AVG plus up to 4 AVFs). HSRP and VRRP give one forwarder per group.
+
+[b098] type=mc domain=5 obj=5.9 (Describe wireless security protocols (WPA, WPA2, and WPA3))
+Q: Branch staff Wi-Fi uses a single WPA2 passphrase, which has to be changed on every device whenever an employee leaves. Security wants per-user credentials checked against the HQ directory that can be revoked one at a time. Which solution meets the requirement?
+  * A. WPA2-Enterprise using 802.1X/EAP with a RADIUS server
+        why: Enterprise mode authenticates each user with EAP through a RADIUS server tied to the directory. Disabling one account removes only that person's access.
+    B. WPA3-Personal with SAE
+        why: SAE strengthens the passphrase exchange, but everyone still shares one passphrase, so a departure still means changing it everywhere.
+    C. MAC address filtering on the WLC
+        why: MAC filters are easy to spoof and identify devices, not users. They are not tied to directory credentials.
+    D. Disabling SSID broadcast
+        why: A hidden SSID still appears in probe traffic and adds no authentication at all.
+TAKEAWAY: Personal (PSK/SAE) = one shared secret. Enterprise (802.1X/EAP + RADIUS) = individual credentials, per-user revocation and accounting.
+
+[b099] type=mc domain=4 obj=4.1 (Configure and verify inside source NAT using static and pools)
+Q: BR1 already has ip nat inside on Gi0/0 and ip nat outside on Gi0/2. The branch video recorder at 10.20.10.60 must be reachable from the internet at 203.0.113.4 through a permanent one-to-one mapping. Which command completes the configuration?
+  * A. ip nat inside source static 10.20.10.60 203.0.113.4
+        why: Static inside source NAT takes the inside local address first and the inside global second. The mapping is permanent and works in both directions, so internet hosts can start connections.
+    B. ip nat inside source static 203.0.113.4 10.20.10.60
+        why: The addresses are reversed. IOS would treat the public address as the inside local host.
+    C. ip nat outside source static 10.20.10.60 203.0.113.4
+        why: Outside source NAT translates addresses of hosts on the outside network, not a server on the branch LAN.
+    D. ip nat inside source list 10 interface GigabitEthernet0/2 overload
+        why: PAT creates translations only when inside hosts start a connection. Internet hosts cannot reach the recorder through it.
+TAKEAWAY: ip nat inside source static <inside local> <inside global>. Inside/outside interface roles must also be set. Static = permanent and bidirectional; PAT = outbound-initiated only.
+
+[b100] type=mc domain=3 obj=3.1.e (Interpret the components of routing table — Administrative distance)
+Q: Refer to the exhibit. During a migration, BR1 runs both OSPF and EIGRP with HQ1 over Gi0/1, and both protocols advertise 10.10.1.0/24. The OSPF cost to that subnet is 2. Why does the routing table show the EIGRP route?
+EXHIBIT:
+    BR1# show ip route | include 10.10.1.0
+    D        10.10.1.0/24 [90/3072] via 10.255.1.1, 00:03:12, GigabitEthernet0/1
+  * A. EIGRP's administrative distance of 90 is lower than OSPF's 110
+        why: When two routing sources offer the same prefix, the router installs the one with the lower AD. Metrics from different protocols are never compared.
+    B. The OSPF adjacency must be down, because OSPF's metric of 2 is lower than EIGRP's 3072
+        why: Metrics of different protocols are not comparable. The OSPF route can be valid and still lose on AD.
+    C. The EIGRP route is more specific than the OSPF route
+        why: Both protocols advertise 10.10.1.0/24, so prefix length is equal and AD decides.
+    D. The router installs whichever protocol learned the route most recently
+        why: Arrival order plays no part. Equal prefixes are decided by AD, then by metric within one protocol.
+TAKEAWAY: AD: connected 0, static 1, eBGP 20, EIGRP 90, OSPF 110, IS-IS 115, RIP 120, external EIGRP 170, iBGP 200. Lower is more trusted.

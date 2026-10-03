@@ -6,6 +6,7 @@ export default {
   code: "SY0-701",
   color: "#FFB454",
   status: "ready",
+  labBlurb: "Matching, ordering, hash ID, firewall rules, risk math, exhibits, incident console, log viewer",
   tagline: "CompTIA Security+ — sit by Oct 30, 2026 (701 retires Jun 2027)",
   examDateDefault: "2026-10-30",
   blurb: "Security+ SY0-701. Cards climb from multiple choice to full recall, and mastered cards come back on a spaced schedule so nothing fades before exam day.",

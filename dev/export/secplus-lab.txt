@@ -1,4 +1,4 @@
-# Security+ SY0-701 — PBQ Lab (40 items + 3 generators)
+# Security+ SY0-701 — PBQ Lab (48 items + 3 generators)
 # Export for second-model review. '*' marks the keyed answer. Report any item where you believe the key, a distractor explanation, or a sim grading key is wrong for CompTIA Security+ SY0-701, citing the objective bullet.
 
 [dg-screened] sim=diagram domain=3 obj=3.2 (Given a scenario, apply security principles to secure enterprise infrastructure)
@@ -384,9 +384,243 @@ CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1;
     * Internet access via web proxy: start=On  →  KEY=Off   // An HMI never needs to browse; it only needs the PLC and the historian.
 TAKEAWAY: When you cannot patch, compensate: isolate (VLAN + allow only the jump host), restrict execution (allow list), harden what remains (firewall, no defaults, no Telnet/AutoRun/Internet). Keep the production and support paths intact; a plant that stops is also a security failure.
 
+[c-web-c2] sim=console domain=4 obj=4.8 (Explain appropriate incident response activities)
+TITLE: Incident console: beaconing web server and finance workstation
+PROMPT: The SOC has confirmed two hosts talking to a known command-and-control range. You have a shell on each. Contain the incident without taking the business offline.
+TASKS:
+    - Find the malicious service on each host (compare listening ports, process names and remote addresses with the IoC list).
+    - Stop each malicious service AND disable it so it does not come back at boot.
+    - Block the command-and-control addresses on the host that talks to them.
+    - Leave nginx, sshd, the print spooler and Remote Desktop running — the business depends on them.
+IOCs given: ports=4444, 8443 · procs=kworkerd, svchost32.exe · ips=198.51.100.23, 203.0.113.77 · malicious services must be stopped AND disabled
+HOST web01 (linux, 10.0.50.10)
+    ! KEEP  nginx "A high performance web server" proc=nginx pid=1203 listen=tcp/443
+    ! KEEP  ssh "OpenBSD Secure Shell server" proc=sshd pid=812 listen=tcp/22
+      leave  node_exporter "Prometheus node exporter" proc=node_exporter pid=1410 listen=tcp/9100
+    * STOP  kworkerd "kworkerd" proc=kworkerd pid=2231 listen=tcp/4444 remote=198.51.100.23:4444
+HOST WS-FIN07 (windows, 10.0.10.67)
+    ! KEEP  Spooler "Print Spooler" proc=spoolsv.exe pid=1860
+    ! KEEP  TermService "Remote Desktop Services" proc=svchost.exe pid=1104 listen=tcp/3389
+      leave  W32Time "Windows Time" proc=svchost.exe pid=1388
+    * STOP  WinUpdSync "Windows Update Sync Helper" proc=svchost32.exe pid=5124 listen=tcp/8443 remote=203.0.113.77:8443
+KEY: block 198.51.100.23, 203.0.113.77 on every host that talks to it; stop + disable every '* STOP' service; '! KEEP' stopped = −1, other legit services stopped = −½
+TAKEAWAY: Listening-port and process listings (ss -tulpn / netstat -ano, ps / tasklist) are compared against the IoC list; the odd binary paths (/tmp/.cache, C:\Users\Public) confirm it. Stop AND disable so the unit file / auto-start service cannot revive it, block the C2 address on the host firewall, and never touch the services the business needs.
+
+[c-db-miner] sim=console domain=4 obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security)
+TITLE: Incident console: cryptominer on the database tier
+PROMPT: Monitoring shows the database host pegged at 100% CPU and the application server talking to the same external address. Clean up both hosts with the least possible disruption.
+TASKS:
+    - Identify the unauthorized process on each host using the IoC list (ports, names, destination address).
+    - Stop the unauthorized service on each host (disabling it too is good practice).
+    - Block the mining pool address on BOTH hosts — each one connects to it.
+    - PostgreSQL, SSH, SQL Server and Remote Desktop must keep running.
+IOCs given: ports=3333, 8081 · procs=sysupdated, wdupd.exe · ips=203.0.113.140
+HOST db01 (linux, 10.0.20.15)
+    ! KEEP  postgresql "PostgreSQL RDBMS" proc=postgres pid=980 listen=tcp/5432
+    ! KEEP  ssh "OpenBSD Secure Shell server" proc=sshd pid=801 listen=tcp/22
+      leave  node_exporter "Prometheus node exporter" proc=node_exporter pid=1322 listen=tcp/9100
+    * STOP  sysupdated "System Update Daemon" proc=sysupdated pid=3377 remote=203.0.113.140:3333
+HOST APP02 (windows, 10.0.20.22)
+    ! KEEP  MSSQLSERVER "SQL Server (MSSQLSERVER)" proc=sqlservr.exe pid=2040 listen=tcp/1433
+    ! KEEP  TermService "Remote Desktop Services" proc=svchost.exe pid=1096 listen=tcp/3389
+      leave  Spooler "Print Spooler" proc=spoolsv.exe pid=1788
+    * STOP  WinDefendUpdater "Windows Defender Update Service" proc=wdupd.exe pid=6120 listen=tcp/8081 remote=203.0.113.140:443
+KEY: block 203.0.113.140 on every host that talks to it; stop every '* STOP' service; '! KEEP' stopped = −1, other legit services stopped = −½
+TAKEAWAY: A process named like a system component but running from a home or ProgramData directory, pinning the CPU and holding a connection to port 3333 (a classic mining-pool port) is a miner. Both hosts reach the same pool, so the block has to happen on both. node_exporter and the print spooler look unfamiliar but are legitimate — touching them is collateral damage, which the grader deducts for.
+
+[f-dmz-web] sim=fweditor domain=4 obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security)
+TITLE: Firewall rules: publish the DMZ web server
+PROMPT: The perimeter firewall table below was started by a junior admin. Edit, add, delete and reorder rules until the table enforces the policy. Rules are evaluated top-down.
+TASKS:
+    - Anyone on the internet may reach the DMZ web server (10.0.50.10) on TCP 80 and TCP 443 — nothing else in the DMZ is reachable from outside.
+    - The known-bad range 203.0.113.0/24 must be blocked from everything, including the web server.
+    - Only the Admin LAN (10.0.10.0/24) may SSH (TCP 22) to the web server.
+    - The web server may reach the database server (10.0.20.15) on TCP 5432 and nothing else on the Server VLAN.
+    - Everything not listed is denied.
+NETWORKS: any=Any, 10.0.10.0/24=Admin LAN, 10.0.20.0/24=Server VLAN, 10.0.20.15=DB server, 10.0.50.0/24=DMZ, 10.0.50.10=Web server, 203.0.113.0/24=Known-bad range
+STARTING RULES (top-down, first match):
+    1. allow any → 10.0.50.10 tcp/443
+    2. deny 203.0.113.0/24 → any any/any
+    3. allow any → 10.0.50.10 tcp/22
+    4. allow 10.0.50.0/24 → 10.0.20.0/24 any/any
+HIDDEN TEST PACKETS (KEY):
+    ALLOW  198.51.100.7 → 10.0.50.10 tcp/443   // public HTTPS to the web server is the whole point
+    ALLOW  198.51.100.7 → 10.0.50.10 tcp/80   // HTTP must be published too (it redirects to HTTPS)
+    DENY   203.0.113.9 → 10.0.50.10 tcp/443   // the known-bad deny has to sit ABOVE the public allow or it never fires
+    DENY   203.0.113.44 → 10.0.20.15 tcp/5432   // known-bad range must be denied everywhere
+    DENY   198.51.100.7 → 10.0.50.10 tcp/22   // SSH from the internet is not allowed — only the Admin LAN
+    ALLOW  10.0.10.25 → 10.0.50.10 tcp/22   // Admin LAN SSH to the web server
+    DENY   10.0.10.25 → 10.0.50.10 tcp/3389   // RDP was never in the policy
+    DENY   198.51.100.7 → 10.0.50.10 udp/443   // the policy says TCP 443; an any-protocol rule is broader than required
+    ALLOW  10.0.50.10 → 10.0.20.15 tcp/5432   // web tier to the database
+    DENY   10.0.50.10 → 10.0.20.15 tcp/22   // the web server may only reach the DB on 5432
+    DENY   10.0.50.10 → 10.0.20.40 tcp/445   // nothing else on the Server VLAN is reachable from the DMZ
+    DENY   10.0.10.25 → 10.0.20.15 tcp/5432   // the policy never allowed the Admin LAN to the database; implicit deny applies
+TAKEAWAY: First match wins, so specific denies (the known-bad range) go above broad allows, and allows are written as narrowly as the policy states: exact host, exact port, exact protocol. A rule like DMZ → Server VLAN any/any is the classic over-permission.
+
+[f-vpn-jump] sim=fweditor domain=4 obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security)
+TITLE: Firewall rules: remote access through the jump box
+PROMPT: Remote staff connect to the VPN and get an address in 10.0.99.0/24. Build the rule table that implements the access policy. Start from the existing (too permissive) rule.
+TASKS:
+    - VPN users may reach the jump box (10.0.20.5) on TCP 3389 only — nothing else on the Server VLAN directly.
+    - The contractor address 10.0.99.50 is suspended: deny it everything, including the jump box.
+    - The jump box may reach the Server VLAN (10.0.20.0/24) on TCP 22 and TCP 3389.
+    - The User LAN (10.0.10.0/24) may reach the Server VLAN on TCP 443 and the DNS server (10.0.20.53) on UDP 53.
+    - Everything else is denied.
+NETWORKS: any=Any, 10.0.99.0/24=VPN pool, 10.0.99.50=Contractor VPN address, 10.0.20.5=Jump box, 10.0.20.0/24=Server VLAN, 10.0.20.53=DNS server, 10.0.10.0/24=User LAN
+STARTING RULES (top-down, first match):
+    1. allow 10.0.99.0/24 → 10.0.20.0/24 any/any
+HIDDEN TEST PACKETS (KEY):
+    ALLOW  10.0.99.12 → 10.0.20.5 tcp/3389   // a VPN user reaching the jump box over RDP
+    DENY   10.0.99.12 → 10.0.20.5 tcp/22   // only RDP to the jump box, not SSH
+    DENY   10.0.99.12 → 10.0.20.30 tcp/3389   // VPN users must go THROUGH the jump box, not around it
+    DENY   10.0.99.50 → 10.0.20.5 tcp/3389   // the suspended contractor must be denied before the VPN-pool allow
+    DENY   10.0.99.50 → 10.0.20.53 udp/53   // the contractor gets nothing
+    ALLOW  10.0.20.5 → 10.0.20.30 tcp/22   // jump box to a Linux server
+    ALLOW  10.0.20.5 → 10.0.20.31 tcp/3389   // jump box to a Windows server
+    DENY   10.0.20.5 → 10.0.20.31 tcp/445   // the jump box is limited to 22 and 3389
+    ALLOW  10.0.10.40 → 10.0.20.31 tcp/443   // User LAN to an internal web app
+    ALLOW  10.0.10.40 → 10.0.20.53 udp/53   // User LAN DNS lookups
+    DENY   10.0.10.40 → 10.0.20.53 tcp/53   // the policy says UDP 53; TCP was not granted
+    DENY   10.0.10.40 → 10.0.20.31 tcp/3389   // User LAN gets 443 only
+TAKEAWAY: A jump box design means remote users touch exactly one host on one port, and that host carries the admin protocols onward. Exceptions for a single address (the suspended contractor) are denies that must precede the subnet-wide allow.
+
+[l-vpn-spray] sim=logview domain=4 obj=4.9 (Given a scenario, use data sources to support an investigation)
+TITLE: Log analysis: VPN authentication incident
+PROMPT: The SIEM raised a low-priority alert overnight. Review the three sources, mark the lines that are evidence of the incident, then answer the questions.
+TASKS:
+    - Select every log line that is evidence of the attack and its outcome (avoid noise).
+    - Classify the attack.
+    - Name the compromised account.
+    - Choose the FIRST response action.
+LOG vpn-auth.log ('*' = evidence line in the key):
+      02:14:03 AUTH OK   user=k.osei      src=10.0.10.88    method=cert+otp   session=4411
+    * 03:02:11 AUTH FAIL user=a.brennan   src=198.51.100.44 reason=bad-password
+    * 03:02:19 AUTH FAIL user=c.dubois    src=198.51.100.44 reason=bad-password
+    * 03:02:27 AUTH FAIL user=d.kowalski  src=198.51.100.44 reason=bad-password
+    * 03:02:35 AUTH FAIL user=f.nakamura  src=198.51.100.44 reason=bad-password
+    * 03:02:43 AUTH FAIL user=h.lindqvist src=198.51.100.44 reason=bad-password
+    * 03:02:51 AUTH OK   user=j.marsh     src=198.51.100.44 method=password   session=4418
+    * 03:03:00 AUTH FAIL user=l.okafor    src=198.51.100.44 reason=bad-password
+    * 03:03:08 AUTH FAIL user=m.alvarez   src=198.51.100.44 reason=bad-password
+      06:48:30 AUTH OK   user=r.patel     src=10.0.10.31    method=cert+otp   session=4502
+      07:01:12 AUTH FAIL user=r.patel     src=10.0.10.31    reason=otp-expired
+      07:01:40 AUTH OK   user=r.patel     src=10.0.10.31    method=cert+otp   session=4503
+LOG file-server.log ('*' = evidence line in the key):
+      02:20:14 SMB OPEN  user=k.osei   share=\\FS01\Projects   file=roadmap.pptx
+      03:05:02 SMB OPEN  user=j.marsh  share=\\FS01\HR         file=salary-review-2026.xlsx
+      03:05:09 SMB OPEN  user=j.marsh  share=\\FS01\HR         file=employee-master.csv
+    * 03:05:30 SMB COPY  user=j.marsh  share=\\FS01\HR  objects=1,842  bytes=913,220,114  dest=client-session-4418
+      06:52:41 SMB OPEN  user=r.patel  share=\\FS01\Clinical   file=rounds-schedule.docx
+      07:15:03 SMB DENY  user=r.patel  share=\\FS01\HR         reason=no-access
+LOG siem-alerts ('*' = evidence line in the key):
+      02:00:00 INFO  Nightly backup job completed (FS01, 2.1 TB, 0 errors)
+    * 03:03:10 LOW   Multiple failed VPN logins from a single source (198.51.100.44) — 7 users, 1 attempt each
+    * 03:06:00 MED   Unusual data volume: j.marsh transferred 913 MB from \\FS01\HR at 03:05 (baseline 4 MB/day)
+      07:01:12 INFO  OTP expired for r.patel, user retried successfully
+      07:30:00 INFO  Vulnerability scan window opened (10.0.20.0/24)
+  Q1 (attack). Which attack does the VPN log show?
+     * A. Password spraying — one guess per account across many accounts from one source
+       B. Brute force against a single account
+       C. Credential stuffing with a leaked password list for each user
+       D. MFA fatigue (push bombing)
+     why: Seven different usernames, one failure each, seconds apart, from one IP, then a success: one common password tried across accounts to stay under the lockout threshold.
+  Q2 (account). Which account was compromised?
+     * A. j.marsh
+       B. r.patel
+       C. k.osei
+       D. a.brennan
+     why: j.marsh is the only account that authenticated successfully from the attacking address (with password only, no OTP) and then bulk-copied HR files.
+  Q3 (first). What should the analyst do FIRST?
+     * A. Disable j.marsh, terminate VPN session 4418 and block 198.51.100.44 at the VPN gateway
+       B. Email j.marsh to ask whether they are working late
+       C. Force a password reset for all seven users and move on
+       D. Open a ticket to enable MFA for VPN password logins next quarter
+     why: Contain first: cut the attacker's active access (account, session, source address). Resets, MFA rollout and user contact are eradication and recovery steps that come after containment.
+TAKEAWAY: r.patel's OTP retry and the backup lines are noise. The spray pattern (many users, one try each), the password-only success and the 913 MB HR copy in the same session make the story: spray → takeover → exfiltration. First response is always to stop the bleeding.
+
+[l-web-sqli] sim=logview domain=2 obj=2.4 (Given a scenario, analyze indicators of malicious activity)
+TITLE: Log analysis: customer portal attack
+PROMPT: Customers report the portal is slow and a security researcher has emailed about leaked records. Work the logs: mark the evidence lines, then answer the questions.
+TASKS:
+    - Select the log lines that show the attack and the data loss (ignore normal traffic).
+    - Classify the attack.
+    - Identify the host the attacker entered through.
+    - Choose the FIRST response action.
+LOG web-01 access.log ('*' = evidence line in the key):
+      198.51.100.12 - - [21/Mar:09:12:04] "GET /portal/search?q=invoice HTTP/1.1" 200 5120
+      198.51.100.12 - - [21/Mar:09:12:30] "GET /portal/account/7781 HTTP/1.1" 200 2210
+    * 203.0.113.58 - - [21/Mar:09:14:02] "GET /portal/search?q=' HTTP/1.1" 500 311
+    * 203.0.113.58 - - [21/Mar:09:14:11] "GET /portal/search?q='%20OR%201=1-- HTTP/1.1" 200 184220
+    * 203.0.113.58 - - [21/Mar:09:14:40] "GET /portal/search?q='%20UNION%20SELECT%20username,password_hash,email%20FROM%20users-- HTTP/1.1" 200 2914400
+    * 203.0.113.58 - - [21/Mar:09:15:05] "GET /portal/search?q='%20UNION%20SELECT%20card_last4,billing_zip,email%20FROM%20customers-- HTTP/1.1" 200 6118002
+      10.0.10.9 - - [21/Mar:09:16:12] "GET /portal/healthz HTTP/1.1" 200 2
+      198.51.100.90 - - [21/Mar:09:17:50] "POST /portal/login HTTP/1.1" 302 0
+      198.51.100.90 - - [21/Mar:09:18:03] "GET /portal/account/9120 HTTP/1.1" 200 2190
+LOG db-01 audit ('*' = evidence line in the key):
+      09:12:04 app_user  SELECT id,title FROM invoices WHERE title LIKE '%invoice%'  rows=14
+    * 09:14:02 app_user  SELECT id,title FROM invoices WHERE title LIKE '%'%'  ERROR: syntax error at or near "%"
+    * 09:14:11 app_user  SELECT id,title FROM invoices WHERE title LIKE '%' OR 1=1--%'  rows=18,204
+    * 09:14:40 app_user  SELECT id,title FROM invoices WHERE title LIKE '%' UNION SELECT username,password_hash,email FROM users--%'  rows=41,117
+    * 09:15:05 app_user  SELECT id,title FROM invoices WHERE title LIKE '%' UNION SELECT card_last4,billing_zip,email FROM customers--%'  rows=96,420
+      09:16:00 backup_svc  pg_dump started (nightly-delta)
+      09:30:00 report_svc  SELECT count(*) FROM invoices  rows=1
+LOG perimeter firewall ('*' = evidence line in the key):
+      09:10:02 ALLOW tcp 198.51.100.12:50211 -> 10.0.50.10:443
+      09:14:00 ALLOW tcp 203.0.113.58:40100 -> 10.0.50.10:443
+    * 09:15:06 ALLOW tcp 10.0.50.10:443 -> 203.0.113.58:40100  bytes_out=9,034,622
+      09:16:12 ALLOW tcp 10.0.10.9:33122 -> 10.0.50.10:443
+      09:17:49 ALLOW tcp 198.51.100.90:51002 -> 10.0.50.10:443
+      09:20:15 DENY  tcp 203.0.113.58:40400 -> 10.0.20.15:5432
+  Q1 (attack). Which attack is shown?
+     * A. SQL injection through the portal search parameter
+       B. Cross-site scripting against portal users
+       C. Directory traversal on the web server
+       D. Credential stuffing against /portal/login
+     why: A lone quote causes a 500 and a database syntax error, then OR 1=1 and UNION SELECT payloads return huge row counts: textbook SQLi against an unparameterized query.
+  Q2 (host). Through which host did the attacker get in?
+     * A. web-01 (10.0.50.10), the portal web server
+       B. db-01 (10.0.20.15), the database server
+       C. The perimeter firewall
+       D. The customer's workstation at 198.51.100.12
+     why: The injected requests arrive at web-01 over HTTPS; the database only executes what the vulnerable application sends it. The direct attempt against 10.0.20.15:5432 was denied.
+  Q3 (first). What should be done FIRST?
+     * A. Block 203.0.113.58 and disable the vulnerable /portal/search endpoint (or add a WAF rule) to stop further extraction
+       B. Rewrite the search feature to use parameterized queries
+       C. Reset every customer password and notify them
+       D. Restore the database from last night's backup
+     why: Containment comes before the code fix: stop the active extraction now, then remediate the query (parameterization, least-privilege DB account), then handle notification. A restore would not help — data was read, not destroyed.
+TAKEAWAY: Read the three sources together: the web log shows the payloads, the DB audit proves they executed and how many rows left, and the firewall byte count confirms the data went out to the attacker. Normal customer traffic, the health check and the backup job are noise.
+
+[m-logsrc] sim=match domain=4 obj=4.9 (Given a scenario, use data sources to support an investigation)
+TITLE: Match the data source to the question it answers
+PROMPT: Drag each investigation question onto the log or data source that answers it best.
+PAIRS (left → right):
+    Firewall logs  →  Did any internal host connect to the attacker's address, and when?
+    IPS/IDS logs  →  Which exploit signature was fired against the web server?
+    Endpoint (EDR) logs  →  Which process spawned the PowerShell that pulled the payload?
+    Application logs  →  Which user triggered the failed money transfer in the banking app?
+    Vulnerability scan output  →  Which hosts still have the unpatched CVE the attacker used?
+    Packet captures  →  What exact data was inside the suspicious outbound session?
+    NetFlow / metadata  →  Which host sent 40 GB out overnight without capturing payloads?
+TAKEAWAY: Objective 4.9 is about picking the source that answers the question: firewalls see allow/deny by address and port, IDS/IPS see signatures, EDR sees process trees, application logs see business actions, scans see exposure, packet captures see content, NetFlow sees volume without content.
+
+[o-ransom] sim=order domain=4 obj=4.8 (Explain appropriate incident response activities)
+TITLE: Order the response to a confirmed ransomware outbreak
+PROMPT: Analysis has confirmed ransomware spreading from a finance workstation through a compromised account. Drag the response steps into order.
+CORRECT ORDER:
+    1. Isolate the infected hosts from the network (EDR quarantine / port shutdown)
+    2. Disable the compromised account and revoke its sessions and tokens
+    3. Capture volatile evidence (memory image) from an isolated host before powering anything off
+    4. Remove the malware and persistence, then patch the entry point
+    5. Restore affected systems from known-clean backups and verify integrity
+    6. Hold the lessons-learned review and update the playbook
+    interchangeable steps: 1=2 (Isolating the hosts and disabling the account are both immediate containment actions; the exam accepts either first.)
+TAKEAWAY: Containment (isolate, disable), then preserve evidence while the host is still up, then eradication, recovery, and lessons learned. Powering off before a memory capture destroys the volatile evidence the investigation needs.
+
 [m-ctrl] sim=match domain=- obj=1.1 (Compare and contrast various types of security controls)
 TITLE: Match the control to its TYPE
-PROMPT: Tap an item on the left, then its match on the right. Tap a matched item to undo.
+PROMPT: Drag each item from the right onto its match on the left. Drag a placed item back to the pool to undo.
 PAIRS (left → right):
     Firewall rule that blocks inbound Telnet  →  Preventive
     Warning sign stating the area is under video surveillance  →  Deterrent
@@ -397,7 +631,7 @@ PAIRS (left → right):
 
 [m-cat] sim=match domain=- obj=1.1 (Compare and contrast various types of security controls)
 TITLE: Match the control to its CATEGORY and TYPE
-PROMPT: Tap a control on the left, then the category/type combination that describes it on the right.
+PROMPT: Drag each category/type combination onto the control it describes.
 PAIRS (left → right):
     Full-disk encryption on laptops  →  Technical / Preventive
     Acceptable use policy that every employee must sign  →  Managerial / Directive
@@ -409,7 +643,7 @@ PAIRS (left → right):
 
 [m-ind] sim=match domain=- obj=2.4 (Given a scenario, analyze indicators of malicious activity)
 TITLE: Match the attack to its indicator
-PROMPT: Tap an attack on the left, then the log evidence that reveals it on the right.
+PROMPT: Drag each piece of log evidence onto the attack it reveals.
 PAIRS (left → right):
     Password spraying  →  Failed logins for many usernames, same password, none locked out
     Account takeover  →  Login from Chicago, then Manila 12 minutes later
@@ -421,7 +655,7 @@ PAIRS (left → right):
 
 [m-mit] sim=match domain=- obj=2.5 (Explain the purpose of mitigation techniques used to secure the enterprise)
 TITLE: Match the attack to its BEST mitigation
-PROMPT: Tap an attack on the left, then the control that most directly defeats it.
+PROMPT: Drag each control onto the attack it most directly defeats.
 PAIRS (left → right):
     SQL injection  →  Parameterized queries and input validation
     Cross-site scripting  →  Output encoding of untrusted data
@@ -433,7 +667,7 @@ PAIRS (left → right):
 
 [m-agree] sim=match domain=- obj=5.3 (Explain the processes associated with third-party risk assessment and management)
 TITLE: Match the agreement to its purpose
-PROMPT: Tap an agreement type on the left, then what it is used for on the right.
+PROMPT: Drag each purpose onto the agreement type it describes.
 PAIRS (left → right):
     SLA  →  Measurable service targets with penalties
     MOU  →  Non-binding statement of shared intent
@@ -444,7 +678,7 @@ PAIRS (left → right):
 
 [m-risk] sim=match domain=- obj=5.2 (Explain elements of the risk management process)
 TITLE: Match the risk strategy to the example
-PROMPT: Tap a strategy on the left, then the scenario that illustrates it on the right.
+PROMPT: Drag each scenario onto the risk strategy it illustrates.
 PAIRS (left → right):
     Transfer  →  Purchasing cyber insurance for breach costs
     Avoid  →  Cancelling a project that would store card numbers
@@ -455,7 +689,7 @@ PAIRS (left → right):
 
 [m-auth] sim=match domain=- obj=4.6 (Given a scenario, implement and maintain identity and access management)
 TITLE: Match the protocol to its description
-PROMPT: Tap a protocol on the left, then its best description on the right.
+PROMPT: Drag each description onto the protocol it fits best.
 PAIRS (left → right):
     SAML  →  XML assertions from an IdP enabling web SSO
     OAuth 2.0  →  Access tokens that let an app call an API on a user's behalf
@@ -467,7 +701,7 @@ PAIRS (left → right):
 
 [m-mal] sim=match domain=- obj=2.4 (Given a scenario, analyze indicators of malicious activity)
 TITLE: Match the malware to its behavior
-PROMPT: Tap a malware type on the left, then its defining behavior on the right.
+PROMPT: Drag each behavior onto the malware type it defines.
 PAIRS (left → right):
     Worm  →  Self-propagates across the network with no user action
     Virus  →  Attaches to a host file and spreads when it is run
@@ -480,7 +714,7 @@ PAIRS (left → right):
 
 [m-state] sim=match domain=- obj=3.3 (Compare and contrast concepts and strategies to protect data)
 TITLE: Match the data state to a protection method
-PROMPT: Tap a data state or type on the left, then the method that protects it on the right.
+PROMPT: Drag each protection method onto the data state or type it protects.
 PAIRS (left → right):
     Data at rest  →  Full-disk or database encryption
     Data in transit  →  TLS or IPSec
@@ -491,7 +725,7 @@ PAIRS (left → right):
 
 [o-ir] sim=order domain=- obj=4.8 (Explain appropriate incident response activities)
 TITLE: Order the incident response process
-PROMPT: Tap the steps in order. Undo removes the last tap.
+PROMPT: Drag the steps into order, first at the top.
 CORRECT ORDER:
     1. Preparation
     2. Detection
@@ -503,7 +737,7 @@ CORRECT ORDER:
 
 [o-vol] sim=order domain=- obj=4.8 (Explain appropriate incident response activities)
 TITLE: Order of volatility: acquire the MOST volatile first
-PROMPT: Tap the evidence sources in the order they should be collected.
+PROMPT: Drag the evidence sources into the order they should be collected, first at the top.
 CORRECT ORDER:
     1. CPU registers and cache
     2. RAM contents and running processes
@@ -515,7 +749,7 @@ CORRECT ORDER:
 
 [o-chg] sim=order domain=- obj=1.3 (Explain the importance of change management processes and the impact to security)
 TITLE: Order the change management flow
-PROMPT: Tap the steps in the order a standard change moves through them.
+PROMPT: Drag the steps into the order a standard change moves through them.
 CORRECT ORDER:
     1. Submit change request with owner and stakeholders
     2. Perform impact analysis and write backout plan
@@ -527,7 +761,7 @@ CORRECT ORDER:
 
 [o-risk] sim=order domain=- obj=5.2 (Explain elements of the risk management process)
 TITLE: Order the risk assessment steps
-PROMPT: Tap the steps in the order they are performed.
+PROMPT: Drag the steps into the order they are performed.
 CORRECT ORDER:
     1. Identify assets and mission-essential functions
     2. Identify threats and vulnerabilities
@@ -538,7 +772,7 @@ CORRECT ORDER:
 
 [o-pki] sim=order domain=- obj=1.4 (Explain the importance of using appropriate cryptographic solutions)
 TITLE: Order the certificate issuance flow
-PROMPT: Tap the steps in the order a server obtains a trusted certificate.
+PROMPT: Drag the steps into the order a server obtains a trusted certificate.
 CORRECT ORDER:
     1. Server generates a public and private key pair
     2. Server creates a certificate signing request containing the public key
@@ -549,7 +783,7 @@ CORRECT ORDER:
 
 [o-zt] sim=order domain=- obj=1.2 (Summarize fundamental security concepts)
 TITLE: Order the zero trust access decision
-PROMPT: Tap the steps in the order a zero trust request is handled.
+PROMPT: Drag the steps into the order a zero trust request is handled.
 CORRECT ORDER:
     1. Subject requests access to a resource
     2. Policy enforcement point forwards the request to the control plane

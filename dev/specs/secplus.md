@@ -64,7 +64,7 @@ Common: `{id, obj, type, title, prompt|setup, d?, cat?, why?}`. `d` is required 
 | `logview` | `tasks?`, `sources:[{name, lines:[…]}] (≥2)`, `evidence:[[src,line]] (≥3)`, `qs:[{k:"attack"|"account"|"host"|"first", q, o:[4, first correct], x}] (≥3)` | Evidence part = (hits − ½·noise) / evidence, floored at 0; each `qs` entry 1 point; f = total / (1 + qs). Must include an `attack`, an `account` or `host`, and a `first` question. |
 | `match` / `order` (drag-and-drop) | as above; `order` `eq:[[i,j]]` = interchangeable step indexes | Rendering is drag-and-drop (touch + mouse, tap-to-pair kept as a fallback). State shape unchanged. Prompts say "drag", never "tap". |
 
-Exam PBQ mix per bank: ≥1 console, ≥1 firewall editor (enforced via `exam.pbqMust` once those types exist; swap plan in `dev/FIDELITY-secplus.md`), the rest from the other sims; no two generated sims of the same type in one exam (validator enforces). Every exam PBQ carries `d`.
+Exam PBQ mix per bank: ≥1 console, ≥1 firewall editor (enforced via `exam.pbqMust`; slots 3 = fweditor, 4 = console in every bank), the rest from the other sims; no two generated sims of the same type in one exam (validator enforces). Every exam PBQ carries `d`. Exam console/fweditor items are proved by `node dev/tests/secplus-exam-pbqs.test.mjs` (blank 0, scripted solution 1, one mistake in between, keep services cost points).
 
 Sim items of the Chat 3 types carry `task:[…]` (2+ lines) for the Task pane; `prompt` stays one line. Validator: `node dev/check-pack.mjs secplus` (schema, blank attempt = 0) and `node dev/tests/sims.test.mjs` (grader behaviour on every item).
 

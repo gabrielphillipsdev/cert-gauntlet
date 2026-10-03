@@ -66,7 +66,7 @@ registerSim("ccna-lab", {
   render(el, item, st, ctx) {
     const L = live(item, st); const names = devNames(item);
     el.innerHTML = "";
-    const root = document.createElement("div"); root.className = "cl" + (ctx.reveal ? " reveal" : ""); root.dataset.view = L.view; el.appendChild(root);
+    const root = document.createElement("div"); root.className = "cl cl-lab" + (ctx.reveal ? " reveal" : ""); root.dataset.view = L.view; el.appendChild(root);
     const result = ctx.reveal ? gradeLab(item, L.lab, st.answers) : null;
     const target = item.timeTargetMin || 6;
     root.innerHTML =
@@ -157,7 +157,7 @@ registerSim("ccna-lab", {
 });
 
 injectCss("cg-sim-ccna-lab", `
-.cl{display:flex;flex-direction:column;gap:8px;min-height:60vh}
+.cl-lab{display:flex;flex-direction:column;gap:8px;min-height:60vh}
 .cl-bar{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);font-weight:600;padding:0 2px}
 .cl-bar .sp{flex:1}
 .cl-timer{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:800;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px 8px}
@@ -169,8 +169,8 @@ injectCss("cg-sim-ccna-lab", `
 .cl-seg button.on{background:var(--panel-2);color:var(--ink)}
 .cl-body{display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
 .cl-left,.cl-right{display:none;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-height:0}
-.cl[data-view="tasks"] .cl-left,.cl[data-view="guide"] .cl-left,.cl[data-view="topo"] .cl-left{display:flex}
-.cl[data-view="term"] .cl-right{display:flex}
+.cl-lab[data-view="tasks"] .cl-left,.cl-lab[data-view="guide"] .cl-left,.cl-lab[data-view="topo"] .cl-left{display:flex}
+.cl-lab[data-view="term"] .cl-right{display:flex}
 .cl-tabs{display:none;border-bottom:1px solid var(--line)}
 .cl-tabs button{flex:1;border:none;background:none;color:var(--muted);font-weight:700;font-size:13px;padding:10px 6px;position:relative}
 .cl-tabs button.on{color:var(--ink)}.cl-tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--teal)}
@@ -209,9 +209,9 @@ injectCss("cg-sim-ccna-lab", `
 .cl-in input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--ink);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:16px;padding:6px 0}
 .cl-in button{border:1px solid var(--line-2);border-radius:8px;background:var(--panel-2);color:var(--ink);font-size:12px;font-weight:800;padding:7px 11px;flex:none}
 .cl-in button:disabled,.cl-in input:disabled{opacity:.5}
-.cl.reveal .cl-term{opacity:.85}
+.cl-lab.reveal .cl-term{opacity:.85}
 @media(min-width:768px){
-  .cl{min-height:0}.cl-seg,.cl-up{display:none}.cl-kb{display:inline}
+  .cl-lab{min-height:0}.cl-seg,.cl-up{display:none}.cl-kb{display:inline}
   .cl-body{flex:none;flex-direction:row;align-items:stretch;height:calc(100vh - 230px);min-height:480px}
   .cl-left{display:flex;flex:0 0 34%;max-width:420px}.cl-right{display:flex;flex:1}
   .cl-tabs{display:flex}

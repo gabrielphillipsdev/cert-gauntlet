@@ -1,0 +1,1853 @@
+# CCNA 200-301 v1.1 — Exam A (Campus build-out: VLANs, trunks, STP, OSPF, ACLs. Labs: trunking, OSPF, ACL, SSH.)
+# 100 questions. Export for second-model review: '*' marks the keyed answer. Multi-response and drag-drop items are graded all-or-nothing.
+# Report any item where the key or an explanation is wrong (cite a cisco.com configuration guide or command reference), any exhibit that IOS would not print that way, and any item with two defensible answers.
+# Lab slots for this exam (filled from Chat 8's labs): vlan (2.2), ospf (3.4), acl (5.6), ssh (4.8)
+
+[a001] type=mc domain=2 obj=2.5.b (Interpret basic operations of Rapid PVST+ Spanning Tree Protocol — Port states and roles)
+Q: Refer to the exhibit. ACC-3 uplinks to DIST-1 on Gi0/1 and to DIST-2 on Gi0/2. DIST-1 is the root bridge for VLAN 10 and DIST-2 reaches the root over its own direct 1-Gb/s link. The fiber on ACC-3 Gi0/1 is cut. What happens on ACC-3 in VLAN 10?
+EXHIBIT:
+    ACC-3# show spanning-tree vlan 10
+    VLAN0010
+      Spanning tree enabled protocol rstp
+      Root ID    Priority    24586
+                 Address     0001.4200.0100
+                 Cost        4
+                 Port        25 (GigabitEthernet0/1)
+                 Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+    
+      Bridge ID  Priority    32778  (priority 32768 sys-id-ext 10)
+                 Address     0001.4200.0300
+                 Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+                 Aging Time  300 sec
+    
+    Interface           Role Sts Cost      Prio.Nbr Type
+    ------------------- ---- --- --------- -------- --------------
+    Gi0/1               Root FWD 4         128.25   P2p
+    Gi0/2               Altn BLK 4         128.26   P2p
+  * A. Gi0/2 becomes the root port and starts forwarding almost at once, with a root path cost of 8
+        why: An RSTP alternate port is a pre-computed backup root port. When the root port fails it is promoted and moved to forwarding without timers. The new cost is DIST-2's cost of 4 plus Gi0/2's own cost of 4.
+    B. Gi0/2 becomes the root port but spends 30 seconds in listening and learning before it forwards
+        why: That is legacy 802.1D behaviour (2 x 15-second forward delay). Rapid PVST+ promotes an alternate port to root port immediately.
+    C. ACC-3 declares itself root for VLAN 10 until DIST-1's BPDUs reach it again
+        why: ACC-3 still receives superior BPDUs on Gi0/2. In RSTP, DIST-2 sends BPDUs carrying DIST-1 as root, and a priority of 32778 can never beat 24586.
+    D. Gi0/2 becomes a backup port and remains in the discarding state
+        why: A backup port is a redundant link to a segment the same switch already serves as designated, such as two ports on one hub. Gi0/2 leads to another switch, so it is alternate and becomes root port here.
+TAKEAWAY: RSTP alternate port = backup path to the root via another switch; it takes over as root port instantly. Root path cost = neighbor's advertised cost + local port cost.
+
+[a002] type=mc domain=1 obj=1.6 (Configure and verify IPv4 addressing and subnetting)
+Q: The new staff VLAN on DIST-1 must hold 450 hosts. The address plan gives it the next free block starting at 10.40.4.0, and the SVI must take the first usable address. Which configuration gives VLAN 10 the smallest subnet that fits?
+  * A. interface vlan 10 / ip address 10.40.4.1 255.255.254.0
+        why: A /23 has 9 host bits: 2^9 - 2 = 510 usable addresses, enough for 450. 10.40.4.0 is on a /23 boundary (4 is a multiple of 2), so .4.1 is the first host.
+    B. interface vlan 10 / ip address 10.40.4.1 255.255.255.0
+        why: A /24 holds only 254 hosts, well short of 450.
+    C. interface vlan 10 / ip address 10.40.4.1 255.255.252.0
+        why: A /22 (1022 hosts) would work but is twice as large as needed. The question asks for the smallest subnet that fits.
+    D. interface vlan 10 / ip address 10.40.4.0 255.255.254.0
+        why: 10.40.4.0 is the network address of 10.40.4.0/23. IOS rejects it as an interface address (bad mask / network address).
+TAKEAWAY: Hosts = 2^h - 2. 450 hosts needs h = 9, which is /23 (255.255.254.0), block size 2 in the third octet.
+
+[a003] type=ms pick=2 domain=6 obj=6.7 (Recognize components of JSON-encoded data)
+Q: Refer to the exhibit. A script pulls this inventory record for an access switch from the campus controller. Which two statements about the data are true? (Choose two.)
+EXHIBIT:
+    {
+      "switch": "ACC-3",
+      "mgmt": {
+        "ip": "10.40.100.13",
+        "vlan": 100
+      },
+      "ports": [
+        { "name": "Gi0/1", "mode": "trunk",  "enabled": true },
+        { "name": "Fa0/7", "mode": "access", "vlan": 10, "enabled": true },
+        { "name": "Fa0/8", "mode": "access", "vlan": 10, "enabled": false }
+      ]
+    }
+  * A. The value of "ports" is an array that holds three objects
+        why: Square brackets mark an array; each element inside is an object in curly braces, and there are three of them.
+  * B. The value of "enabled" is a Boolean, not a string
+        why: true and false appear without quotes, so they are JSON Booleans. "true" in quotes would be a string.
+    C. The value of "mgmt" is an array of two strings
+        why: "mgmt" is an object (curly braces) with two key/value pairs. One value is a string ("10.40.100.13") and the other is a number (100).
+    D. The VLAN value 100 is a string because VLAN IDs are labels
+        why: 100 has no quotes, so JSON treats it as a number. Only quoted values are strings.
+    E. The record is invalid because the Gi0/1 object has no "vlan" key
+        why: JSON does not require objects in an array to share the same keys. Missing keys are a data-model question, not a syntax error.
+    F. The outermost structure of the record is an array
+        why: The record starts with { and ends with }, so the outermost structure is an object.
+TAKEAWAY: JSON: {} object of key/value pairs, [] ordered array, quoted text = string, bare numbers = number, true/false = Boolean, null = null. Keys are always quoted strings.
+
+[a004] type=mc domain=1 obj=1.13.c (Describe switching concepts — Frame flooding)
+Q: Refer to the exhibit. On ACC-2, Fa0/1-12 are access ports in VLAN 10, Fa0/13-24 are access ports in VLAN 20, and Gi0/1 is a trunk allowing all VLANs. PC1 on Fa0/1 sends a unicast frame to 00e0.4c00.0601. What does ACC-2 do with the frame?
+EXHIBIT:
+    ACC-2# show mac address-table
+              Mac Address Table
+    -------------------------------------------
+    
+    Vlan    Mac Address       Type        Ports
+    ----    -----------       --------    -----
+      10    0001.4200.0100    DYNAMIC     Gi0/1
+      10    00e0.4c00.0301    DYNAMIC     Fa0/1
+      10    00e0.4c00.0401    DYNAMIC     Fa0/2
+      20    0001.4200.0100    DYNAMIC     Gi0/1
+      20    00e0.4c00.0501    DYNAMIC     Fa0/13
+    Total Mac Addresses for this criterion: 5
+  * A. It floods the frame out every other forwarding port in VLAN 10, including trunk Gi0/1
+        why: 00e0.4c00.0601 is not in the VLAN 10 table, so it is an unknown unicast. The switch floods it within VLAN 10 only, out every port except the one it came in on, and the trunk carries it tagged for VLAN 10.
+    B. It drops the frame because the destination MAC address is unknown
+        why: Switches never drop unknown unicast by default; they flood it so the frame can still reach the host, then learn its port when it replies.
+    C. It floods the frame out every port on the switch in both VLAN 10 and VLAN 20
+        why: Flooding is bounded by the VLAN. A frame received in VLAN 10 is never sent out VLAN 20 access ports.
+    D. It forwards the frame only out Gi0/1 toward the default gateway's MAC address
+        why: A switch does not use the default gateway for Layer 2 forwarding. The destination is unknown, so the frame is flooded in VLAN 10, not sent to one port.
+TAKEAWAY: Known unicast: forward out one port. Unknown unicast, broadcast and (by default) multicast: flood out all ports in the same VLAN except the ingress port.
+
+[a005] type=mc domain=2 obj=2.2.c (Configure and verify interswitch connectivity — Native VLAN)
+Q: Refer to the exhibit. The campus standard is native VLAN 99 on every trunk. ACC-3 Gi0/1 is cabled to DIST-1 Gi1/0/3. Which action fixes the problem and keeps the standard?
+EXHIBIT:
+    ACC-3#
+    %CDP-4-NATIVE_VLAN_MISMATCH: Native VLAN mismatch discovered on
+     GigabitEthernet0/1 (99), with DIST-1 GigabitEthernet1/0/3 (1).
+    
+    ACC-3# show interfaces trunk
+    Port        Mode             Encapsulation  Status        Native vlan
+    Gi0/1       on               802.1q         trunking      99
+    
+    Port        Vlans allowed on trunk
+    Gi0/1       10,20,30,99,100
+  * A. On DIST-1 Gi1/0/3, enter switchport trunk native vlan 99
+        why: The message shows ACC-3 uses native 99 and DIST-1 Gi1/0/3 uses 1. Setting DIST-1's trunk to native 99 makes both ends match and follows the standard.
+    B. On ACC-3 Gi0/1, enter switchport trunk native vlan 1
+        why: Both ends would then match and the CDP message would stop, but the trunk would use native VLAN 1, which breaks the campus standard.
+    C. On DIST-1 Gi1/0/3, enter switchport trunk allowed vlan add 99
+        why: The allowed list controls which VLANs cross the trunk. It does not change which VLAN is sent untagged, so the native mismatch remains.
+    D. On ACC-3 Gi0/1, enter switchport nonegotiate
+        why: This only turns off DTP. The link is already trunking; the problem is the untagged VLAN on each end.
+TAKEAWAY: Native VLAN must match on both ends of an 802.1Q trunk. A mismatch merges the two VLANs' untagged traffic; CDP reports it with %CDP-4-NATIVE_VLAN_MISMATCH.
+
+[a006] type=mc domain=1 obj=1.10 (Verify IP parameters for Client OS (Windows, Mac OS, Linux))
+Q: Refer to the exhibit. A technician statically addressed this workstation in the engineering VLAN, whose gateway SVI is 10.40.21.129/25. The workstation can ping other hosts in its VLAN but cannot reach anything in other buildings. What is the cause?
+EXHIBIT:
+    C:\> ipconfig /all
+    
+    Ethernet adapter Ethernet:
+    
+       Connection-specific DNS Suffix  . :
+       Physical Address. . . . . . . . . : 3C-52-82-1A-7E-04
+       DHCP Enabled. . . . . . . . . . . : No
+       IPv4 Address. . . . . . . . . . . : 10.40.21.130(Preferred)
+       Subnet Mask . . . . . . . . . . . : 255.255.255.128
+       Default Gateway . . . . . . . . . : 10.40.21.1
+       DNS Servers . . . . . . . . . . . : 10.40.0.53
+  * A. The default gateway is outside the host's subnet; it should be 10.40.21.129
+        why: 10.40.21.130/25 lives in 10.40.21.128/25 (.129-.254). 10.40.21.1 is in 10.40.21.0/25, so the PC cannot ARP for it and has no working path off its subnet.
+    B. The subnet mask is invalid because a 10.x.x.x address requires 255.0.0.0
+        why: Classful masks have not applied for decades. A /25 on a 10.x address is perfectly valid and matches the SVI.
+    C. DHCP is disabled, so the workstation has no route to other subnets
+        why: Static addressing works fine if the values are right. DHCP is only one way to receive the gateway; the gateway entered here is the problem.
+    D. The DNS server is on a different subnet, which blocks off-subnet traffic
+        why: DNS servers are normally on other subnets. DNS affects name lookups, not whether packets can leave the subnet.
+TAKEAWAY: Check a client's IP, mask and gateway together: the gateway must be an address inside the host's own subnet.
+
+[a007] type=mc domain=6 obj=6.5 (Describe characteristics of REST-based APIs (authentication types, CRUD, HTTP verbs, and data encoding))
+Q: The campus controller exposes each switch port as a resource at /api/v1/interfaces/{id}. An engineer must change only the description of one port, sending just the description field and leaving every other attribute as it is. Which HTTP method fits?
+  * A. PATCH
+        why: PATCH applies a partial update: only the fields in the body change, and everything else on the resource is kept.
+    B. PUT
+        why: PUT replaces the whole resource with the representation in the body. Sending only the description could reset or remove the attributes that were left out.
+    C. POST
+        why: POST creates a new resource (or triggers an action) under a collection. It is not the method for editing one field of an existing port.
+    D. GET
+        why: GET only reads a resource. It never changes anything on the server.
+TAKEAWAY: CRUD to HTTP: Create = POST, Read = GET, Update = PUT (replace) or PATCH (partial), Delete = DELETE.
+
+[a008] type=mc domain=2 obj=2.6 (Describe Cisco Wireless Architectures and AP modes)
+Q: Security staff want one lightweight AP in the main library to stop serving clients and spend all of its time scanning every channel for rogue APs and wireless attack signatures, reporting what it finds to the WLC. Which AP mode should be set?
+  * A. Monitor
+        why: Monitor mode turns the AP into a dedicated sensor. It serves no clients and scans all channels for rogue detection, wIPS and location data.
+    B. Local
+        why: Local mode is the default. The AP serves clients on its channel and only goes off-channel briefly to scan, so it is not dedicated to detection.
+    C. FlexConnect
+        why: FlexConnect lets an AP across a WAN keep serving clients and switch traffic locally if the link to the WLC fails. It still serves clients.
+    D. Bridge
+        why: Bridge mode builds mesh or point-to-point wireless backhaul links between APs. It has nothing to do with dedicated rogue scanning.
+TAKEAWAY: AP modes: local (default, serves clients, CAPWAP to WLC), FlexConnect (remote sites, local switching), monitor (sensor only), sniffer (captures for an analyzer), bridge (mesh), SE-Connect (spectrum analysis).
+
+[a009] type=mc domain=1 obj=1.4 (Identify interface and cable issues (collisions, errors, mismatch duplex, and/or speed))
+Q: Refer to the exhibit. A print server cabled directly to ACC-6 Fa0/14 is slow. Its NIC was hard-coded to 100 Mb/s full duplex; the switch port was left at its defaults. What explains the counters, and what fixes the problem?
+EXHIBIT:
+    ACC-6# show interfaces fastEthernet0/14
+    FastEthernet0/14 is up, line protocol is up (connected)
+      Hardware is Fast Ethernet, address is 00a1.b2c3.4d0e
+      MTU 1500 bytes, BW 100000 Kbit/sec, DLY 100 usec,
+         reliability 255/255, txload 3/255, rxload 2/255
+      Encapsulation ARPA, loopback not set
+      Half-duplex, 100Mb/s, media type is 10/100BaseTX
+      ...
+         0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored
+         48211 packets output, 6930214 bytes, 0 underruns
+         0 output errors, 2215 collisions, 3 interface resets
+         0 babbles, 836 late collision, 0 deferred
+  * A. Autonegotiation failed and the switch fell back to half duplex; set duplex full and speed 100 on Fa0/14
+        why: With the peer hard-coded, the switch senses 100 Mb/s but cannot learn duplex, so it falls back to half. It then sees collisions, including late ones, while the full-duplex NIC never waits. Matching the settings ends the mismatch.
+    B. The speeds do not match; set speed 10 on Fa0/14
+        why: Both sides already run 100 Mb/s, as the output shows. A real speed mismatch normally keeps the link down entirely, and 10 Mb/s would make it slower.
+    C. Electrical noise is corrupting frames; replace the cable with shielded cable
+        why: Noise shows up as CRC and input errors, and both are zero here. The errors are collisions on a half-duplex port.
+    D. Too many devices share the collision domain; replace the hub on Fa0/14 with a switch
+        why: The stem says the print server connects directly. Collisions on a point-to-point link mean one side is half duplex, not that the segment is crowded.
+TAKEAWAY: Duplex mismatch fingerprint: the half-duplex side logs collisions and late collisions; the full-duplex side logs CRC errors and runts. Hard-code both ends or let both negotiate.
+
+[a010] type=mc domain=1 obj=1.9.d (Describe IPv6 address types — Modified EUI 64)
+Q: The VLAN 30 SVI on DIST-2 has MAC address 0c2a.7f31.4b90 and is configured with ipv6 address 2001:db8:acad:30::/64 eui-64. Which global unicast address does the SVI get?
+  * A. 2001:DB8:ACAD:30:E2A:7FFF:FE31:4B90
+        why: Split the MAC into 0c2a7f and 314b90, insert FFFE between them, and flip the 7th bit of the first byte: 0x0C (0000 1100) becomes 0x0E (0000 1110). Interface ID 0E2A:7FFF:FE31:4B90.
+    B. 2001:DB8:ACAD:30:C2A:7FFF:FE31:4B90
+        why: FFFE was inserted correctly but the universal/local (7th) bit was not flipped. Modified EUI-64 always inverts it, so 0C becomes 0E.
+    C. 2001:DB8:ACAD:30:E2A:FFFE:7F31:4B90
+        why: FFFE belongs in the exact middle of the 48-bit MAC, after the third byte (0c2a7f), not after the second.
+    D. 2001:DB8:ACAD:30::E2A:7F31:4B90
+        why: This drops FFFE entirely. Modified EUI-64 builds a 64-bit ID by inserting FFFE; a 48-bit MAC alone cannot fill it.
+TAKEAWAY: Modified EUI-64: split the MAC in half, insert FFFE, flip bit 7 of the first byte (00 to 02, 0C to 0E, 52 to 50).
+
+[a011] type=mc domain=2 obj=2.1.a (Configure and verify VLANs (normal range) spanning multiple switches — Access ports (data and voice))
+Q: Refer to the exhibit. An IP phone is cabled to ACC-4 Fa0/7, and a staff PC is cabled to the phone's PC port. How do the two devices' frames arrive on Fa0/7?
+EXHIBIT:
+    ACC-4# show running-config interface fastEthernet0/7
+    interface FastEthernet0/7
+     description Room 2-114 phone + PC
+     switchport access vlan 10
+     switchport mode access
+     switchport voice vlan 30
+     spanning-tree portfast
+    end
+  * A. Phone frames carry an 802.1Q tag for VLAN 30; PC frames arrive untagged and go into VLAN 10
+        why: With a voice VLAN, the switch tells the phone (via CDP) to tag voice traffic with VLAN 30. The PC's frames pass through the phone untagged and land in the access VLAN, 10.
+    B. Both arrive untagged, and the switch sorts them into VLANs 10 and 30 by MAC address
+        why: An access port does not sort untagged frames into VLANs by MAC. The voice VLAN works because the phone tags its frames.
+    C. Both arrive tagged: the phone uses VLAN 30 and the PC uses VLAN 10
+        why: The PC is unaware of VLANs and sends untagged frames. Only the phone tags, and only with the voice VLAN.
+    D. Fa0/7 becomes a full trunk to the phone carrying all VLANs, with the PC tagged in VLAN 10
+        why: The port stays in access mode; show interfaces trunk will not list it. It accepts only untagged data-VLAN frames and frames tagged with the voice VLAN.
+TAKEAWAY: Access port + voice VLAN: data VLAN untagged for the PC, voice VLAN tagged by the phone (learned via CDP or LLDP-MED). The port is still an access port.
+
+[a012] type=mc domain=6 obj=6.2 (Compare traditional networks with controller-based networking)
+Q: The campus team configures each of its 140 switches over CLI, one device at a time. It is evaluating a controller-based design for the new buildings. Which statement correctly describes the controller-based approach?
+  * A. Intent and policy are defined once on a central controller, which programs the devices through southbound APIs
+        why: The controller centralizes the management and much of the control logic, then pushes configuration to every device. Engineers stop touching each box individually.
+    B. All user traffic is forwarded through the controller, which replaces the switches' data plane
+        why: The data plane stays on the switches; frames and packets are still forwarded in hardware on each device. Sending every frame through a controller would not scale.
+    C. Devices no longer need management IP addresses, because the controller reaches them over Layer 2
+        why: The controller talks to devices over IP using protocols such as NETCONF, RESTCONF or SSH, so devices still need management addresses.
+    D. Switches keep no forwarding tables, because the controller makes every forwarding decision
+        why: Devices still hold MAC, routing and forwarding tables. The controller programs policy; it does not replace per-packet forwarding on each device.
+TAKEAWAY: Traditional: distributed control plane, box-by-box config. Controller-based: centralized policy and management, devices programmed via southbound APIs, data plane stays on the devices.
+
+[a013] type=mc domain=1 obj=1.11.a (Describe wireless principles — Nonoverlapping Wi-Fi channels)
+Q: Three APs cover overlapping areas of a lecture hall in a US deployment using the 2.4-GHz band (channels 1-11). AP-1 uses channel 1 and AP-2 uses channel 6. Which channel should AP-3 use so that none of the three APs overlap?
+  * A. 11
+        why: 2.4-GHz channels are 5 MHz apart but about 22 MHz wide, so only channels five apart do not overlap. In the US that set is 1, 6 and 11.
+    B. 3
+        why: Channel 3 overlaps both channel 1 and channel 6, adding interference to both APs.
+    C. 8
+        why: Channel 8 is only two channels (10 MHz) from 6, so their spectrum overlaps heavily.
+    D. 9
+        why: Channel 9 is three channels (15 MHz) from 6, which still overlaps a roughly 22-MHz-wide signal.
+TAKEAWAY: 2.4 GHz nonoverlapping channels in the US: 1, 6, 11. Use 5 GHz when you need more clean channels.
+
+[a014] type=mc domain=2 obj=2.4 (Configure and verify (Layer 2/Layer 3) EtherChannel (LACP))
+Q: Refer to the exhibit. ACC-5 Gi0/1-2 connect to DIST-2 Gi0/1-2. Both switches have channel-group 1 mode passive on both ports. Which change lets the bundle form using LACP?
+EXHIBIT:
+    ACC-5# show etherchannel summary
+    Flags:  D - down        P - bundled in port-channel
+            I - stand-alone s - suspended
+            R - Layer3      S - Layer2
+            U - in use      f - failed to allocate aggregator
+    
+    Number of channel-groups in use: 1
+    Number of aggregators:           1
+    
+    Group  Port-channel  Protocol    Ports
+    ------+-------------+-----------+-----------------------------
+    1      Po1(SD)       LACP        Gi0/1(I) Gi0/2(I)
+  * A. On ACC-5 Gi0/1-2, change to channel-group 1 mode active
+        why: Passive only answers LACP; it never starts the negotiation. With one side active and the other passive, LACP runs and the ports bundle (flags P, Po1 SU).
+    B. On ACC-5 Gi0/1-2, change to channel-group 1 mode desirable
+        why: Desirable is a PAgP mode. PAgP and LACP cannot negotiate with each other, so this cannot bundle with DIST-2's LACP passive ports.
+    C. On ACC-5 Gi0/1-2, change to channel-group 1 mode on
+        why: Mode on sends no negotiation frames and bundles only with a peer that is also on. Against LACP passive it does not form a working channel.
+    D. Shut down and re-enable interface Port-channel1 on both switches
+        why: Bouncing the port-channel changes nothing. Passive/passive will still never send the first LACP packet.
+TAKEAWAY: EtherChannel modes that form a channel: LACP active+active or active+passive; PAgP desirable+desirable or desirable+auto; on+on. Passive+passive and auto+auto never form.
+
+[a015] type=build ordered=false domain=1 obj=1.5 (Compare TCP to UDP)
+Q: The campus is moving its phone system to VoIP, which carries the audio stream in RTP over UDP. Drag the characteristics of UDP into the answer area. Leave the characteristics that do not apply.
+POOL:
+  [0] Connectionless: no session setup before data is sent
+  [1] No acknowledgments or retransmission of lost segments
+  [2] Fixed 8-byte header
+  [3] Three-way handshake before the first data segment
+  [4] Sequence numbers used to reorder and recover segments
+  [5] Sliding-window flow control
+  [6] Low overhead suited to delay-sensitive voice
+KEY (unordered subset): [0] + [1] + [2] + [6]
+why: UDP sends datagrams with no handshake, no acknowledgments, no retransmission and no windowing, using an 8-byte header (ports, length, checksum). That low overhead suits voice: a late packet is useless, so resending it would only add delay. The handshake, sequencing for recovery and sliding windows belong to TCP.
+TAKEAWAY: TCP: connection-oriented, reliable, ordered, flow-controlled, 20-byte minimum header. UDP: connectionless, best effort, 8-byte header; used by voice/video, DNS queries, DHCP, TFTP, SNMP, syslog.
+
+[a016] type=mc domain=2 obj=2.9 (Interpret the wireless LAN GUI configuration for client connectivity, such as WLAN creation, security settings, QoS profiles, and advanced settings)
+Q: Refer to the exhibit. Wi-Fi handsets on the CAMPUS-VOICE WLAN have choppy audio whenever the library is busy. Which change on this WLAN gives voice traffic the correct treatment?
+EXHIBIT:
+    WLANs > Edit 'CAMPUS-VOICE'
+      [General] [Security] [QoS] [Policy-Mapping] [Advanced]
+    
+      QoS tab
+        Quality of Service (QoS) : Bronze (background)
+        Application Visibility   : [ ] Enabled
+        AVC Profile              : none
+        WMM Policy               : Allowed
+  * A. Set Quality of Service (QoS) to Platinum (voice)
+        why: On the WLC, Platinum is the profile for voice, Gold for video, Silver for best effort and Bronze for background. Bronze puts the handsets' calls in the lowest queue.
+    B. Set Quality of Service (QoS) to Gold (video)
+        why: Gold is better than Bronze but is meant for video. Voice belongs in Platinum, the highest profile.
+    C. Set Quality of Service (QoS) to Silver (best effort)
+        why: Silver is the default best-effort profile, so voice would still compete equally with all data traffic.
+    D. Set WMM Policy to Disabled
+        why: WMM is what carries 802.11e priority markings over the air. Disabling it removes wireless QoS, and many voice clients need WMM.
+TAKEAWAY: WLC QoS profiles: Platinum = voice, Gold = video, Silver = best effort (default), Bronze = background. Voice WLANs also need WMM allowed or required.
+
+[a017] type=mc domain=1 obj=1.7 (Describe private IPv4 addressing)
+Q: A contractor's addressing plan for the new science building lists the four subnets below. The campus edge translates only RFC 1918 addresses. Which subnet is NOT a private address range and will cause problems?
+  * A. 172.32.10.0/24
+        why: The private Class B block is 172.16.0.0/12, which runs 172.16.0.0 to 172.31.255.255. 172.32.x.x is outside it and is public address space.
+    B. 172.31.200.0/24
+        why: 172.31.x.x is the last /16 inside 172.16.0.0/12, so it is private.
+    C. 10.255.8.0/24
+        why: Everything in 10.0.0.0/8 is private, including 10.255.x.x.
+    D. 192.168.250.0/24
+        why: 192.168.0.0/16 is private, so any 192.168.x.0/24 is fine.
+TAKEAWAY: RFC 1918: 10.0.0.0/8, 172.16.0.0/12 (172.16-172.31), 192.168.0.0/16. 172.32 and above, and 172.15 and below, are public.
+
+[a018] type=mc domain=2 obj=2.3 (Configure and verify Layer 2 discovery protocols (Cisco Discovery Protocol and LLDP))
+Q: Refer to the exhibit. A technician consoled into ACC-2 must document the uplink. Which statement is correct?
+EXHIBIT:
+    ACC-2# show cdp neighbors detail
+    -------------------------
+    Device ID: DIST-1
+    Entry address(es):
+      IP address: 10.40.100.1
+    Platform: cisco WS-C3650-24TS,  Capabilities: Router Switch IGMP
+    Interface: GigabitEthernet0/1,  Port ID (outgoing port): GigabitEthernet1/0/1
+    Holdtime : 127 sec
+    
+    advertisement version: 2
+    Duplex: full
+    
+    Total cdp entries displayed : 1
+  * A. ACC-2 Gi0/1 connects to DIST-1 Gi1/0/1, and DIST-1 advertises 10.40.100.1
+        why: In CDP output, Interface is the local port on ACC-2 and Port ID is the neighbor's port. The Entry address is the IP the neighbor advertises.
+    B. DIST-1 Gi0/1 connects to ACC-2 Gi1/0/1
+        why: This swaps the two ends. Interface (Gi0/1) is local to ACC-2, the switch where the command ran; Port ID (Gi1/0/1) belongs to DIST-1.
+    C. ACC-2 learned this from LLDP, which IOS runs by default
+        why: This is CDP output. CDP is on by default on Cisco IOS devices; LLDP is off until lldp run is entered.
+    D. The neighbor has been up for 127 seconds
+        why: Holdtime is how long ACC-2 keeps the entry if no new CDP message arrives (counting down from 180 by default). It says nothing about the neighbor's uptime.
+TAKEAWAY: CDP fields: Device ID = neighbor name, Interface = your local port, Port ID = neighbor's port, Holdtime = seconds left before the entry expires. Only the detail form shows IP and version.
+
+[a019] type=mc domain=6 obj=6.3 (Describe controller-based, software defined architecture (overlay, underlay, and fabric))
+Q: Refer to the exhibit. The new campus fabric is described below. Which part of the design is the underlay?
+EXHIBIT:
+    Campus fabric (text topology)
+      Border nodes : CORE-1, CORE-2
+      Edge nodes   : ACC-1 ... ACC-8
+      Links        : every edge node has routed /31 uplinks to both
+                     border nodes; IS-IS advertises each node's loopback
+      Users        : VLAN 10 hosts on ACC-1 talk to VLAN 10 hosts on
+                     ACC-7 inside VXLAN tunnels between edge loopbacks
+      Controller   : manages the fabric through a REST-based GUI/API
+  * A. The routed /31 links and IS-IS that give every node reachability to the other loopbacks
+        why: The underlay is the physical network and its routing protocol. It only has to deliver packets between node loopbacks so the tunnels can be built on top.
+    B. The VXLAN tunnels between edge-node loopbacks
+        why: Tunnels built over the routed network are the overlay. They carry user traffic across the fabric.
+    C. VLAN 10 stretched between ACC-1 and ACC-7
+        why: The stretched VLAN is a service the overlay provides to users. The underlay routes only between nodes and has no VLAN 10.
+    D. The controller's REST API
+        why: The API is the management and northbound side of the design. It configures the fabric but is neither the underlay nor the overlay.
+TAKEAWAY: Underlay = physical links + routing between devices. Overlay = virtual tunnels (VXLAN, etc.) over it carrying user traffic. Fabric = underlay + overlay managed as one.
+
+[a020] type=mc domain=1 obj=1.12 (Explain virtualization fundamentals (server virtualization, containers, and VRFs))
+Q: CORE-1 must carry guest Wi-Fi traffic and the building-management (HVAC) network. Both use 10.0.0.0/24, and they must never route to each other, yet both share CORE-1's uplinks. Which technology lets CORE-1 keep a separate routing table for each?
+  * A. VRFs, with each network in its own VRF
+        why: A VRF is a separate routing and forwarding table inside one router. Overlapping prefixes are fine because each VRF only sees its own routes, and traffic cannot cross between them unless leaked on purpose.
+    B. Separate VLANs for each network on CORE-1
+        why: VLANs separate Layer 2 broadcast domains. Their SVIs still share CORE-1's single global routing table, which cannot hold 10.0.0.0/24 twice.
+    C. A Type 1 hypervisor running a virtual router for each network
+        why: Server virtualization could host separate virtual routers, but it does not give CORE-1 itself multiple routing tables. VRFs are the built-in feature for that.
+    D. Containers running each network's DHCP service
+        why: Containers isolate applications on a host OS. They have no effect on how CORE-1 routes the two networks.
+TAKEAWAY: VRF = virtual routing table on one device; allows overlapping IPs and path isolation. VMs share hardware through a hypervisor; containers share the host OS kernel.
+
+[a021] type=ms pick=2 domain=2 obj=2.5.d (Interpret basic operations of Rapid PVST+ Spanning Tree Protocol — Root guard, loop guard, BPDU filter, and BPDU guard)
+Q: Access ports Fa0/1-24 on ACC-8 connect to classroom PCs. A port must start forwarding as soon as a PC connects, and must be error-disabled if a BPDU ever arrives on it, for example from a switch a student plugs in. Which two interface commands meet both requirements? (Choose two.)
+  * A. spanning-tree portfast
+        why: PortFast makes an access port an edge port that skips straight to forwarding when the link comes up.
+  * B. spanning-tree bpduguard enable
+        why: BPDU guard error-disables the port the moment any BPDU is received, which stops a rogue switch from joining the topology.
+    C. spanning-tree guard root
+        why: Root guard reacts only to superior BPDUs and puts the port in root-inconsistent (blocking) state. It does not err-disable the port and ignores inferior BPDUs.
+    D. spanning-tree bpdufilter enable
+        why: BPDU filter stops sending and processing BPDUs on the port. It would hide a loop instead of shutting the port.
+    E. spanning-tree guard loop
+        why: Loop guard protects non-designated ports from becoming designated when BPDUs stop arriving. It is for uplinks, not edge ports.
+    F. switchport nonegotiate
+        why: This disables DTP. It has no effect on STP or BPDUs.
+TAKEAWAY: Edge ports: PortFast + BPDU guard. Root guard on ports that should never lead to the root (from the distribution side). Loop guard on uplinks. BPDU filter only with care.
+
+[a022] type=mc domain=1 obj=1.2.b (Describe characteristics of network topology architectures — Three-tier)
+Q: Refer to the exhibit. Which design change best supports the planned growth?
+EXHIBIT:
+    Current campus (two-tier, collapsed core)
+      Core/distribution pair : CD-1, CD-2 (data center building)
+      Buildings B1-B3         : access switches dual-homed to CD-1/CD-2
+    
+    Planned growth (next three years)
+      Buildings B4-B12 added, each with its own distribution pair
+      (DIST-4A/4B ... DIST-12A/12B) feeding that building's
+      access switches
+  * A. Add a dedicated core layer that interconnects every building's distribution pair
+        why: With many distribution blocks, a separate core (three-tier) gives each building just two uplinks to the core and avoids a mesh between distribution pairs. It also keeps fast, simple transport in the middle.
+    B. Run a full mesh of links between all the distribution pairs
+        why: Ten-plus distribution pairs in a full mesh would need dozens of links and grow quadratically with every new building. This is the problem a core layer solves.
+    C. Trunk every new access switch directly to CD-1 and CD-2 and skip building distribution
+        why: That creates long Layer 2 paths and very large STP/broadcast domains across buildings, and runs out of ports on CD-1/CD-2.
+    D. Rebuild the campus as a spine-leaf fabric with every access switch connected to every spine
+        why: Spine-leaf suits data center east-west traffic between servers. Connecting every closet switch in twelve buildings to every spine is not practical for a campus.
+TAKEAWAY: Two-tier (collapsed core) fits small campuses. Add a core (three-tier) when there are many distribution blocks. Spine-leaf is the data center design.
+
+[a023] type=mc domain=2 obj=2.7 (Describe physical infrastructure connections of WLAN components (AP, WLC, access/trunk ports, and LAG))
+Q: WLC-1, an AireOS controller, has both distribution ports cabled to DIST-1 Gi1/0/23-24, and LAG is enabled on the controller. Which configuration must DIST-1 use on those two ports?
+  * A. An 802.1Q trunk bundled with channel-group 5 mode on
+        why: AireOS LAG does not run LACP or PAgP, so the switch side must be a static EtherChannel (mode on). The bundle is a trunk carrying the WLC's management and client VLANs.
+    B. An 802.1Q trunk bundled with channel-group 5 mode active
+        why: LACP active waits for LACP replies that an AireOS controller never sends, so the bundle does not form.
+    C. An 802.1Q trunk bundled with channel-group 5 mode desirable
+        why: Desirable starts PAgP, which the AireOS controller does not support either, so no bundle forms.
+    D. Two separate access ports in the management VLAN, with no EtherChannel
+        why: With LAG enabled, the WLC treats its ports as one logical link. It needs a bundle on the switch, and an access port would carry only one VLAN.
+TAKEAWAY: AireOS WLC LAG = static EtherChannel (mode on) trunk on the switch. Lightweight APs in local mode usually use access ports in the AP VLAN.
+
+[a024] type=mc domain=1 obj=1.6 (Configure and verify IPv4 addressing and subnetting)
+Q: Refer to the exhibit. Which address can be statically assigned to a lab PC in VLAN 20?
+EXHIBIT:
+    DIST-2# show running-config interface vlan 20
+    interface Vlan20
+     description Student labs
+     ip address 10.40.20.65 255.255.255.224
+    end
+  * A. 10.40.20.94
+        why: A /27 has a block size of 32: .0, .32, .64, .96. .65 is in 10.40.20.64/27, with hosts .65-.94 and broadcast .95. .94 is the last usable host.
+    B. 10.40.20.95
+        why: .95 is the broadcast address of 10.40.20.64/27 and cannot be assigned to a host.
+    C. 10.40.20.96
+        why: .96 is the network address of the next subnet, 10.40.20.96/27, so it is outside VLAN 20.
+    D. 10.40.20.62
+        why: .62 belongs to 10.40.20.32/27 (.33-.62), a different subnet from the SVI.
+TAKEAWAY: Block size = 256 - mask octet (256 - 224 = 32). Find the multiple of the block size at or below the address: that's the network. Next block minus 1 is the broadcast.
+
+[a025] type=mc domain=6 obj=6.3.b (Describe controller-based, software defined architecture (overlay, underlay, and fabric) — Northbound and Southbound APIs)
+Q: A Python script on an operations server requests device inventory and client-health scores from the campus SDN controller using REST calls over HTTPS. Which interface is the script using?
+  * A. The controller's northbound API
+        why: Northbound APIs face up from the controller toward applications, scripts and dashboards. REST over HTTPS is the usual form.
+    B. The controller's southbound API
+        why: Southbound APIs face down from the controller toward the network devices (NETCONF, RESTCONF, OpenFlow, SSH/CLI). The script is not a network device.
+    C. The data plane of the access switches
+        why: The data plane forwards user traffic on each device. The script talks to the controller, not through device forwarding logic.
+    D. The fabric underlay
+        why: The underlay is the routed physical network between fabric nodes. It is transport, not an API.
+TAKEAWAY: Northbound = apps to controller (usually REST). Southbound = controller to devices (NETCONF, RESTCONF, OpenFlow, CLI/SSH).
+
+[a026] type=mc domain=2 obj=2.8 (Describe network device management access (Telnet, SSH, HTTP, HTTPS, console, TACACS+/RADIUS, and cloud managed))
+Q: The campus wants switch administrators authenticated against a central server. Each command an administrator enters must be authorized separately, and the whole body of every AAA packet must be encrypted. Which protocol meets these requirements?
+  * A. TACACS+
+        why: TACACS+ (TCP 49) separates authentication, authorization and accounting, so it can authorize each command, and it encrypts the entire packet body. That makes it the usual choice for device administration.
+    B. RADIUS
+        why: RADIUS (UDP 1812/1813) combines authentication and authorization and encrypts only the password field. It is the usual choice for network access (802.1X, VPN), not per-command device administration.
+    C. Local usernames with login local on the vty lines
+        why: Local accounts live on each switch, so there is no central server and no per-command authorization.
+    D. SSH version 2
+        why: SSH encrypts the management session itself. It is a transport, not an AAA protocol, and does not authorize commands.
+TAKEAWAY: TACACS+: Cisco-developed, TCP 49, full-body encryption, separate AAA, per-command authorization (device admin). RADIUS: open standard, UDP 1812/1813, password-only encryption (network access).
+
+[a027] type=mc domain=1 obj=1.1.h (Explain the role and function of network components — PoE)
+Q: The new lecture-hall APs each need 25.5 W delivered at the AP to run every radio at full power. Which is the minimum PoE standard the access switch ports must support?
+  * A. IEEE 802.3at (PoE+)
+        why: 802.3at supplies up to 30 W at the switch port, which leaves 25.5 W at the powered device after cable loss: exactly what these APs need.
+    B. IEEE 802.3af (PoE)
+        why: 802.3af supplies 15.4 W at the port and about 12.95 W at the device. The AP would boot in a reduced-power mode or not at all.
+    C. IEEE 802.3bt (PoE++)
+        why: 802.3bt (60 W or 90 W at the port) would work, but it is more than needed. The question asks for the minimum standard.
+    D. IEEE 802.3ad
+        why: 802.3ad is the original link aggregation (LACP) standard. It has nothing to do with power.
+TAKEAWAY: PoE at the switch port / at the device: 802.3af 15.4 W / 12.95 W; 802.3at (PoE+) 30 W / 25.5 W; 802.3bt Type 3 60 W, Type 4 90 W.
+
+[a028] type=mc domain=2 obj=2.2.a (Configure and verify interswitch connectivity — Trunk ports)
+Q: Refer to the exhibit. ACC-6 Gi0/1 connects to DIST-2 Gi0/2. Neither port has been configured, and DIST-2 Gi0/2 shows the same switchport output. Which single change makes the link a trunk?
+EXHIBIT:
+    ACC-6# show interfaces gigabitEthernet0/1 switchport
+    Name: Gi0/1
+    Switchport: Enabled
+    Administrative Mode: dynamic auto
+    Operational Mode: static access
+    Administrative Trunking Encapsulation: dot1q
+    Operational Trunking Encapsulation: native
+    Negotiation of Trunking: On
+    Access Mode VLAN: 1 (default)
+    Trunking Native Mode VLAN: 1 (default)
+  * A. On DIST-2 Gi0/2, enter switchport mode trunk
+        why: Both ends are dynamic auto, which only responds to DTP and never asks, so the link stays access. A static trunk on one end sends DTP requests, and the dynamic auto end agrees to trunk.
+    B. On both ports, enter switchport nonegotiate
+        why: Nonegotiate turns off DTP and is rejected while the port is dynamic. Even on a static port it would only stop negotiation; it would not make the link a trunk.
+    C. On both ports, enter switchport trunk native vlan 99
+        why: This sets which VLAN would be untagged if the link were a trunk. It does not change the dynamic auto mode, so the link stays access.
+    D. On both ports, enter switchport trunk allowed vlan all
+        why: The allowed list only applies once a port is trunking. It does not change the administrative mode.
+TAKEAWAY: DTP: trunk + anything except access = trunk; desirable + desirable/auto = trunk; auto + auto = access. Best practice: static trunk plus switchport nonegotiate.
+
+[a029] type=mc domain=1 obj=1.8 (Configure and verify IPv6 addressing and prefix)
+Q: Refer to the exhibit. Which interface command produced the first global unicast address listed?
+EXHIBIT:
+    EDGE-R1# show ipv6 interface gigabitEthernet0/0
+    GigabitEthernet0/0 is up, line protocol is up
+      IPv6 is enabled, link-local address is FE80::201:42FF:FE00:101
+      No Virtual link-local address(es):
+      Global unicast address(es):
+        2001:DB8:ACAD:20:201:42FF:FE00:101, subnet is 2001:DB8:ACAD:20::/64 [EUI]
+        2001:DB8:ACAD:21::1, subnet is 2001:DB8:ACAD:21::/64
+      Joined group address(es):
+        FF02::1
+        FF02::2
+        FF02::1:FF00:1
+        FF02::1:FF00:101
+      MTU is 1500 bytes
+  * A. ipv6 address 2001:db8:acad:20::/64 eui-64
+        why: The [EUI] flag shows the router built the interface ID itself with modified EUI-64 from its MAC (0001.4200.0101 becomes 0201:42FF:FE00:0101). Only the eui-64 keyword produces that flag.
+    B. ipv6 address 2001:db8:acad:20:201:42ff:fe00:101/64
+        why: Typing the full address by hand gives the same address, but IOS lists it without the [EUI] flag, like the 2001:DB8:ACAD:21::1 entry.
+    C. ipv6 address fe80::201:42ff:fe00:101 link-local
+        why: This sets the link-local address, shown on the 'link-local address is' line. It does not create a global unicast address.
+    D. ipv6 enable
+        why: ipv6 enable creates only an automatic link-local address. It never adds a 2001:DB8 global unicast address.
+TAKEAWAY: show ipv6 interface flags: [EUI] = modified EUI-64 interface ID; no flag = manual. Every IPv6 interface joins FF02::1, routers join FF02::2, plus a solicited-node group FF02::1:FFxx:xxxx per address.
+
+[a030] type=mc domain=2 obj=2.1.c (Configure and verify VLANs (normal range) spanning multiple switches — InterVLAN connectivity)
+Q: Refer to the exhibit. Students on ACC-2 in VLAN 20 cannot ping their gateway, 10.40.20.1. ACC-2 has VLAN 20 with ports assigned, and its uplink trunks to DIST-1 Gi1/0/1 with all VLANs allowed. Which action fixes the problem?
+EXHIBIT:
+    DIST-1# show ip interface brief | include Vlan
+    Vlan1                  unassigned      YES unset  administratively down down
+    Vlan10                 10.40.10.1      YES manual up                    up
+    Vlan20                 10.40.20.1      YES manual up                    down
+    
+    DIST-1# show vlan brief
+    VLAN Name                             Status    Ports
+    ---- -------------------------------- --------- -----------------
+    1    default                          active    Gi1/0/2, Gi1/0/3
+    10   VLAN0010                         active
+    1002 fddi-default                     act/unsup
+    1003 token-ring-default               act/unsup
+    1004 fddinet-default                  act/unsup
+    1005 trnet-default                    act/unsup
+  * A. Create VLAN 20 on DIST-1 with the vlan 20 command
+        why: An SVI is up/up only if its VLAN exists on the switch and at least one port carrying it is forwarding. VLAN 20 is missing from DIST-1's VLAN database, so Vlan20 is up/down.
+    B. Enter no shutdown under interface vlan 20 on DIST-1
+        why: Status is already 'up', so the SVI is not administratively down. The down line protocol comes from the missing VLAN.
+    C. Enter ip routing on DIST-1
+        why: Routing between VLANs needs ip routing, but even without it the SVI would be up/up and the students could ping their gateway. VLAN 10 works fine here.
+    D. Add VLAN 20 to the allowed list on DIST-1 Gi1/0/1
+        why: The stem says the trunk allows all VLANs. Even so, a trunk does not carry a VLAN that does not exist on the switch.
+TAKEAWAY: SVI up/down checklist: VLAN exists locally, an access or trunk port in that VLAN is up and forwarding, and the SVI is not shut down.
+
+[a031] type=mc domain=6 obj=6.4 (Explain AI (generative and predictive) and machine learning in network operations)
+Q: The campus operations team is reviewing AI tools. Which use is an example of predictive AI rather than generative AI?
+  * A. A model trained on months of optic temperature and error telemetry flags transceivers likely to fail within two weeks
+        why: Predictive AI and ML learn patterns from historical data to forecast an outcome or spot an anomaly, here a future hardware failure, so it can be fixed before users notice.
+    B. An assistant drafts a VLAN and trunk configuration from a plain-language request
+        why: Producing new content such as config text from a prompt is generative AI. Its output still needs review before it is pushed.
+    C. A chatbot writes a prose summary of last night's syslog messages
+        why: Writing a new natural-language summary is a generative task, even though it reads operational data.
+    D. A script pushes the same NTP configuration to every switch each night
+        why: That is rule-based automation. It applies a fixed template and involves no learning or prediction.
+TAKEAWAY: Predictive AI/ML: forecasts and anomaly detection from historical telemetry (capacity, failures, baselines). Generative AI: creates new content (config drafts, summaries, chat answers).
+
+[a032] type=mc domain=1 obj=1.3.a (Compare physical interface and cabling types — Single-mode fiber, multimode fiber, copper)
+Q: A new athletics complex will connect to CORE-1 with a 10-Gb/s uplink. The cable run between the buildings is about 6 km. Which media should be installed?
+  * A. Single-mode fiber with 10GBASE-LR optics
+        why: Single-mode fiber has a narrow core and laser optics, so it reaches kilometers. 10GBASE-LR is specified to 10 km, which covers the 6 km run.
+    B. OM4 multimode fiber with 10GBASE-SR optics
+        why: Multimode fiber's wider core causes modal dispersion. 10GBASE-SR on OM4 reaches only about 400 m.
+    C. Category 6A UTP copper
+        why: 10GBASE-T over Cat6A is limited to 100 m, far short of 6 km, and copper between buildings also raises grounding and lightning issues.
+    D. Category 8 copper
+        why: Cat8 supports 25/40 Gb/s but only to about 30 m. It is meant for data center top-of-rack links.
+TAKEAWAY: Copper Ethernet: 100 m. Multimode fiber (LED/VCSEL, larger core): hundreds of meters, cheaper optics. Single-mode fiber (laser, ~9-micron core): kilometers.
+
+[a033] type=mc domain=2 obj=2.5.a (Interpret basic operations of Rapid PVST+ Spanning Tree Protocol — Root port, root bridge (primary/secondary), and other port names)
+Q: Refer to the exhibit. The design calls for DIST-1 to be root for VLAN 20, yet VLAN 20 traffic to the data center takes an odd path. Each switch's VLAN 20 bridge ID is shown. Which switch is actually the root bridge for VLAN 20?
+EXHIBIT:
+    VLAN 20 bridge IDs (from show spanning-tree vlan 20)
+    
+    Switch  Bridge ID Priority                         Address
+    ------  -----------------------------------------  --------------
+    DIST-1  24596  (priority 24576 sys-id-ext 20)      0001.4200.0100
+    DIST-2  28692  (priority 28672 sys-id-ext 20)      0001.4200.0200
+    ACC-4    4116  (priority 4096 sys-id-ext 20)       0001.4200.0400
+    ACC-5   32788  (priority 32768 sys-id-ext 20)      0001.4200.0050
+  * A. ACC-4
+        why: The lowest bridge ID wins, and priority is compared first. ACC-4's 4116 (4096 + VLAN 20) beats every other switch, so the MAC addresses never come into play. Someone set priority 4096 on an access switch.
+    B. ACC-5
+        why: ACC-5 has the lowest MAC address, but MAC is only a tie-breaker when priorities are equal. Its priority, 32788, is the highest here.
+    C. DIST-1
+        why: DIST-1 is the intended root, and 24596 beats DIST-2 and ACC-5, but it loses to ACC-4's 4116.
+    D. DIST-2
+        why: DIST-2's 28692 is lower than ACC-5's but higher than both DIST-1's and ACC-4's.
+TAKEAWAY: Root bridge = lowest bridge ID: priority (multiple of 4096) + VLAN ID (sys-id-ext), then lowest MAC. Use spanning-tree vlan X root primary on the switch that should be root, and root guard toward access switches.
+
+[a034] type=mc domain=1 obj=1.13.a (Describe switching concepts — MAC learning and aging)
+Q: A legacy UDP label printer on ACC-7 Fa0/18 (VLAN 40) receives jobs but sends almost nothing; its last frame was its DHCP request at boot. A capture on another VLAN 40 port shows copies of the print jobs arriving there, starting about five minutes after the printer last sent a frame. What explains this?
+  * A. The printer's dynamic MAC entry aged out after the default 300 seconds, so frames to it are flooded as unknown unicast
+        why: A switch refreshes a dynamic entry only when the MAC appears as a source. With no frames from the printer for 300 seconds, the entry ages out and every frame to it is flooded in VLAN 40.
+    B. Port security on Fa0/18 is in restrict mode and copies frames to other ports
+        why: Restrict mode drops frames from violating source MACs and logs them. It never copies traffic to other ports.
+    C. A static MAC entry for the printer forces the switch to flood its frames
+        why: A static entry never ages out and makes the switch forward to exactly one port, the opposite of what was seen.
+    D. The trunk to DIST-1 does not allow VLAN 40, so ACC-7 floods the frames
+        why: Trunk allowed lists do not cause local flooding. The flooding starts on a timer, which points to MAC aging.
+TAKEAWAY: MAC learning uses the source address; the default aging time on Catalyst switches is 300 seconds. A silent host ages out and its traffic is flooded until it transmits again.
+
+[a035] type=mc domain=6 obj=6.5 (Describe characteristics of REST-based APIs (authentication types, CRUD, HTTP verbs, and data encoding))
+Q: Refer to the exhibit. An engineer tests the campus controller's REST API from a jump host. What should the engineer do next?
+EXHIBIT:
+    $ curl -i https://10.40.100.50/api/v1/network-device
+    HTTP/1.1 401 Unauthorized
+    Content-Type: application/json
+    
+    {"error": "missing or invalid token"}
+  * A. Authenticate to obtain a token, then resend the GET with the token in the request header
+        why: 401 means the request lacked valid credentials. Many controller APIs issue a token from an authentication call; later calls carry it in a header such as X-Auth-Token or Authorization: Bearer.
+    B. Change the method from GET to POST
+        why: Using the wrong method on a resource returns 405 Method Not Allowed. The body here clearly complains about the token.
+    C. Correct the URI, because the resource does not exist
+        why: A missing resource returns 404 Not Found. The server recognized the path and asked for credentials.
+    D. Wait for the controller to recover from an internal error
+        why: Server faults are 5xx codes such as 500 Internal Server Error. 4xx codes mean the client must fix its request.
+TAKEAWAY: HTTP codes: 200 OK, 201 Created, 204 No Content, 400 Bad Request, 401 Unauthorized (no/invalid auth), 403 Forbidden (authenticated but not allowed), 404 Not Found, 500 Internal Server Error.
+
+[a036] type=order domain=2 obj=2.5.a (Interpret basic operations of Rapid PVST+ Spanning Tree Protocol — Root port, root bridge (primary/secondary), and other port names)
+Q: Drag the steps into the order Rapid PVST+ follows to build a loop-free topology for VLAN 10 across the campus switches.
+POOL:
+  [0] Each non-root switch selects one root port: its lowest-cost path to the root
+  [1] All switches elect the root bridge: the lowest bridge ID
+  [2] On each link, the port with the best path to the root becomes the designated port
+  [3] Every remaining port becomes an alternate or backup port and discards
+KEY (full order): [1] -> [0] -> [2] -> [3]
+why: Nothing can be measured until a root exists, so the root bridge is elected first. Each non-root switch then picks its root port by lowest root path cost (then neighbor bridge ID, then port ID). Each segment then gets one designated port, and the ports left over become alternate (or backup) and discard.
+TAKEAWAY: Root bridge, then root ports, then designated ports, then alternate/backup. Root bridge ports are all designated.
+
+[a037] type=ms pick=3 domain=1 obj=1.9 (Describe IPv6 address types)
+Q: Refer to the exhibit. A Linux workstation in the staff VLAN shows these IPv6 addresses. Which three statements are true? (Choose three.)
+EXHIBIT:
+    $ ip -6 addr show dev ens33
+    2: ens33: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 state UP qlen 1000
+        inet6 2001:db8:acad:10:5054:ff:fe3a:91c2/64 scope global dynamic
+           valid_lft 2591932sec preferred_lft 604732sec
+        inet6 fd4a:91c7:2e10:10::25/64 scope global
+           valid_lft forever preferred_lft forever
+        inet6 fe80::5054:ff:fe3a:91c2/64 scope link
+           valid_lft forever preferred_lft forever
+  * A. fd4a:91c7:2e10:10::25 is a unique local address: routable inside the campus but not on the internet
+        why: FD00::/8 is the locally assigned half of the ULA range FC00::/7. ULAs are like RFC 1918 space: usable inside an organization, never routed on the internet.
+  * B. fe80::5054:ff:fe3a:91c2 is a link-local address valid only on the segment attached to ens33
+        why: FE80::/10 addresses (scope link) are created automatically on every IPv6 interface and are never forwarded by routers.
+  * C. The interface ID 5054:ff:fe3a:91c2 was built with modified EUI-64 from MAC 52:54:00:3a:91:c2
+        why: Take MAC 52:54:00 | 3a:91:c2, insert ff:fe, then flip bit 7 of the first byte: 0x52 (0101 0010) becomes 0x50. Result: 5054:00ff:fe3a:91c2.
+    D. The interface ID 5054:ff:fe3a:91c2 was built from MAC 50:54:00:3a:91:c2
+        why: This forgets the bit flip. In the interface ID the first byte is 0x50, so the original MAC byte was 0x52.
+    E. The fe80:: address can be used as the source to reach servers in other VLANs
+        why: Routers never forward packets with a link-local source or destination off the link. Off-link traffic uses a global or unique local address.
+    F. The fd4a: address was also built with modified EUI-64
+        why: Its interface ID is ::25, which has no FF:FE in the middle. It was set manually or by a DHCPv6 server.
+TAKEAWAY: IPv6 types: global unicast 2000::/3, ULA FC00::/7 (FD00::/8 in use), link-local FE80::/10, multicast FF00::/8. Spot EUI-64 by the FF:FE in the middle of the interface ID.
+
+[a038] type=mc domain=2 obj=2.1.b (Configure and verify VLANs (normal range) spanning multiple switches — Default VLAN)
+Q: Every unused port on ACC-7 is still in VLAN 1. A technician enters no vlan 1 in global configuration to keep users from landing in the default VLAN. What is the result?
+  * A. IOS rejects the command; VLAN 1 cannot be deleted, so unused ports should be moved to an unused VLAN and shut down
+        why: VLAN 1 is the default VLAN and cannot be deleted or renamed. The standard practice is to assign unused ports to a parking VLAN and shut them down.
+    B. VLAN 1 is deleted and its ports move to VLAN 1002
+        why: VLAN 1 can never be deleted. VLANs 1002-1005 are also reserved legacy VLANs and are never used for Ethernet ports.
+    C. VLAN 1 is deleted and its ports become inactive until reassigned
+        why: That is what happens when you delete a normal VLAN, such as VLAN 40, that has ports in it. VLAN 1 itself cannot be removed.
+    D. VLAN 1 is deleted and CDP and DTP move to the native VLAN
+        why: The deletion never happens: VLAN 1 stays in the VLAN database whatever native VLAN the trunks use.
+TAKEAWAY: VLAN 1: the default for every port, cannot be deleted or renamed. Harden by moving unused ports to an unused VLAN, shutting them, and using a non-1 native VLAN.
+
+[a039] type=mc domain=1 obj=1.1.c (Explain the role and function of network components — Next-generation firewalls and IPS)
+Q: The campus edge must block a peer-to-peer file-sharing application even when it tunnels over TCP 443, apply rules per user directory group, and block exploit traffic inline. Which device meets all three requirements?
+  * A. A next-generation firewall
+        why: An NGFW identifies applications regardless of port (application visibility and control), maps traffic to users and groups, and includes an inline IPS that drops exploits.
+    B. A stateful firewall with port-based rules
+        why: A classic stateful firewall tracks sessions by addresses and ports. It sees TCP 443 and cannot tell the file-sharing app from normal HTTPS.
+    C. A Layer 3 switch with extended ACLs
+        why: Extended ACLs match addresses, protocols and ports. They have no application identification, user awareness or exploit signatures.
+    D. An IDS connected to a SPAN port
+        why: An IDS on a SPAN port only sees copies of the traffic. It can alert but cannot block inline, and it does not enforce per-group policy.
+TAKEAWAY: NGFW = stateful firewall + application awareness + user identity + integrated IPS (+ URL filtering, malware protection). IDS alerts out-of-band; IPS sits inline and drops.
+
+[a040] type=mc domain=6 obj=6.1 (Explain how automation impacts network management)
+Q: Each semester the campus team adds a new VLAN to all 120 access switches by hand, and an audit found a dozen switches with typos or missing lines. The team now pushes the change from one template using an automation tool. What is the main operational benefit?
+  * A. Every switch receives the same validated configuration, which reduces configuration drift and human error
+        why: Automation applies one tested template everywhere, and can verify the result. That consistency cuts the typo-driven drift the audit found and speeds up the change.
+    B. Engineers no longer need to understand VLANs or trunking
+        why: Automation encodes what engineers already know; someone still has to design, review and troubleshoot the template.
+    C. Change control and maintenance windows are no longer needed
+        why: Automated changes still reach production. A bad template can break all 120 switches at once, so review and change control matter more.
+    D. The switches stop needing a control plane
+        why: Pushing configuration does not change how switches run STP, learn MACs or build forwarding tables.
+TAKEAWAY: Automation brings consistency, speed, scale and fewer manual errors. It also scales mistakes, so templates need testing and change control.
+
+[a041] type=mc domain=2 obj=2.9 (Interpret the wireless LAN GUI configuration for client connectivity, such as WLAN creation, security settings, QoS profiles, and advanced settings)
+Q: Refer to the exhibit. Staff laptops associate and authenticate to SSID Staff, but they get addresses in 10.40.100.0/24 instead of the staff subnet. Which change fixes this?
+EXHIBIT:
+    WLANs > Edit 'STAFF-WIFI'  (WLAN ID 2)
+      General tab
+        Profile Name                 : STAFF-WIFI
+        Type                         : WLAN
+        SSID                         : Staff
+        Status                       : [x] Enabled
+        Security Policies            : [WPA2][Auth(802.1X)]
+        Radio Policy                 : All
+        Interface/Interface Group(G) : management
+        Broadcast SSID               : [x] Enabled
+    
+    Controller > Interfaces
+        Interface Name   VLAN Identifier   IP Address
+        management       100               10.40.100.5
+        staff            10                10.40.10.5
+        student          20                10.40.20.5
+  * A. On the General tab, set Interface/Interface Group(G) to staff
+        why: The WLAN's interface decides which VLAN client traffic is bridged onto at the WLC. It points at management (VLAN 100), so clients get addresses there. Mapping it to staff puts them in VLAN 10.
+    B. On the Security tab, change Layer 2 security to WPA2 PSK
+        why: Authentication already works. The security method does not decide which VLAN or subnet the clients join.
+    C. Set Radio Policy to 802.11a only
+        why: Radio Policy limits which bands or PHY types can join. It has no effect on the client VLAN.
+    D. Clear Broadcast SSID
+        why: Hiding the SSID only removes it from beacons. Clients that connect still land in the management VLAN.
+TAKEAWAY: WLC WLAN General tab: Profile Name, SSID, Status, Security Policies summary, Radio Policy, Interface/Interface Group = the VLAN clients are placed in. Security tab = L2/L3/AAA; QoS tab = Platinum/Gold/Silver/Bronze.
+
+[a042] type=ms pick=2 domain=1 obj=1.6 (Configure and verify IPv4 addressing and subnetting)
+Q: The large guest Wi-Fi DHCP pool gave one guest 10.40.33.200/21. Which two addresses can be assigned to other hosts in the same subnet? (Choose two.)
+  * A. 10.40.39.254
+        why: A /21 has a block size of 8 in the third octet: 32, 40, 48. 33 falls in 10.40.32.0/21, which covers 10.40.32.0-10.40.39.255. .39.254 is the last usable host.
+  * B. 10.40.32.1
+        why: 10.40.32.0 is the network address, so 10.40.32.1 is the first usable host of 10.40.32.0/21.
+    C. 10.40.39.255
+        why: This is the broadcast address of 10.40.32.0/21. It is in the subnet but cannot be assigned to a host.
+    D. 10.40.40.1
+        why: 10.40.40.0 starts the next /21 block (40-47), so this host is in a different subnet.
+    E. 10.40.31.250
+        why: Third octet 31 belongs to the previous block, 10.40.24.0/21 (24-31).
+TAKEAWAY: /21 = 255.255.248.0, block size 8 in the third octet. Network = largest multiple of 8 at or below the octet; broadcast = next block minus 1.
+
+[a043] type=mc domain=2 obj=2.2.b (Configure and verify interswitch connectivity — 802.1Q)
+Q: Trunk Gi1/0/3 on DIST-1 is configured with switchport trunk native vlan 99 and switchport trunk allowed vlan 10,20,30,99. No other VLAN-related global commands are configured. How does DIST-1 send frames from VLAN 99 and from VLAN 30 on this trunk?
+  * A. VLAN 99 frames go untagged; VLAN 30 frames carry a 4-byte 802.1Q tag with VLAN ID 30
+        why: 802.1Q inserts a 4-byte tag (TPID 0x8100 plus a 12-bit VLAN ID) into every frame except those in the native VLAN, which cross untagged.
+    B. Both carry an 802.1Q tag, with VLAN IDs 99 and 30
+        why: Native VLAN traffic is untagged by default. Tagging the native VLAN needs the global vlan dot1q tag native command, which the stem rules out.
+    C. VLAN 99 frames go untagged; VLAN 30 frames are encapsulated in a 26-byte ISL header
+        why: ISL is a legacy Cisco trunking method that encapsulates the whole frame. A trunk uses one encapsulation, and these trunks are 802.1Q.
+    D. VLAN 99 frames are dropped, because the native VLAN must be VLAN 1
+        why: Any VLAN can be the native VLAN; using an unused, non-1 VLAN is common practice. It only has to match on both ends.
+TAKEAWAY: 802.1Q: 4-byte tag (TPID 0x8100, 3-bit PCP, 1-bit DEI, 12-bit VID) inserted after the source MAC. Native VLAN untagged; must match on both ends.
+
+[a044] type=order domain=6 obj=6.6 (Recognize the capabilities of configuration management mechanisms such as Ansible and Terraform)
+Q: The team will manage the campus's cloud-hosted controller VMs and their virtual networks with Terraform. Drag the steps into the order used to make the first change.
+POOL:
+  [0] Run terraform plan to preview the changes against the current state
+  [1] Write the desired resources in .tf files using HCL
+  [2] Run terraform apply to make the changes and record them in the state file
+  [3] Run terraform init to download the required providers
+KEY (full order): [1] -> [3] -> [0] -> [2]
+why: Terraform first needs configuration files to read, since init discovers which providers the .tf files use and downloads them. Plan then compares the desired state with the state file and real infrastructure and shows what will change. Apply carries out that plan and updates the state file.
+TAKEAWAY: Terraform: declarative IaC in HCL, providers, state file, workflow write, init, plan, apply. Ansible: procedural-style YAML playbooks pushed agentless over SSH.
+
+[a045] type=order domain=1 obj=1.5 (Compare TCP to UDP)
+Q: A staff PC opens a new TCP session to the intranet web server, requests a page and closes the session. Drag the events into the order in which they occur.
+POOL:
+  [0] Client sends ACK
+  [1] Client sends SYN
+  [2] Client sends HTTP GET in a data segment
+  [3] Server replies SYN-ACK
+  [4] Client sends FIN after the transfer completes
+KEY (full order): [1] -> [3] -> [0] -> [2] -> [4]
+why: TCP sets up the session with the three-way handshake: SYN from the client, SYN-ACK from the server, ACK from the client. Only then does application data such as the HTTP GET flow. When the exchange is over, a FIN starts the graceful close.
+TAKEAWAY: TCP open: SYN, SYN-ACK, ACK. TCP close: FIN, ACK in each direction (four segments). UDP has neither.
+
+[a046] type=build ordered=true domain=2 obj=2.8 (Describe network device management access (Telnet, SSH, HTTP, HTTPS, console, TACACS+/RADIUS, and cloud managed))
+Q: ACC-2 already has a hostname, a domain name and RSA keys. It must accept remote management only over SSH, authenticating against a local account. Create the account first, then configure all 16 vty lines. Drag the commands you need into the answer area in the order you enter them. Leave the commands that do not apply.
+POOL:
+  [0] username netadmin privilege 15 secret C4mpus-Adm1n
+  [1] line vty 0 15
+  [2] login local
+  [3] transport input ssh
+  [4] transport input telnet ssh
+  [5] login
+  [6] password C4mpus-Adm1n
+KEY (ordered subset): [0] -> [1] -> [2] -> [3]
+ALSO ACCEPTED: [0] -> [1] -> [3] -> [2]
+why: The local account must exist (username ... secret). Under line vty 0 15, login local checks the local user database and transport input ssh refuses Telnet. Those two lines can be entered in either order. Plain login with a line password ignores usernames, and telnet ssh would still allow cleartext Telnet.
+TAKEAWAY: SSH-only vty: hostname, ip domain-name, crypto key generate rsa (768+ bits for v2), username/secret, line vty 0 15, login local, transport input ssh. Optionally ip ssh version 2.
+
+[a047] type=ms pick=2 domain=1 obj=1.11.c (Describe wireless principles — RF)
+Q: The wireless team is moving lecture-hall clients from 2.4 GHz to 5 GHz. Which two statements about 5 GHz compared with 2.4 GHz are correct? (Choose two.)
+  * A. It offers many more nonoverlapping 20-MHz channels, which eases channel planning in dense rooms
+        why: 5 GHz has around two dozen nonoverlapping 20-MHz channels (depending on regulatory domain), against three in 2.4 GHz, so neighboring APs rarely have to share a channel.
+  * B. Its signal weakens more over distance and through walls, so more APs are usually needed for the same coverage
+        why: Higher frequencies lose more energy over free space and through obstacles. 5-GHz cells are smaller, which suits dense halls but needs more APs.
+    C. It travels farther at the same transmit power, so fewer APs are needed
+        why: The reverse is true: 2.4 GHz reaches farther. That is one reason it suffers more co-channel interference.
+    D. It shares its band with microwave ovens and Bluetooth, so interference is worse
+        why: Microwave ovens and Bluetooth sit in 2.4 GHz. Moving to 5 GHz avoids them.
+    E. It offers only three nonoverlapping channels in North America
+        why: Three nonoverlapping channels (1, 6, 11) is the 2.4-GHz limit, not 5 GHz.
+TAKEAWAY: 2.4 GHz: longer range, 3 nonoverlapping channels, crowded (802.11b/g/n/ax). 5 GHz: shorter range, many channels, cleaner (802.11a/n/ac/ax). 6 GHz: Wi-Fi 6E/7.
+
+[a048] type=ms pick=2 domain=2 obj=2.3 (Configure and verify Layer 2 discovery protocols (Cisco Discovery Protocol and LLDP))
+Q: Refer to the exhibit. Third-party IP phones and APs were installed on ACC-4. Which two statements about the output are true? (Choose two.)
+EXHIBIT:
+    ACC-4# show lldp neighbors
+    Capability codes:
+        (R) Router, (B) Bridge, (T) Telephone, (C) DOCSIS Cable Device
+        (W) WLAN Access Point, (P) Repeater, (S) Station, (O) Other
+    
+    Device ID           Local Intf     Hold-time  Capability      Port ID
+    DIST-1              Gi0/1          120        B,R             Gi1/0/4
+    phone-2-114         Fa0/9          180        B,T             0012.ab34.cd56
+    ap-lib-2f           Fa0/24         120        B,W             eth0
+    
+    Total entries displayed: 3
+  * A. ACC-4 Gi0/1 connects to port Gi1/0/4 on DIST-1
+        why: Local Intf is ACC-4's own port and Port ID is the neighbor's port, so Gi0/1 on ACC-4 leads to Gi1/0/4 on DIST-1.
+  * B. The device on Fa0/24 advertises WLAN access point capability
+        why: Its capability list is B,W, and the legend maps W to WLAN Access Point.
+    C. LLDP is disabled globally on ACC-4 but enabled on these three interfaces
+        why: On IOS, LLDP runs only after the global lldp run command. Per-interface transmit/receive does nothing while it is off globally, so neighbors would not appear.
+    D. The phone on Fa0/9 must be a Cisco phone, because only Cisco devices send LLDP
+        why: LLDP is the IEEE 802.1AB open standard, which is why third-party phones and APs appear. CDP is the Cisco-proprietary protocol.
+    E. This output shows each neighbor's management IP address
+        why: The summary has no address column. show lldp neighbors detail (or show lldp entry) shows the management address.
+    F. The phone's entry is removed if no LLDP frame arrives within 30 seconds
+        why: The entry expires when its hold-time runs out, 180 seconds as advertised by this phone. 30 seconds is the default LLDP transmit interval, not the hold time.
+TAKEAWAY: LLDP: IEEE 802.1AB, off by default on IOS (lldp run), timer 30 s, holdtime 120 s. CDP: Cisco, on by default, timer 60 s, holdtime 180 s. Both are Layer 2 and not routed.
+
+[a049] type=build ordered=false domain=6 obj=6.6 (Recognize the capabilities of configuration management mechanisms such as Ansible and Terraform)
+Q: The campus team chose Ansible to push VLAN and NTP changes to its switches. Drag the characteristics of Ansible into the answer area. Leave the characteristics that do not apply.
+POOL:
+  [0] Agentless: managed switches need no installed agent
+  [1] Pushes changes from a control node, typically over SSH
+  [2] Playbooks are written in YAML
+  [3] An inventory file lists the managed hosts and groups
+  [4] Keeps a state file and compares it with real infrastructure before applying
+  [5] Configuration is written in HCL
+  [6] An agent on each device pulls its configuration from a central server
+KEY (unordered subset): [0] + [1] + [2] + [3]
+why: Ansible runs from a control node, connects to devices over SSH (or an API), and pushes tasks defined in YAML playbooks to the hosts listed in its inventory, with no agent on the switches. HCL and a state file belong to Terraform. Agent-based pull is the classic Puppet/Chef model.
+TAKEAWAY: Ansible: agentless, push, SSH, YAML playbooks, inventory. Terraform: HCL, providers, state file, plan/apply. Puppet/Chef: agent-based pull (v1.0 era).
+
+[a050] type=ms pick=2 domain=2 obj=2.7 (Describe physical infrastructure connections of WLAN components (AP, WLC, access/trunk ports, and LAG))
+Q: Campus lightweight APs run in local mode and tunnel all client traffic in CAPWAP to WLC-1, which connects to DIST-1. The WLC maps the staff, student and voice WLANs to VLANs 10, 20 and 30. Which two switch port configurations are correct? (Choose two.)
+  * A. Each AP's switch port is an access port in the AP management VLAN
+        why: In local mode, client traffic stays inside the CAPWAP tunnel to the WLC, so the AP needs only one untagged VLAN for its own address.
+  * B. The WLC-facing ports are 802.1Q trunks carrying VLANs 10, 20 and 30 and the WLC management VLAN
+        why: The WLC removes client frames from CAPWAP and bridges them onto each WLAN's VLAN, so its uplink must be a trunk carrying all of them.
+    C. Each AP's switch port is a trunk carrying VLANs 10, 20 and 30
+        why: An AP trunk is needed only when the AP switches client traffic locally, as with FlexConnect local switching. Local-mode APs send it all to the WLC.
+    D. The WLC-facing ports are routed ports with no switchport and a single IP address
+        why: A routed port carries no VLANs, so the WLC could not place clients into VLANs 10, 20 and 30.
+    E. Each AP's switch port is an access port in VLAN 10 so staff clients get staff addresses
+        why: The AP's VLAN has no effect on client VLANs in local mode. The WLAN-to-interface mapping on the WLC places the clients.
+TAKEAWAY: Local mode AP: access port (AP VLAN), CAPWAP to WLC. FlexConnect with local switching: trunk port. WLC: trunk (often LAG) carrying management + client VLANs.
+
+[a051] type=mc domain=3 obj=3.4.c (Configure and verify single area OSPFv2 — Broadcast (DR/BDR selection))
+Q: Refer to the exhibit. EDGE-1, DIST-1, DIST-2 and CORE-1 share the core transit segment 10.40.250.0/24. A junior engineer opens a ticket because EDGE-1 has shown CORE-1 in the 2WAY state for over an hour. What should the senior engineer reply?
+EXHIBIT:
+    EDGE-1# show ip ospf neighbor
+    
+    Neighbor ID     Pri   State           Dead Time   Address         Interface
+    10.40.255.2     200   FULL/DR         00:00:32    10.40.250.2     GigabitEthernet0/0
+    10.40.255.3     150   FULL/BDR        00:00:32    10.40.250.3     GigabitEthernet0/0
+    10.40.255.4       0   2WAY/DROTHER    00:00:32    10.40.250.4     GigabitEthernet0/0
+  * A. This is normal: two DROTHERs stop at 2WAY and synchronize their databases only with the DR and BDR
+        why: On a broadcast segment every router forms a FULL adjacency only with the DR and the BDR. EDGE-1 (priority 1) and CORE-1 (priority 0) are both DROTHERs, so 2WAY between them is the expected steady state; CORE-1's routes still reach EDGE-1 through the DR.
+    B. CORE-1's priority of 0 blocks the adjacency; set it to 1 on CORE-1
+        why: Priority 0 only makes CORE-1 ineligible for DR or BDR. At priority 1 it would still be a DROTHER (the DR and BDR are already elected and are not preempted), so the pair would still rest at 2WAY.
+    C. The hello and dead timers on EDGE-1 and CORE-1 do not match
+        why: With mismatched timers each router discards the other's hellos, so CORE-1 would not appear in the table at all. Reaching 2WAY proves the hellos are accepted in both directions.
+    D. EDGE-1 and CORE-1 are using the same OSPF router ID
+        why: The table lists CORE-1 as 10.40.255.4, which differs from EDGE-1's own ID. A duplicate router ID logs %OSPF-4-DUP_RTRID_NBR and breaks the adjacency; it does not produce a stable 2WAY.
+TAKEAWAY: Broadcast segment: DROTHER to DROTHER = 2WAY (healthy). FULL only with the DR and BDR. A neighbor stuck in INIT, EXSTART or EXCHANGE is a fault; 2WAY between DROTHERs is not.
+
+[a052] type=mc domain=3 obj=3.2.a (Determine how a router makes a forwarding decision by default — Longest prefix match)
+Q: Refer to the exhibit. The static summary toward CORE-1 was left on EDGE-1 after the campus migrated to OSPF. EDGE-1 receives a packet destined to the print server 10.40.60.200. Which next hop does EDGE-1 use?
+EXHIBIT:
+    EDGE-1# show ip route
+    Codes: L - local, C - connected, S - static, O - OSPF
+           * - candidate default
+    
+    Gateway of last resort is 203.0.113.1 to network 0.0.0.0
+    
+    S*    0.0.0.0/0 [1/0] via 203.0.113.1
+          10.0.0.0/8 is variably subnetted, 7 subnets, 4 masks
+    S        10.40.0.0/16 [1/0] via 10.40.250.4
+    O        10.40.40.0/24 [110/2] via 10.40.250.2, 00:12:34, GigabitEthernet0/0
+                           [110/2] via 10.40.250.3, 00:12:34, GigabitEthernet0/0
+    O        10.40.50.0/24 [110/2] via 10.40.250.4, 00:12:34, GigabitEthernet0/0
+    O        10.40.60.0/25 [110/2] via 10.40.250.2, 00:12:34, GigabitEthernet0/0
+    O        10.40.60.128/25 [110/2] via 10.40.250.3, 00:12:34, GigabitEthernet0/0
+    C        10.40.250.0/24 is directly connected, GigabitEthernet0/0
+    L        10.40.250.1/32 is directly connected, GigabitEthernet0/0
+          203.0.113.0/24 is variably subnetted, 2 subnets, 2 masks
+    C        203.0.113.0/30 is directly connected, GigabitEthernet0/1
+    L        203.0.113.2/32 is directly connected, GigabitEthernet0/1
+  * A. 10.40.250.3
+        why: 10.40.60.128/25 covers .128 to .255, so it contains .200. It is the longest (most specific) matching prefix, so its next hop, 10.40.250.3 (DIST-2), is used.
+    B. 10.40.250.4
+        why: The static 10.40.0.0/16 also matches, but only with 16 bits. Its AD of 1 never competes with the /25: AD only breaks ties between routes to the same prefix and length.
+    C. 10.40.250.2
+        why: 10.40.60.0/25 covers only 10.40.60.0 to .127. Address .200 falls in the other half of the /24, the 10.40.60.128/25 subnet.
+    D. 203.0.113.1
+        why: The default route is used only when nothing more specific matches. Here a /16 and a /25 both match, so the /0 is never consulted.
+TAKEAWAY: Longest prefix match first. Administrative distance and metric only choose between candidates for the exact same prefix and mask.
+
+[a053] type=mc domain=4 obj=4.5 (Describe the use of syslog features, including facilities and severity levels)
+Q: Refer to the exhibit. DIST-2 has logging host 10.40.50.30 and logging trap warnings configured. It generates the four messages shown, in this order. Which messages does the NOC syslog server receive?
+EXHIBIT:
+    *Oct  3 08:14:02: %LINK-3-UPDOWN: Interface GigabitEthernet0/0,
+      changed state to down
+    *Oct  3 08:14:03: %LINEPROTO-5-UPDOWN: Line protocol on Interface
+      GigabitEthernet0/0, changed state to down
+    *Oct  3 08:14:03: %OSPF-5-ADJCHG: Process 1, Nbr 10.40.255.2 on
+      GigabitEthernet0/0 from FULL to DOWN, Neighbor Down: Interface down
+      or detached
+    *Oct  3 08:20:11: %SEC_LOGIN-4-LOGIN_FAILED: Login failed [user: admin]
+      [Source: 10.40.20.77] [localport: 22] [Reason: Login Authentication
+      Failed] at 08:20:11 UTC Sat Oct 3 2026
+  * A. Only the LINK-3 and SEC_LOGIN-4 messages
+        why: logging trap warnings sends severity 4 (warnings) and every more severe level (0-3). LINK-3 is error and SEC_LOGIN-4 is warning, so both go. The two severity 5 (notifications) messages stay local.
+    B. Only the LINK-3 message
+        why: This treats warnings as 'more severe than 4'. The configured level is included, so severity 4 messages such as SEC_LOGIN-4 are sent too.
+    C. All four messages
+        why: Notifications (5) are less severe than warnings (4). To send LINEPROTO-5 and OSPF-5 the trap level would have to be notifications or lower in severity.
+    D. Only the LINEPROTO-5 and OSPF-5 messages
+        why: This reverses the scale. Lower numbers are more severe; a trap level passes its own number and every lower number, not the higher ones.
+TAKEAWAY: Severity: 0 emergencies, 1 alerts, 2 critical, 3 errors, 4 warnings, 5 notifications, 6 informational, 7 debugging. A logging level sends that number and everything below it.
+
+[a054] type=mc domain=5 obj=5.6 (Configure and verify access control lists)
+Q: Refer to the exhibit. The ACL is applied with ip access-group SRV-PROTECT out on CORE-1 Gi0/1, the interface facing the server farm. Staff PC 10.40.20.44 opens an SSH session to 10.40.50.20 and then sends a DNS query over UDP to 10.40.50.53. What is the result?
+EXHIBIT:
+    CORE-1# show access-lists SRV-PROTECT
+    Extended IP access list SRV-PROTECT
+        10 permit tcp 10.40.20.0 0.0.0.255 host 10.40.50.20 eq 443 (1832 matches)
+        20 permit udp any host 10.40.50.53 eq domain (912 matches)
+        30 deny ip 10.40.20.0 0.0.0.255 10.40.50.0 0.0.0.255 (57 matches)
+        40 permit ip any any (40210 matches)
+  * A. The SSH session is denied by line 30 and the DNS query is permitted by line 20
+        why: SSH is TCP 22, so line 10 (port 443 only) and line 20 (UDP) miss and line 30 denies it. The DNS query is UDP 53 to .53, which line 20 permits before line 30 is ever checked.
+    B. Both are denied by line 30
+        why: ACLs stop at the first match. The DNS query matches line 20 first, so line 30 never sees it.
+    C. Both are permitted by line 40
+        why: Line 40 is reached only by traffic that matched nothing above it. The SSH session matches the deny in line 30 first.
+    D. The SSH session is permitted by line 10 and the DNS query by line 20
+        why: Line 10 permits only TCP destination port 443 (HTTPS) to 10.40.50.20. SSH uses port 22 and does not match it.
+TAKEAWAY: Read an ACL top-down and stop at the first matching line. Check protocol, source, destination and port; eq domain is how IOS displays port 53.
+
+[a055] type=mc domain=3 obj=3.3.d (Configure and verify IPv4 and IPv6 static routing — Floating static)
+Q: Refer to the exhibit. EDGE-1 gets a second internet circuit on Gi0/2 (198.51.100.2/30) to ISP-B, whose router is 198.51.100.1. ISP-B must carry traffic only when the ISP-A default route is gone from the routing table. Which command meets the requirement?
+EXHIBIT:
+    EDGE-1# show running-config | include ip route
+    ip route 0.0.0.0 0.0.0.0 203.0.113.1
+    
+    EDGE-1# show ip interface brief | include Gigabit
+    GigabitEthernet0/0     10.40.250.1     YES manual up                    up
+    GigabitEthernet0/1     203.0.113.2     YES manual up                    up
+    GigabitEthernet0/2     198.51.100.2    YES manual up                    up
+  * A. ip route 0.0.0.0 0.0.0.0 198.51.100.1 5
+        why: AD 5 is worse than the primary's AD of 1, so this route stays out of the table until the ISP-A route is removed (for example when Gi0/1 goes down). That is a floating static route.
+    B. ip route 0.0.0.0 0.0.0.0 198.51.100.1
+        why: Without a distance the route gets AD 1, the same as the ISP-A route. Both defaults would be installed and traffic would be shared across both ISPs.
+    C. ip route 0.0.0.0 0.0.0.0 198.51.100.1 255
+        why: AD 255 means the route is never trusted, so it is never installed, even after the ISP-A route disappears. The backup would never work.
+    D. ip route 0.0.0.0 255.255.255.255 198.51.100.1 5
+        why: A 255.255.255.255 mask describes a host route for the single address 0.0.0.0, not a default route that matches every destination.
+TAKEAWAY: Floating static = same prefix, higher AD than the primary. It only takes over when the primary leaves the table (interface down or next hop lost), not when the ISP fails beyond the link.
+
+[a056] type=mc domain=3 obj=3.4.c (Configure and verify single area OSPFv2 — Broadcast (DR/BDR selection))
+Q: Refer to the exhibit, captured on CORE-1. Router IDs: EDGE-1 10.40.255.1, DIST-1 10.40.255.2, DIST-2 10.40.255.3, CORE-1 10.40.255.4. DIST-1 is reloaded for a software upgrade and rejoins the transit segment about five minutes later. No configuration is changed. After all adjacencies are stable again, which roles exist on 10.40.250.0/24?
+EXHIBIT:
+    CORE-1# show ip ospf neighbor
+    
+    Neighbor ID     Pri   State           Dead Time   Address         Interface
+    10.40.255.1       1   2WAY/DROTHER    00:00:32    10.40.250.1     GigabitEthernet0/0
+    10.40.255.2     200   FULL/DR         00:00:32    10.40.250.2     GigabitEthernet0/0
+    10.40.255.3     150   FULL/BDR        00:00:32    10.40.250.3     GigabitEthernet0/0
+    
+    CORE-1# show running-config interface g0/0 | include priority
+     ip ospf priority 0
+  * A. DIST-2 is DR, EDGE-1 is BDR, and DIST-1 is a DROTHER
+        why: When DIST-1 died, BDR DIST-2 was promoted to DR and a new BDR was elected from the eligible routers: EDGE-1 (priority 1). CORE-1 cannot serve at priority 0. DR/BDR roles are not preemptive, so DIST-1 returns as a DROTHER.
+    B. DIST-1 is DR again and DIST-2 is BDR
+        why: This assumes OSPF preempts. A returning router with a higher priority does not take over an existing DR or BDR; it waits for the next election.
+    C. DIST-2 is DR and DIST-1 is BDR
+        why: The BDR role did not stay empty while DIST-1 was down. EDGE-1 was elected BDR as soon as DIST-2 was promoted, and it keeps the role.
+    D. DIST-2 is DR and CORE-1 is BDR
+        why: CORE-1 has the highest router ID of the remaining routers, but ip ospf priority 0 makes it ineligible. Router ID only breaks ties between eligible routers.
+TAKEAWAY: DR election: highest priority, then highest router ID; priority 0 never serves. The BDR is promoted when the DR fails, and nobody preempts a DR or BDR that is already in place.
+
+[a057] type=mc domain=4 obj=4.6 (Configure and verify DHCP client and relay)
+Q: Refer to the exhibit. Staff PCs in VLAN 20 get 169.254.x.x addresses. The campus DHCP server, 10.40.50.5, has an active scope for 10.40.20.0/24 and is reachable from DIST-1. Addresses must come from that server. Which configuration fixes the problem?
+EXHIBIT:
+    DIST-1# show running-config interface vlan 20
+    interface Vlan20
+     description STAFF
+     ip address 10.40.20.2 255.255.255.0
+     standby 20 ip 10.40.20.1
+     standby 20 priority 110
+     standby 20 preempt
+    end
+    
+    DIST-1# show ip interface vlan 20 | include Helper
+      Helper address is not set
+  * A. Add ip helper-address 10.40.50.5 under interface Vlan20
+        why: DHCPDISCOVER is a broadcast and routers do not forward broadcasts. The helper on the interface that receives the client broadcasts relays them as unicast to 10.40.50.5, with Vlan20's address as the gateway address so the server picks the right scope.
+    B. Add ip helper-address 10.40.50.5 under the uplink interface that faces the server farm
+        why: The relay agent must be configured where the client broadcasts arrive. The uplink never receives the DHCPDISCOVER, so nothing would be relayed.
+    C. Add ip address dhcp under interface Vlan20
+        why: That makes the SVI itself a DHCP client and removes its static address and HSRP gateway role. It does nothing for the PCs.
+    D. Create ip dhcp pool STAFF on DIST-1 with network 10.40.20.0 /24
+        why: A local pool would hand out addresses, but the requirement is that leases come from the central server. It would also split lease records across two servers.
+TAKEAWAY: DHCP relay: ip helper-address <server> on the client-facing L3 interface (SVI or subinterface). Configure it on both HSRP peers so relay survives a failover.
+
+[a058] type=ms pick=2 domain=5 obj=5.4 (Describe security password policy elements, such as management, complexity, and password alternatives (multifactor authentication, certificates, and biometrics))
+Q: The campus is adding multifactor authentication for administrators who log in to CORE-1 and the wireless controller. Which two login methods qualify as MFA? (Choose two.)
+  * A. A password plus a one-time code from an authenticator app on the admin's phone
+        why: Something you know (password) plus something you have (the phone generating the code): two different factor types.
+  * B. A smart card that holds the admin's certificate, unlocked with a PIN
+        why: The card and its certificate are something you have; the PIN is something you know. Two categories, so it is MFA.
+    C. A password plus the answers to two security questions
+        why: Every element is something you know. Adding more knowledge checks makes it multi-step, not multifactor.
+    D. A 20-character password that expires every 60 days
+        why: Length and expiry strengthen one factor. It is still a single knowledge factor.
+    E. A fingerprint scan repeated on two different readers
+        why: Both scans are something you are. Repeating the same factor type is not MFA.
+TAKEAWAY: MFA = at least two different categories: know (password, PIN), have (phone token, smart card, certificate), are (biometrics). Two of the same category is not MFA.
+
+[a059] type=mc domain=3 obj=3.4.a (Configure and verify single area OSPFv2 — Neighbor adjacencies)
+Q: Refer to the exhibit. CORE-1 was re-addressed during a maintenance window. It can ping DIST-1 at 10.40.250.2, but it no longer has any OSPF neighbors on Gi0/0. What is the cause?
+EXHIBIT:
+    DIST-1# show ip ospf interface g0/0
+    GigabitEthernet0/0 is up, line protocol is up
+      Internet Address 10.40.250.2/24, Area 0, Attached via Network Statement
+      Process ID 1, Router ID 10.40.255.2, Network Type BROADCAST, Cost: 1
+      Transmit Delay is 1 sec, State DR, Priority 200
+      Timer intervals configured, Hello 10, Dead 40, Wait 40, Retransmit 5
+    
+    CORE-1# show ip ospf interface g0/0
+    GigabitEthernet0/0 is up, line protocol is up
+      Internet Address 10.40.250.4/25, Area 0, Attached via Network Statement
+      Process ID 10, Router ID 10.40.255.4, Network Type BROADCAST, Cost: 1
+      Transmit Delay is 1 sec, State DROTHER, Priority 0
+      Timer intervals configured, Hello 10, Dead 40, Wait 40, Retransmit 5
+  * A. The subnet masks differ (/24 and /25), so each router rejects the other's hellos
+        why: On a broadcast network the hello carries the interface mask, and neighbors must agree on it. 10.40.250.2 still falls inside CORE-1's /25, which is why ping works while OSPF does not.
+    B. The OSPF process IDs differ (1 and 10)
+        why: The process ID is locally significant and is not carried in hellos. Routers with different process IDs form adjacencies normally.
+    C. CORE-1 has priority 0, so it cannot form adjacencies
+        why: Priority 0 only keeps CORE-1 out of the DR/BDR election. It still forms FULL adjacencies with the DR and BDR.
+    D. CORE-1's router ID is not inside the 10.40.250.0 subnet
+        why: A router ID is just a unique 32-bit identifier. It does not need to belong to any interface subnet.
+TAKEAWAY: For an OSPF adjacency, these must match: area, subnet and mask, hello/dead timers, authentication, stub flags (and MTU to get past EXSTART). Process ID and priority do not need to match.
+
+[a060] type=mc domain=4 obj=4.7 (Explain the forwarding per-hop behavior (PHB) for QoS such as classification, marking, queuing, congestion, policing, and shaping)
+Q: EDGE-1's 1-Gb/s link to ISP-A is contracted at a 300-Mb/s CIR, and ISP-A drops everything above that rate. Off-site backup jobs burst far above 300 Mb/s and the resulting drops cause gaps in voice calls. Which QoS tool should EDGE-1 apply outbound on Gi0/1 to stay within the CIR while queuing excess bursts instead of dropping them?
+  * A. Shaping
+        why: A shaper buffers traffic that exceeds the configured rate and releases it at the CIR. It smooths bursts so the provider's policer never sees excess traffic.
+    B. Policing
+        why: A policer drops or re-marks traffic that exceeds the rate with no buffering. That is what ISP-A already does, and it is what causes the drops.
+    C. Classification and marking
+        why: Classification and marking identify traffic and set DSCP values. They do not limit the sending rate, so bursts would still exceed the CIR.
+    D. Weighted random early detection (WRED)
+        why: WRED drops packets early as a queue fills, to make TCP senders slow down. It does not hold traffic to a configured rate.
+TAKEAWAY: Shaping buffers excess traffic (adds delay, avoids drops) and is applied outbound toward a slower contract. Policing drops or re-marks excess traffic and is typical at the provider's ingress.
+
+[a061] type=mc domain=3 obj=3.3.d (Configure and verify IPv4 and IPv6 static routing — Floating static)
+Q: Refer to the exhibit. DIST-2 has a 1.544-Mb/s serial link to CORE-1 that should carry server-farm traffic only if the OSPF path over Gi0/0 fails. An engineer added ip route 10.40.50.0 255.255.255.0 10.40.249.1 100. Gi0/0 and all OSPF neighbors are up, yet users complain that the servers are slow. Which change fixes the issue?
+EXHIBIT:
+    DIST-2# show ip route
+    Codes: L - local, C - connected, S - static, O - OSPF
+    
+    Gateway of last resort is not set
+    
+          10.0.0.0/8 is variably subnetted, 10 subnets, 4 masks
+    C        10.40.40.0/24 is directly connected, GigabitEthernet0/1
+    L        10.40.40.3/32 is directly connected, GigabitEthernet0/1
+    S        10.40.50.0/24 [100/0] via 10.40.249.1
+    O        10.40.60.0/25 [110/2] via 10.40.250.2, 00:12:34, GigabitEthernet0/0
+    C        10.40.60.128/25 is directly connected, GigabitEthernet0/2
+    L        10.40.60.129/32 is directly connected, GigabitEthernet0/2
+    C        10.40.249.0/30 is directly connected, Serial0/1/0
+    L        10.40.249.2/32 is directly connected, Serial0/1/0
+    C        10.40.250.0/24 is directly connected, GigabitEthernet0/0
+    L        10.40.250.3/32 is directly connected, GigabitEthernet0/0
+  * A. Configure the static route with an administrative distance above 110, such as 130
+        why: AD 100 beats OSPF's 110, so the static route over the slow serial link is installed and the OSPF route is hidden. With AD 130 the OSPF route wins while it exists and the static floats in only when it disappears.
+    B. Configure the static route with administrative distance 1
+        why: AD 1 makes the static route even more preferred. The serial link would carry server traffic permanently.
+    C. Set ip ospf cost 1 on DIST-2 Gi0/0
+        why: Gi0/0 already has cost 1, and OSPF cost only compares OSPF paths with each other. It cannot beat a route from a source with a lower AD.
+    D. Add the serial link to OSPF area 0
+        why: OSPF would then prefer the Gigabit path (cost 2 versus 65), but the static route at AD 100 would still beat any OSPF route for 10.40.50.0/24.
+TAKEAWAY: A floating static that backs up a dynamic route needs an AD higher than that protocol: above 110 for OSPF, above 90 for EIGRP. Check the [AD/metric] in show ip route.
+
+[a062] type=mc domain=5 obj=5.1 (Define key security concepts (threats, vulnerabilities, exploits, and mitigation techniques))
+Q: A vendor advisory says the HTTPS management service in the campus controller firmware accepts crafted requests that skip the login check. Two days later a public script appears that sends those requests automatically. In security terms, what is the script?
+  * A. An exploit
+        why: An exploit is the tool or technique that takes advantage of a weakness. The script turns the flaw into working unauthorized access.
+    B. A vulnerability
+        why: The vulnerability is the flaw in the firmware itself (the skipped login check). It existed before the script was written.
+    C. A threat
+        why: A threat is a potential danger, such as an attacker who might use the flaw. The script is the means of attack, not the danger itself.
+    D. A mitigation
+        why: Mitigations reduce risk: patching, or limiting HTTPS management to the NOC subnet. The script increases risk.
+TAKEAWAY: Vulnerability = the weakness. Exploit = the code or technique that uses it. Threat = who or what could use it. Mitigation = the control that reduces the risk.
+
+[a063] type=mc domain=3 obj=3.5 (Describe the purpose, functions, and concepts of first hop redundancy protocols)
+Q: Refer to the exhibit. DIST-1 is supposed to be the active gateway for VLAN 30. It was reloaded overnight, and this morning DIST-2 is still forwarding VLAN 30 traffic. What must be configured so that DIST-1 takes back the active role whenever it is available?
+EXHIBIT:
+    DIST-1# show standby brief
+                         P indicates configured to preempt.
+                         |
+    Interface   Grp  Pri P State   Active          Standby         Virtual IP
+    Vl30        30   110   Standby 10.40.30.3      local           10.40.30.1
+    
+    DIST-2# show standby brief
+                         P indicates configured to preempt.
+                         |
+    Interface   Grp  Pri P State   Active          Standby         Virtual IP
+    Vl30        30   100   Active  local           10.40.30.2      10.40.30.1
+  * A. standby 30 preempt on DIST-1's Vlan30 interface
+        why: HSRP preemption is off by default, so a higher-priority router that comes back waits as standby. With preempt, DIST-1 (110) takes the active role from DIST-2 (100) as soon as it is ready.
+    B. standby 30 priority 120 on DIST-1's Vlan30 interface
+        why: DIST-1 already has the higher priority. Without preempt, raising it further still leaves DIST-1 waiting as standby.
+    C. standby 30 preempt on DIST-2's Vlan30 interface
+        why: Preempt lets the router it is configured on take over. DIST-2 has the lower priority, so this would not move the active role to DIST-1.
+    D. standby version 2 on both switches
+        why: HSRPv2 adds more groups, millisecond timers and IPv6 support. It does not turn on preemption.
+TAKEAWAY: HSRP: default priority 100, highest wins, and preempt is OFF by default. Without standby N preempt, the router that is active keeps the role until it fails.
+
+[a064] type=mc domain=3 obj=3.2.c (Determine how a router makes a forwarding decision by default — Routing protocol metric)
+Q: Refer to the exhibit. Which route to the lab LAN 10.40.70.0/24 does DIST-1 install?
+EXHIBIT:
+    Topology (all routers OSPF area 0, default reference bandwidth,
+    no ip ospf cost commands)
+    
+    Lab LAN 10.40.70.0/24 is on BLDG-7 Gi0/1 (1 Gb/s)
+    
+    Path A: DIST-1 Se0/1/0 (1.544 Mb/s) --- BLDG-7
+    Path B: DIST-1 Gi0/0 (1 Gb/s) --- CORE-1
+            CORE-1 Fa0/3 (100 Mb/s) --- BLDG-7
+  * A. The route through CORE-1, with a metric of 3
+        why: Cost = 100 Mb/s / interface bandwidth, minimum 1. Path B: Gi0/0 (1) + Fa0/3 (1) + BLDG-7 Gi0/1 (1) = 3. Path A: serial (100/1.544 = 64) + 1 = 65. OSPF installs only the lowest-cost path.
+    B. The route through the serial link, with a metric of 2
+        why: OSPF does not count hops. The serial link costs 64 on its own, so path A totals 65.
+    C. Both routes, load-shared, because Fast Ethernet and Gigabit Ethernet both cost 1
+        why: Fast Ethernet and Gigabit Ethernet do both cost 1 with the default reference, but path A crosses a serial link costing 64. The totals (65 and 3) are not equal.
+    D. The route through CORE-1, with a metric of 12
+        why: This uses 10 for Fast Ethernet. With the 100-Mb/s reference bandwidth, Fast Ethernet costs 1; 19 and 10 are spanning-tree or other-reference values.
+TAKEAWAY: OSPF metric = sum of outgoing interface costs along the path plus the destination LAN's cost; cost = 100 Mb/s / bandwidth (min 1). T1 = 64, Fast and Gigabit Ethernet = 1 by default.
+
+[a065] type=mc domain=4 obj=4.8 (Configure network devices for remote access using SSH)
+Q: Refer to the exhibit. The NOC cannot open SSH sessions to CORE-1. Which command must be entered next on CORE-1?
+EXHIBIT:
+    CORE-1# show running-config | include hostname|domain|username
+    hostname CORE-1
+    ip domain name campus.example
+    username netadmin privilege 15 secret 5 $1$kQ3x$Xr0Tq9mWb2Lr1nVf8sYcZ.
+    
+    CORE-1# show running-config | section line vty
+    line vty 0 4
+     login local
+     transport input ssh
+    
+    CORE-1# show ip ssh
+    SSH Disabled - version 1.99
+    %Please create RSA keys to enable SSH (and of atleast 768 bits for SSH v2).
+    Authentication methods:publickey,keyboard-interactive,password
+    Authentication timeout: 120 secs; Authentication retries: 3
+  * A. crypto key generate rsa modulus 2048
+        why: The hostname, domain name, local user and vty lines are ready, but SSH stays disabled until an RSA key pair exists. Generating a 2048-bit key enables SSH (768 bits or more is needed for SSHv2).
+    B. ip ssh version 2
+        why: Version 2 needs RSA keys before it can run. Without keys, SSH remains disabled whatever version is set.
+    C. transport input telnet ssh under line vty 0 4
+        why: The vty lines already accept SSH. Adding Telnet would allow cleartext logins and still would not enable SSH without keys.
+    D. login under line vty 0 4
+        why: login would make the lines use a line password instead of the local user database. Authentication is not the problem; SSH is disabled.
+TAKEAWAY: SSH setup: hostname (not Router), ip domain name, crypto key generate rsa (768+ bits for v2), local user, line vty with login local and transport input ssh. show ip ssh confirms it is enabled.
+
+[a066] type=mc domain=5 obj=5.7 (Configure and verify Layer 2 security features (DHCP snooping, dynamic ARP inspection, and port security))
+Q: Refer to the exhibit. A staff member plugged a small unmanaged switch into the jack on ACC-4 Fa0/7 so a second laptop could share it, and both laptops lost connectivity. The second laptop has been removed. What should the technician do to restore the port with the least change to its security settings?
+EXHIBIT:
+    ACC-4# show port-security interface fa0/7
+    Port Security              : Enabled
+    Port Status                : Secure-shutdown
+    Violation Mode             : Shutdown
+    Aging Time                 : 0 mins
+    Aging Type                 : Absolute
+    SecureStatic Address Aging : Disabled
+    Maximum MAC Addresses      : 1
+    Total MAC Addresses        : 1
+    Configured MAC Addresses   : 0
+    Sticky MAC Addresses       : 1
+    Last Source Address:Vlan   : 3c52.82a1.9e04:20
+    Security Violation Count   : 1
+  * A. Enter shutdown and then no shutdown on Fa0/7
+        why: The second MAC address exceeded the maximum of 1 and the shutdown violation mode put the port in err-disabled state. Bouncing the interface clears it; the original laptop's sticky MAC is still allowed.
+    B. Enter clear mac address-table dynamic interface fa0/7
+        why: The port is err-disabled, not just holding a stale entry. Clearing the MAC table does not bring an err-disabled interface back up.
+    C. Set switchport port-security maximum 2 on Fa0/7
+        why: That changes the security policy so two devices are allowed, which is not the least change. The port would also stay err-disabled until it is bounced.
+    D. Wait for the secure address aging timer to expire
+        why: Aging is 0 (disabled), and aging removes secure addresses; it never recovers an err-disabled port. Only a bounce or errdisable recovery does that.
+TAKEAWAY: Port security in shutdown mode = err-disabled port (Secure-shutdown). Recover with shutdown / no shutdown, or errdisable recovery cause psecure-violation. Restrict and protect drop frames but leave the port up.
+
+[a067] type=order domain=3 obj=3.2.b (Determine how a router makes a forwarding decision by default — Administrative distance)
+Q: Drag the route sources into order from the lowest default administrative distance (most trusted) to the highest, as IOS uses them when the same prefix is learned from several sources.
+POOL:
+  [0] OSPF
+  [1] Static route
+  [2] iBGP
+  [3] Connected interface
+  [4] RIPv2
+  [5] eBGP
+  [6] IS-IS
+  [7] EIGRP (internal)
+KEY (full order): [3] -> [1] -> [5] -> [7] -> [0] -> [6] -> [4] -> [2]
+why: Connected 0, static 1, eBGP 20, internal EIGRP 90, OSPF 110, IS-IS 115, RIP 120, iBGP 200. When two sources offer the exact same prefix and mask, the one with the lowest AD is installed; metrics are compared only within one source.
+TAKEAWAY: Learn the AD ladder cold: 0 connected, 1 static, 20 eBGP, 90 EIGRP, 110 OSPF, 115 IS-IS, 120 RIP, 170 external EIGRP, 200 iBGP, 255 unusable.
+
+[a068] type=mc domain=3 obj=3.4.d (Configure and verify single area OSPFv2 — Router ID)
+Q: Refer to the exhibit. DIST-2 was built by pasting a copy of DIST-1's configuration and editing the addresses. DIST-1 and DIST-2 cannot keep a stable adjacency on the transit segment. Which action fixes the problem immediately?
+EXHIBIT:
+    *Oct  3 09:02:41: %OSPF-4-DUP_RTRID_NBR: OSPF detected duplicate router-id
+      10.40.255.2 from 10.40.250.2 on interface GigabitEthernet0/0
+    
+    DIST-2# show running-config | section router ospf
+    router ospf 1
+     router-id 10.40.255.2
+     passive-interface GigabitEthernet0/1
+     network 10.40.40.0 0.0.0.255 area 0
+     network 10.40.250.0 0.0.0.255 area 0
+  * A. On DIST-2, enter router-id 10.40.255.3 under router ospf 1 and then clear ip ospf process
+        why: Router IDs must be unique. A new router-id on a running process only takes effect after the process restarts (IOS asks for clear ip ospf process or a reload), so both steps are needed.
+    B. On DIST-2, enter router-id 10.40.255.3 under router ospf 1 and do nothing else
+        why: IOS accepts the command but keeps using 10.40.255.2 until the OSPF process is cleared or the router reloads, so the duplicate remains for now.
+    C. On DIST-2, create Loopback0 with 10.40.255.3/32 and then clear ip ospf process
+        why: A manually configured router-id always beats loopback addresses. DIST-2 would still choose 10.40.255.2.
+    D. On DIST-2, change the process to router ospf 2
+        why: The process ID is local and is not part of the router ID. The copied router-id command would be re-entered under the new process with the same duplicate value.
+TAKEAWAY: Router ID order: router-id command, then highest loopback IP, then highest IP on an up physical interface. A change on a running process needs clear ip ospf process (or a reload).
+
+[a069] type=ms pick=2 domain=5 obj=5.3 (Configure and verify device access control using local passwords)
+Q: Refer to the exhibit. Which two statements about ACC-4's device access configuration are true? (Choose two.)
+EXHIBIT:
+    ACC-4# show running-config | include password|secret|line|login
+    no service password-encryption
+    enable secret 5 $1$Gp7v$3mXq1rTzKc8W0dLw9eQaN/
+    enable password Campus2026
+    line con 0
+     password C0nsole!
+     login
+    line vty 0 4
+     password Vty#Acc4
+     login
+  * A. Typing Campus2026 at the enable prompt does not give privileged EXEC access
+        why: When both are configured, the enable secret is the only one checked. The enable password is ignored.
+  * B. The console and vty passwords are stored in clear text in the configuration
+        why: service password-encryption is off, so line passwords are shown and saved as plain text. Anyone who sees the config or a backup can read them.
+    C. Entering service password-encryption converts the enable secret to a type 7 password
+        why: The secret is already a type 5 hash and is left alone. service password-encryption only applies weak type 7 to clear-text passwords such as the line passwords.
+    D. Telnet and SSH users are checked against a local username database
+        why: login (without local) makes the vty lines use the line password Vty#Acc4. Checking local usernames would need login local.
+    E. Removing login under line con 0 makes the console prompt for C0nsole!
+        why: It is the other way round: without login the console never prompts, so anyone with a console cable gets in.
+TAKEAWAY: enable secret beats enable password. service password-encryption = reversible type 7 for clear-text passwords only. login = line password; login local = username database.
+
+[a070] type=ms pick=2 domain=3 obj=3.1 (Interpret the components of routing table)
+Q: Refer to the exhibit. Which two statements about DIST-2's routing table are true? (Choose two.)
+EXHIBIT:
+    DIST-2# show ip route
+    Codes: L - local, C - connected, S - static, O - OSPF
+           E2 - OSPF external type 2, * - candidate default
+    
+    Gateway of last resort is 10.40.250.1 to network 0.0.0.0
+    
+    O*E2  0.0.0.0/0 [110/1] via 10.40.250.1, 00:12:34, GigabitEthernet0/0
+          10.0.0.0/8 is variably subnetted, 10 subnets, 4 masks
+    C        10.40.40.0/24 is directly connected, GigabitEthernet0/1
+    L        10.40.40.3/32 is directly connected, GigabitEthernet0/1
+    O        10.40.50.0/24 [110/2] via 10.40.250.4, 00:12:34, GigabitEthernet0/0
+    O        10.40.60.0/25 [110/2] via 10.40.250.2, 00:12:34, GigabitEthernet0/0
+    C        10.40.60.128/25 is directly connected, GigabitEthernet0/2
+    L        10.40.60.129/32 is directly connected, GigabitEthernet0/2
+    C        10.40.249.0/30 is directly connected, Serial0/1/0
+    L        10.40.249.2/32 is directly connected, Serial0/1/0
+    C        10.40.250.0/24 is directly connected, GigabitEthernet0/0
+    L        10.40.250.3/32 is directly connected, GigabitEthernet0/0
+  * A. The default route is an OSPF external type 2 route whose next hop is 10.40.250.1
+        why: O*E2 marks an OSPF external type 2 route that is also the candidate default. EDGE-1 (10.40.250.1) injects it, typically with default-information originate.
+  * B. A packet to 10.40.50.25 is sent to 10.40.250.4 and the route has an OSPF cost of 2
+        why: 10.40.50.25 falls in 10.40.50.0/24, learned by OSPF via 10.40.250.4. In [110/2], 110 is the administrative distance and 2 is the metric (cost).
+    C. 10.40.60.0/25 has an administrative distance of 2
+        why: In [110/2] the first number is the AD (110 for OSPF) and the second is the metric. The AD is 110.
+    D. The L routes are /32 host routes for PCs attached to DIST-2's subnets
+        why: L (local) entries are DIST-2's own interface addresses, installed so the router can recognize traffic addressed to itself. They are not learned client hosts.
+    E. A packet to 10.40.60.140 is forwarded to 10.40.250.2
+        why: 10.40.60.140 is in 10.40.60.128/25, which is directly connected on Gi0/2. DIST-2 delivers it locally; 10.40.250.2 is the next hop only for .0 to .127.
+    F. A packet to 198.51.100.7 is dropped because no route matches it
+        why: The gateway of last resort is set. Any destination without a more specific match uses the 0.0.0.0/0 route via 10.40.250.1.
+TAKEAWAY: Read a route as code, prefix/length, [AD/metric], next hop, age, exit interface. O*E2 = OSPF external default; L = the router's own address; C = the connected subnet.
+
+[a071] type=mc domain=4 obj=4.2 (Configure and verify NTP operating in a client and server mode)
+Q: Refer to the exhibit. DIST-1 is configured with ntp server 10.40.50.123. Which statement about DIST-1 is true?
+EXHIBIT:
+    DIST-1# show ntp associations
+    
+      address         ref clock       st   when   poll reach  delay  offset   disp
+    *~10.40.50.123    192.0.2.10      2      38     64   377   1.204   0.311   1.9
+     * sys.peer, # selected, + candidate, - outlyer, x falseticker, ~ configured
+  * A. It is synchronized to 10.40.50.123 and runs at stratum 3
+        why: The asterisk marks the system peer DIST-1 is synchronized to. That server is stratum 2, so DIST-1 is one level further from the reference clock: stratum 3.
+    B. It is synchronized to 10.40.50.123 and runs at stratum 2
+        why: The st column shows the server's stratum. A client is always one stratum higher (worse) than the server it syncs from.
+    C. It is acting as the NTP server for 10.40.50.123
+        why: ntp server makes DIST-1 a client of 10.40.50.123. The tilde shows the association was configured locally, and the asterisk shows DIST-1 is following that server.
+    D. It has not synchronized yet because reach is not 1
+        why: Reach is an octal register of the last eight polls. 377 means all eight were answered, the best possible value.
+TAKEAWAY: show ntp associations: * = sys.peer (synced), ~ = configured, st = the server's stratum (yours is +1), reach 377 = last 8 polls answered. ntp server = client mode; ntp master = act as an authoritative source.
+
+[a072] type=mc domain=3 obj=3.5 (Describe the purpose, functions, and concepts of first hop redundancy protocols)
+Q: Hosts in VLAN 20 use 10.40.20.1 as their default gateway. That address is the virtual IP of HSRP version 1 group 20, shared by DIST-1 and DIST-2. Which MAC address do the hosts store in their ARP caches for 10.40.20.1?
+  * A. 0000.0c07.ac14
+        why: HSRPv1 virtual MACs are 0000.0c07.acXX, where XX is the group number in hex. Group 20 is 0x14.
+    B. 0000.0c07.ac20
+        why: The group number is written in hexadecimal. 20 decimal is 14 hex; ac20 would be group 32.
+    C. 0000.5e00.0114
+        why: 0000.5e00.01XX is the VRRP virtual MAC format. VLAN 20 runs HSRP.
+    D. The burned-in MAC of the Vlan20 SVI on whichever switch is active
+        why: Hosts learn the virtual MAC, not a physical one. That is what lets the standby take over without the hosts updating their ARP caches.
+TAKEAWAY: Virtual MACs: HSRPv1 0000.0c07.acXX, HSRPv2 0000.0c9f.fXXX, VRRP 0000.5e00.01XX (XX = group in hex). A shared virtual MAC is what makes failover invisible to hosts.
+
+[a073] type=mc domain=5 obj=5.6 (Configure and verify access control lists)
+Q: The lab PCs in VLAN 20 occupy 10.40.20.64 through 10.40.20.127. An ACL entry must match exactly those sources and no others. Which address and wildcard mask should the entry use?
+  * A. 10.40.20.64 0.0.0.63
+        why: 64 to 127 is a block of 64 addresses that starts on a multiple of 64 (a /26). The wildcard is 255.255.255.255 - 255.255.255.192 = 0.0.0.63.
+    B. 10.40.20.64 0.0.0.64
+        why: A wildcard of 0.0.0.64 lets only the 64 bit vary, so it matches just two addresses: 10.40.20.0 and 10.40.20.64. A contiguous range needs a wildcard one less than a power of two.
+    C. 10.40.20.64 255.255.255.192
+        why: That is a subnet mask, not a wildcard. Read as a wildcard it would ignore the first three octets and match far more than the lab range.
+    D. 10.40.20.0 0.0.0.127
+        why: This matches .0 to .127, twice the required range. It would include hosts outside the lab.
+TAKEAWAY: Wildcard = 255.255.255.255 minus the subnet mask. A block of 64 hosts on a 64 boundary is /26, wildcard 0.0.0.63. 0 bits must match; 1 bits are ignored.
+
+[a074] type=ms pick=2 domain=3 obj=3.4.b (Configure and verify single area OSPFv2 — Point-to-point)
+Q: Refer to the exhibit. DIST-1 and DIST-2 are joined by a dedicated /30 link, and both ends are configured with ip ospf network point-to-point. Which two statements about this link are true? (Choose two.)
+EXHIBIT:
+    DIST-1# show ip ospf neighbor gigabitEthernet 0/3
+    
+    Neighbor ID     Pri   State           Dead Time   Address         Interface
+    10.40.255.3       0   FULL/  -        00:00:31    10.40.249.6     GigabitEthernet0/3
+    
+    DIST-1# show ip ospf interface g0/3 | include Type|State
+      Process ID 1, Router ID 10.40.255.2, Network Type POINT_TO_POINT, Cost: 1
+      Transmit Delay is 1 sec, State POINT_TO_POINT
+  * A. No DR or BDR is elected on this link
+        why: Point-to-point networks skip the DR/BDR election. The dash after FULL/ shows that the neighbor has no DR or BDR role.
+  * B. Changing ip ospf priority on either end has no effect on this link
+        why: Priority is used only in DR/BDR elections. With no election on a point-to-point link, the value is ignored.
+    C. The dash in FULL/  - means the adjacency is still forming
+        why: FULL is the final state: the databases are synchronized. The dash refers only to the missing DR/BDR role.
+    D. DIST-2 is a DROTHER on this link because the neighbor table shows its priority as 0
+        why: IOS lists point-to-point neighbors with Pri 0 because no election takes place. DROTHER exists only on broadcast and NBMA segments that elect a DR; a point-to-point neighbor has no such role.
+    E. Both ends must run OSPF process ID 1
+        why: Process IDs are locally significant and are not compared between neighbors.
+    F. Hellos on this link are sent every 30 seconds
+        why: On Ethernet, broadcast and point-to-point network types both use a 10-second hello and 40-second dead interval. 30/120 is the NBMA default.
+TAKEAWAY: ip ospf network point-to-point on a two-router Ethernet link: no DR/BDR election, no wait timer, FULL/  - with Pri 0 in the neighbor table, State POINT_TO_POINT, priority ignored. Both ends must use the same network type.
+
+[a075] type=mc domain=3 obj=3.3.a (Configure and verify IPv4 and IPv6 static routing — Default route)
+Q: ISP-A now provides IPv6 on EDGE-1 Gi0/1, and its router gives only its link-local address, FE80::A, as the next hop. ipv6 unicast-routing is already enabled. Which command creates EDGE-1's IPv6 default route?
+  * A. ipv6 route ::/0 GigabitEthernet0/1 FE80::A
+        why: ::/0 is the IPv6 default prefix. Link-local addresses are only unique per link, so a link-local next hop must be paired with the exit interface.
+    B. ipv6 route ::/0 FE80::A
+        why: IOS rejects a link-local next hop without an interface, because FE80::A could exist on any link. The interface tells the router which link to use.
+    C. ipv6 route ::/128 GigabitEthernet0/1 FE80::A
+        why: ::/128 is a host route for the unspecified address, not a default route. A default matches every destination only with a /0 prefix.
+    D. ip route ::/0 GigabitEthernet0/1 FE80::A
+        why: ip route takes IPv4 prefixes and masks only. IPv6 static routes use ipv6 route.
+TAKEAWAY: IPv6 default: ipv6 route ::/0 <next hop>. With a link-local next hop, add the exit interface. ipv6 unicast-routing must be on for the router to forward IPv6.
+
+[a076] type=mc domain=4 obj=4.1 (Configure and verify inside source NAT using static and pools)
+Q: Refer to the exhibit. Early each morning the first staff members reach the internet, but by 8:30 most new users cannot, although nothing has failed. Which change lets every campus user share the public pool?
+EXHIBIT:
+    EDGE-1# show running-config | include nat|access-list 10
+     ip nat inside
+     ip nat outside
+    ip nat pool CAMPUS 203.0.113.17 203.0.113.30 netmask 255.255.255.240
+    ip nat inside source list 10 pool CAMPUS
+    access-list 10 permit 10.40.0.0 0.0.255.255
+    
+    EDGE-1# show ip nat statistics | begin Dynamic
+    Dynamic mappings:
+    -- Inside Source
+    [Id: 1] access-list 10 pool CAMPUS refcount 14
+     pool CAMPUS: netmask 255.255.255.240
+            start 203.0.113.17 end 203.0.113.30
+            type generic, total addresses 14, allocated 14 (100%), misses 37
+  * A. Add overload to the ip nat inside source list 10 pool CAMPUS command
+        why: Without overload, dynamic NAT maps each inside host to its own pool address. All 14 are allocated and 37 attempts have failed. With overload (PAT) many hosts share each address, told apart by port numbers.
+    B. Change access-list 10 to permit 10.40.0.0 0.0.0.255
+        why: That narrows translation to 10.40.0.0/24, so most campus subnets would lose internet access altogether. The problem is the pool size, not the ACL.
+    C. Swap the ip nat inside and ip nat outside interface commands
+        why: Translations are being created and allocated, so inside and outside are correct. Swapping them would break NAT for everyone.
+    D. Change the pool netmask to 255.255.255.0
+        why: The pool still contains only the addresses from start to end (.17 to .30). The netmask is a sanity check on that range and does not add addresses.
+TAKEAWAY: Dynamic NAT from a pool = one public address per inside host; when allocation hits 100% new hosts fail (misses climb). Add overload for PAT. ACL = who gets translated; pool = to what.
+
+[a077] type=mc domain=5 obj=5.6 (Configure and verify access control lists)
+Q: Refer to the exhibit. About 40 seconds after ACL 120 was applied inbound on DIST-1 Gi0/0, every OSPF adjacency on that interface went down. Which entry, added to ACL 120, restores the adjacencies and keeps the other restrictions?
+EXHIBIT:
+    DIST-1# show running-config interface g0/0
+    interface GigabitEthernet0/0
+     ip address 10.40.250.2 255.255.255.0
+     ip access-group 120 in
+     ip ospf priority 200
+    end
+    DIST-1# show access-lists 120
+    Extended IP access list 120
+        10 permit tcp any 10.40.20.0 0.0.0.255 established (4127 matches)
+        20 permit udp any eq domain 10.40.20.0 0.0.0.255 (388 matches)
+        30 permit icmp any 10.40.20.0 0.0.0.255 (52 matches)
+    
+    *Oct  3 10:41:52: %OSPF-5-ADJCHG: Process 1, Nbr 10.40.255.3 on
+      GigabitEthernet0/0 from FULL to DOWN, Neighbor Down: Dead timer expired
+  * A. permit ospf any any
+        why: OSPF hellos and updates (to 224.0.0.5, 224.0.0.6 and unicast neighbors) are IP protocol 89. No line permits them, so the implicit deny drops them and the dead timer expires. Permitting protocol ospf restores them without opening anything else.
+    B. permit udp any any eq 89
+        why: OSPF runs directly over IP as protocol 89. It does not use UDP, so a UDP port 89 entry matches none of its packets.
+    C. permit ip host 224.0.0.5 any
+        why: 224.0.0.5 is the destination of OSPF hellos, not the source. This line would match nothing, and it would also miss unicast OSPF packets.
+    D. permit tcp any any eq 179
+        why: TCP 179 is BGP. OSPF does not use TCP at all.
+TAKEAWAY: Every ACL ends with an implicit deny any. An inbound ACL on a routing interface must permit the routing protocol itself: OSPF = IP protocol 89 (permit ospf), EIGRP = 88, BGP = TCP 179.
+
+[a078] type=mc domain=3 obj=3.4.a (Configure and verify single area OSPFv2 — Neighbor adjacencies)
+Q: Refer to the exhibit. DIST-2 Gi0/2 connects to LIB-R1, a router in the new library building. The adjacency never leaves the state shown. What is the most likely cause?
+EXHIBIT:
+    DIST-2# show ip ospf neighbor gigabitEthernet 0/2
+    
+    Neighbor ID     Pri   State           Dead Time   Address         Interface
+    10.40.255.8       1   EXCHANGE/DR     00:00:36    10.40.247.2     GigabitEthernet0/2
+    
+    DIST-2# show interfaces g0/2 | include MTU
+      MTU 1500 bytes, BW 1000000 Kbit/sec, DLY 10 usec,
+    
+    LIB-R1# show interfaces g0/1 | include MTU
+      MTU 1400 bytes, BW 1000000 Kbit/sec, DLY 10 usec,
+  * A. The interface MTUs do not match, so database description packets are rejected
+        why: DBD packets carry the interface MTU. LIB-R1 (1400) rejects DIST-2's larger DBDs and stays in EXSTART, while DIST-2 accepts LIB-R1's and sits in EXCHANGE. The database exchange never completes even though hellos are fine.
+    B. The two routers are configured in different areas
+        why: An area mismatch is detected in the hello, so the routers would never list each other as neighbors at all, let alone reach EXCHANGE.
+    C. The hello and dead timers do not match
+        why: Mismatched timers also stop the process at the hello stage. Reaching EXSTART/EXCHANGE proves the hellos were accepted.
+    D. LIB-R1's interface is passive
+        why: A passive interface sends no hellos, so DIST-2 would not see LIB-R1 as a neighbor at all.
+TAKEAWAY: Where an adjacency stops tells you why. No neighbor/INIT = hello parameters (area, mask, timers, auth, passive). EXSTART/EXCHANGE = MTU mismatch. 2WAY between DROTHERs = normal.
+
+[a079] type=mc domain=5 obj=5.9 (Describe wireless security protocols (WPA, WPA2, and WPA3))
+Q: The staff SSID uses WPA2-Personal with a passphrase. A penetration tester captured a four-way handshake from the parking lot and is running an offline dictionary attack against the passphrase. Which change best defends against this attack without moving to 802.1X?
+  * A. Move the SSID to WPA3-Personal, which uses SAE
+        why: SAE (Simultaneous Authentication of Equals) replaces the WPA2 PSK handshake. A captured exchange cannot be tested offline against a word list, and SAE adds forward secrecy.
+    B. Change the cipher from AES-CCMP to TKIP
+        why: TKIP is the older, weaker WPA cipher. It does not change how the passphrase is verified and lowers security.
+    C. Stop broadcasting the SSID
+        why: Hidden SSIDs still appear in probe and association frames. The handshake can still be captured and attacked.
+    D. Enable MAC address filtering on the WLAN
+        why: MAC addresses are visible in the air and easy to spoof. Filtering does nothing to protect the passphrase from an offline attack.
+TAKEAWAY: WPA2-Personal: PSK + 4-way handshake, open to offline dictionary attacks on weak passphrases. WPA3-Personal: SAE. WPA2/WPA3-Enterprise: 802.1X with a RADIUS server. AES (CCMP/GCMP) beats TKIP.
+
+[a080] type=mc domain=3 obj=3.1.g (Interpret the components of routing table — Gateway of last resort)
+Q: Refer to the exhibit. EDGE-1 has a working static default route to ISP-A, but DIST-2 has no gateway of last resort and campus users cannot reach the internet. Which single change gives every OSPF router in the campus a default route?
+EXHIBIT:
+    EDGE-1# show running-config | section router ospf
+    router ospf 1
+     router-id 10.40.255.1
+     network 10.40.250.0 0.0.0.255 area 0
+    
+    EDGE-1# show ip route static | include 0.0.0.0
+    S*    0.0.0.0/0 [1/0] via 203.0.113.1
+    
+    DIST-2# show ip route | begin Gateway
+    Gateway of last resort is not set
+    
+          10.0.0.0/8 is variably subnetted, 10 subnets, 4 masks
+    C        10.40.40.0/24 is directly connected, GigabitEthernet0/1
+    L        10.40.40.3/32 is directly connected, GigabitEthernet0/1
+    O        10.40.50.0/24 [110/2] via 10.40.250.4, 00:12:34, GigabitEthernet0/0
+    O        10.40.60.0/25 [110/2] via 10.40.250.2, 00:12:34, GigabitEthernet0/0
+    C        10.40.60.128/25 is directly connected, GigabitEthernet0/2
+    L        10.40.60.129/32 is directly connected, GigabitEthernet0/2
+    C        10.40.249.0/30 is directly connected, Serial0/1/0
+    L        10.40.249.2/32 is directly connected, Serial0/1/0
+    C        10.40.250.0/24 is directly connected, GigabitEthernet0/0
+    L        10.40.250.3/32 is directly connected, GigabitEthernet0/0
+  * A. Enter default-information originate under router ospf 1 on EDGE-1
+        why: EDGE-1 has a default route in its table, but OSPF does not advertise it until told to. default-information originate injects 0.0.0.0/0 as an O*E2 route to every OSPF router.
+    B. Enter network 0.0.0.0 255.255.255.255 area 0 under router ospf 1 on EDGE-1
+        why: A network statement enables OSPF on matching interfaces, here every interface including the ISP link. It does not advertise the static default route.
+    C. Enter ip default-gateway 10.40.250.1 on DIST-2
+        why: ip default-gateway is used only when IP routing is disabled, such as on a Layer 2 switch. A routing device ignores it, and it would fix only DIST-2.
+    D. Enter ip route 0.0.0.0 0.0.0.0 10.40.250.1 on DIST-2
+        why: That would work for DIST-2 alone, but every other router would need its own static default. The requirement is one change that reaches all OSPF routers.
+TAKEAWAY: Gateway of last resort = the installed default route. To share an ASBR's static default through OSPF: default-information originate (add always to advertise it even without a default in the table).
+
+[a081] type=build ordered=false domain=3 obj=3.4 (Configure and verify single area OSPFv2)
+Q: BLDG-7 is joining OSPF area 0. Its router ID must be 10.40.255.7. Gi0/0 (10.40.250.7/24) must form adjacencies on the transit segment. The lab LAN on Gi0/1 (10.40.70.1/24) must be advertised but must not send hellos. Drag the commands needed under router ospf 1 into the answer area. Leave the commands that are not needed.
+POOL:
+  [0] router-id 10.40.255.7
+  [1] network 10.40.250.0 0.0.0.255 area 0
+  [2] network 10.40.70.0 0.0.0.255 area 0
+  [3] passive-interface GigabitEthernet0/1
+  [4] passive-interface GigabitEthernet0/0
+  [5] network 10.40.70.0 0.0.0.255 area 1
+  [6] default-information originate
+  [7] router-id 10.40.250.7
+KEY (unordered subset): [0] + [1] + [2] + [3]
+why: router-id sets the required ID (10.40.250.7 is the interface address, not the requested ID). The two area 0 network statements enable OSPF on Gi0/0 and Gi0/1, which also advertises both subnets. passive-interface Gi0/1 keeps the lab LAN advertised but silent. Making Gi0/0 passive would block the transit adjacencies; area 1 breaks the single-area design; default-information originate belongs on the internet edge router.
+TAKEAWAY: Single-area OSPF recipe: router-id, network <net> <wildcard> area 0 for each interface, passive-interface for user and server LANs. passive = advertised, but no hellos and no neighbors.
+
+[a082] type=mc domain=4 obj=4.3 (Explain the role of DHCP and DNS within the network)
+Q: Refer to the exhibit. A user in VLAN 20 reports that the intranet is down. Which conclusion is best supported by the output?
+EXHIBIT:
+    C:\> ping 10.40.50.20
+    
+    Pinging 10.40.50.20 with 32 bytes of data:
+    Reply from 10.40.50.20: bytes=32 time=1ms TTL=126
+    Reply from 10.40.50.20: bytes=32 time=1ms TTL=126
+    
+    C:\> ping intranet.campus.example
+    Ping request could not find host intranet.campus.example. Please check
+    the name and try again.
+  * A. The PC cannot resolve the name; check its DNS server setting and the DNS record for the intranet
+        why: The server answers by IP address across two routed hops (TTL 126), so addressing, the gateway and the path work. Only the name-to-address lookup fails, which is DNS's job.
+    B. The PC's default gateway is wrong
+        why: 10.40.50.20 is on another subnet. Replies from it prove the PC is using a working default gateway.
+    C. The PC's DHCP lease has expired
+        why: A PC with an expired lease would fall back to a 169.254.x.x address and could not reach a remote server by IP at all.
+    D. An ACL is blocking ICMP between VLAN 20 and the server farm
+        why: ICMP to 10.40.50.20 succeeds. The failure happens before any packet is sent to the server, when the name cannot be resolved.
+TAKEAWAY: Ping by IP works but ping by name fails = DNS (server setting, reachability of UDP 53 or the record). DHCP hands out the DNS server address along with the IP, mask and gateway.
+
+[a083] type=mc domain=5 obj=5.10 (Configure and verify WLAN within the GUI using WPA2 PSK)
+Q: Refer to the exhibit. The Staff-PSK WLAN on WLC-1 is meant to use WPA2 with a shared passphrase. Clients that enter the passphrase fail to connect, and some are prompted for a username and password instead. What must be changed?
+EXHIBIT:
+    WLANs > Edit 'Staff-PSK' > Security > Layer 2
+    
+      Layer 2 Security            WPA+WPA2
+      WPA+WPA2 Parameters
+        WPA Policy                [ ]
+        WPA2 Policy               [x]
+        WPA2 Encryption           [x] AES     [ ] TKIP
+      Authentication Key Management
+        802.1X                    [x] Enable
+        PSK                       [ ] Enable
+        PSK Format                ASCII
+  * A. Under Authentication Key Management, disable 802.1X, enable PSK and enter the passphrase
+        why: The WLAN is set for WPA2-Enterprise (802.1X), so clients are asked for credentials to pass to a RADIUS server. WPA2-Personal needs PSK selected and an ASCII passphrase of 8 to 63 characters.
+    B. Enable TKIP alongside AES under WPA2 Encryption
+        why: The cipher is not the problem. AES is the correct WPA2 cipher; TKIP is legacy and weaker.
+    C. Enable WPA Policy in addition to WPA2 Policy
+        why: That adds legacy WPA support but leaves key management on 802.1X, so clients would still be asked for usernames.
+    D. Set Layer 2 Security to None and use web authentication
+        why: That removes WPA2 encryption entirely and replaces the passphrase with a portal login, which does not meet the requirement.
+TAKEAWAY: WLC WPA2-Personal: Layer 2 Security WPA+WPA2, WPA2 Policy with AES, Auth Key Mgmt = PSK (not 802.1X), PSK format ASCII, then the passphrase. 802.1X = Enterprise (RADIUS).
+
+[a084] type=mc domain=3 obj=3.4.d (Configure and verify single area OSPFv2 — Router ID)
+Q: Refer to the exhibit. BLDG-7 has no router-id command under router ospf 1. Its configuration was saved and the router was reloaded. Which router ID does OSPF use?
+EXHIBIT:
+    BLDG-7# show ip interface brief | include Ethernet|Loopback
+    GigabitEthernet0/0     10.40.250.7     YES manual up                    up
+    GigabitEthernet0/1     172.16.99.2     YES manual up                    up
+    GigabitEthernet0/2     192.168.70.1    YES manual administratively down down
+    Loopback0              10.40.255.7     YES manual up                    up
+    Loopback1              10.40.254.70    YES manual up                    up
+    
+    BLDG-7# show running-config | section router ospf
+    router ospf 1
+     network 10.40.250.0 0.0.0.255 area 0
+     network 10.40.255.7 0.0.0.0 area 0
+  * A. 10.40.255.7
+        why: With no router-id command, OSPF uses the highest loopback address. 10.40.255.7 is higher than 10.40.254.70 because the third octet (255 against 254) decides before the fourth.
+    B. 10.40.254.70
+        why: Comparing only the last octet (70 against 7) is the trap. Addresses are compared octet by octet from the left, and 255 beats 254 in the third octet.
+    C. 172.16.99.2
+        why: That is the highest address on an up physical interface, which is used only when no loopback has an address.
+    D. 192.168.70.1
+        why: Gi0/2 is administratively down, and in any case a loopback address is preferred over every physical interface.
+TAKEAWAY: OSPF router ID: router-id command, else the highest loopback IP, else the highest IP on an up physical interface. Compare addresses octet by octet; the loopback need not be advertised.
+
+[a085] type=ms pick=2 domain=3 obj=3.2.a (Determine how a router makes a forwarding decision by default — Longest prefix match)
+Q: Refer to the exhibit. RES-1 connects the research park to the campus transit segment. Which two destination addresses does RES-1 forward to 10.40.250.3? (Choose two.)
+EXHIBIT:
+    RES-1# show ip route | begin Gateway
+    Gateway of last resort is 10.40.250.1 to network 0.0.0.0
+    
+    O*E2  0.0.0.0/0 [110/1] via 10.40.250.1, 00:12:34, GigabitEthernet0/0
+          10.0.0.0/8 is variably subnetted, 2 subnets, 2 masks
+    C        10.40.250.0/24 is directly connected, GigabitEthernet0/0
+    L        10.40.250.9/32 is directly connected, GigabitEthernet0/0
+          172.16.0.0/16 is variably subnetted, 3 subnets, 3 masks
+    S        172.16.0.0/16 [1/0] via 10.40.250.4
+    O        172.16.32.0/20 [110/3] via 10.40.250.3, 00:12:34, GigabitEthernet0/0
+    O        172.16.40.0/22 [110/2] via 10.40.250.2, 00:12:34, GigabitEthernet0/0
+  * A. 172.16.47.200
+        why: 172.16.32.0/20 covers 172.16.32.0 to 172.16.47.255. The /22 covers only 40.0 to 43.255, so the /20 is the longest match and the next hop is 10.40.250.3.
+  * B. 172.16.33.5
+        why: This falls inside the /20 (32 to 47) but outside the /22 (40 to 43). The /20 is the longest match, via 10.40.250.3.
+    C. 172.16.43.10
+        why: This matches the /16, the /20 and the /22. The /22 is the longest match, so it goes to 10.40.250.2.
+    D. 172.16.48.1
+        why: 48 is just past the /20's range (32 to 47). Only the static 172.16.0.0/16 matches, so it goes to 10.40.250.4.
+    E. 172.16.40.1
+        why: This is the first address of 172.16.40.0/22. The /22 beats the /20 and the /16, so the next hop is 10.40.250.2.
+    F. 10.40.60.5
+        why: No 10.40.60.x route exists on RES-1, so this destination uses the default route via 10.40.250.1.
+TAKEAWAY: For each destination, list every route that contains it and take the longest prefix. A /20 spans 16 values of the third octet (32-47); a /22 spans 4 (40-43).
+
+[a086] type=build ordered=true domain=5 obj=5.6 (Configure and verify access control lists)
+Q: On CORE-1, build the named ACL SRV-WEB: VLAN 20 (10.40.20.0/24) may reach the web server 10.40.50.20 over HTTPS only, all other traffic from VLAN 20 to the server farm 10.40.50.0/24 is blocked, and everything else is allowed. Apply it to traffic leaving Gi0/1 toward the servers. Drag the commands into the answer area in the order they are entered. Leave the commands that are not needed.
+POOL:
+  [0] permit ip any any
+  [1] interface GigabitEthernet0/1
+  [2] ip access-list extended SRV-WEB
+  [3] deny ip 10.40.20.0 0.0.0.255 10.40.50.0 0.0.0.255
+  [4] ip access-group SRV-WEB in
+  [5] permit tcp 10.40.20.0 0.0.0.255 host 10.40.50.20 eq 443
+  [6] ip access-group SRV-WEB out
+  [7] permit tcp host 10.40.50.20 eq 443 10.40.20.0 0.0.0.255
+KEY (ordered subset): [2] -> [5] -> [3] -> [0] -> [1] -> [6]
+ALSO ACCEPTED: [1] -> [6] -> [2] -> [5] -> [3] -> [0]
+why: Inside the ACL, order is everything: the HTTPS permit must come before the broader deny, and permit ip any any must come last to override the implicit deny for all other traffic. Traffic toward the servers leaves Gi0/1, so the ACL is applied out. The reversed permit (server as source, port 443 as source port) matches return traffic, not requests. Applying the ACL before creating it is also accepted.
+TAKEAWAY: Extended ACL entries run top-down: specific permits, then broader denies, then permit ip any any. Direction is from the router's point of view: toward the servers on the server-facing port is out.
+
+[a087] type=mc domain=3 obj=3.1.d (Interpret the components of routing table — Next hop)
+Q: Refer to the exhibit. Which statement describes how EDGE-1 forwards traffic to 10.40.40.0/24?
+EXHIBIT:
+    EDGE-1# show ip route 10.40.40.0
+    Routing entry for 10.40.40.0/24
+      Known via "ospf 1", distance 110, metric 2, type intra area
+      Last update from 10.40.250.3 on GigabitEthernet0/0, 00:12:34 ago
+      Routing Descriptor Blocks:
+      * 10.40.250.3, from 10.40.255.3, 00:12:34 ago, via GigabitEthernet0/0
+          Route metric is 2, traffic share count is 1
+        10.40.250.2, from 10.40.255.2, 00:12:34 ago, via GigabitEthernet0/0
+          Route metric is 2, traffic share count is 1
+  * A. It load-shares between next hops 10.40.250.2 and 10.40.250.3, because both paths have the same cost of 2
+        why: Two routing descriptor blocks with equal metrics mean OSPF installed both paths (equal-cost multipath). The traffic share count of 1 on each means traffic is spread evenly.
+    B. It sends everything to 10.40.250.3, and 10.40.250.2 is a backup used only if that path fails
+        why: The asterisk only points to the path that process-switched traffic will use next. Both entries are installed and in use; neither is a backup.
+    C. The route has an administrative distance of 2 and a metric of 110
+        why: This is reversed. distance 110 is OSPF's administrative distance and metric 2 is the OSPF cost.
+    D. It forwards the traffic to next hops 10.40.255.2 and 10.40.255.3
+        why: Those are the router IDs of the routers that advertised the route (from ...). The next hops are their interface addresses, 10.40.250.2 and 10.40.250.3.
+TAKEAWAY: show ip route <prefix>: distance = AD, metric = cost, one descriptor block per installed next hop, 'from' = the advertising router ID. Equal metrics = equal-cost load sharing (OSPF installs 4 by default).
+
+[a088] type=mc domain=4 obj=4.4 (Explain the function of SNMP in network operations)
+Q: The NOC wants CORE-1 to notify the network management station as soon as an interface goes down, and CORE-1 must send the notification again if the station does not acknowledge it. Which SNMP message type meets the requirement?
+  * A. Inform
+        why: An inform is an unsolicited notification from the agent that the manager must acknowledge. If no acknowledgment arrives, the agent resends it. Informs need SNMPv2c or SNMPv3.
+    B. Trap
+        why: A trap is also unsolicited, but it is fire-and-forget. If it is lost on the way to the NMS, the agent never knows and never resends it.
+    C. Get-response
+        why: This is the agent's reply to a Get request from the manager. The manager would have to poll; it is not an alert sent when the event happens.
+    D. Set
+        why: A Set is sent by the manager to change a value in the agent's MIB, such as shutting an interface. It flows the wrong way for an alert.
+TAKEAWAY: SNMP: manager sends Get/GetNext/GetBulk/Set to the agent (UDP 161). The agent sends Trap (no ack) or Inform (acknowledged) to the manager (UDP 162). SNMPv3 adds authentication and encryption.
+
+[a089] type=ms pick=2 domain=5 obj=5.7 (Configure and verify Layer 2 security features (DHCP snooping, dynamic ARP inspection, and port security))
+Q: A student plugged a home router into a classroom jack on ACC-2, and PCs in VLAN 20 began receiving 192.168.0.x addresses. The real DHCP server is reached through the uplink to DIST-1. Which two configurations on ACC-2 block the rogue server while legitimate DHCP keeps working? (Choose two.)
+  * A. ip dhcp snooping and ip dhcp snooping vlan 20 in global configuration
+        why: This turns on DHCP snooping for VLAN 20. Every port becomes untrusted, and server messages such as DHCPOFFER and DHCPACK arriving on an untrusted port are dropped.
+  * B. ip dhcp snooping trust on the uplink toward DIST-1
+        why: The legitimate offers arrive on the uplink. Trusting only that port lets them through, while offers from the student's router on an access port are dropped.
+    C. ip dhcp snooping trust on the classroom access ports
+        why: That is backwards. Trusting the access ports would let the rogue router's offers through again.
+    D. ip arp inspection vlan 20 in global configuration
+        why: Dynamic ARP inspection checks ARP messages against the snooping bindings. It does not filter DHCP offers, so the rogue leases would continue.
+    E. switchport port-security maximum 1 on the classroom access ports
+        why: The home router uses one MAC address on the port, so port security would allow it. Port security limits MAC addresses; it does not look at DHCP messages.
+TAKEAWAY: DHCP snooping: enable it globally and per VLAN, trust only the ports toward real DHCP servers (uplinks), leave access ports untrusted. Its binding table is what DAI and IP Source Guard rely on.
+
+[a090] type=ms pick=3 domain=3 obj=3.4.a (Configure and verify single area OSPFv2 — Neighbor adjacencies)
+Q: A new router, RES-1, will join the transit segment 10.40.250.0/24 where EDGE-1, DIST-1, DIST-2 and CORE-1 already run OSPF. Which three settings on RES-1's Gi0/0 must agree with the existing routers for adjacencies to form? (Choose three.)
+  * A. Area ID (area 0)
+        why: The area ID is carried in every hello. A router in another area on the same segment is ignored.
+  * B. Subnet mask (/24)
+        why: On broadcast segments the hello includes the interface mask, and neighbors must agree on it as well as on the subnet.
+  * C. Hello and dead intervals
+        why: Both timers are carried in the hello and must match exactly (10 and 40 seconds by default on Ethernet).
+    D. OSPF process ID
+        why: The process ID is local to each router and is not sent in any OSPF packet. router ospf 7 can peer with router ospf 1.
+    E. Router priority
+        why: Priority only affects the DR/BDR election. Routers with different priorities still form adjacencies.
+    F. Router ID
+        why: Router IDs must be unique, not equal. A duplicate router ID causes problems instead of preventing them.
+TAKEAWAY: Must match: area, subnet/mask, hello/dead timers, authentication, stub flag (and MTU, checked at EXSTART). Must differ: router ID. Doesn't matter: process ID, priority, cost.
+
+[a091] type=mc domain=3 obj=3.3.c (Configure and verify IPv4 and IPv6 static routing — Host route)
+Q: Traffic from EDGE-1 to the NOC monitoring server 10.40.50.30 must pass through DIST-1 (10.40.250.2), where a traffic tap is installed. The rest of 10.40.50.0/24 must keep following the OSPF route through CORE-1. Which command on EDGE-1 meets the requirement?
+  * A. ip route 10.40.50.30 255.255.255.255 10.40.250.2
+        why: A /32 host route matches only 10.40.50.30. It is longer than the OSPF /24, so it wins for that one address and leaves the rest of the subnet on OSPF.
+    B. ip route 10.40.50.0 255.255.255.0 10.40.250.2
+        why: This static /24 has AD 1 and would replace the OSPF /24 for the whole server farm, moving every server's traffic through DIST-1.
+    C. ip route 10.40.50.30 0.0.0.0 10.40.250.2
+        why: ip route takes a subnet mask, not a wildcard. With mask 0.0.0.0 the address has bits outside the mask, and IOS rejects it as an inconsistent address and mask.
+    D. ip route 10.40.250.2 255.255.255.255 10.40.50.30
+        why: The destination and next hop are reversed. This would create a route to DIST-1's address via the monitoring server.
+TAKEAWAY: Host route = /32 (mask 255.255.255.255; IPv6 /128). Longest match lets it steer one address without touching the subnet's dynamic route.
+
+[a092] type=mc domain=5 obj=5.2 (Describe security program elements (user awareness, training, and physical access control))
+Q: During a walk-through, an auditor follows an employee through the badge-controlled door of the campus data center without badging in. Which control most directly prevents this from happening?
+  * A. An access control vestibule that admits one person per badge swipe
+        why: A vestibule (mantrap) has two interlocked doors, so only one authenticated person can pass at a time. It physically stops tailgating.
+    B. CCTV cameras pointed at the data center door
+        why: Cameras are detective: they record the tailgating so it can be investigated, but they do not stop it.
+    C. Longer and more complex PINs on the badge readers
+        why: The auditor never used a badge or PIN. Stronger credentials do nothing when someone walks in behind an authorized person.
+    D. A sign reminding staff to keep the door closed
+        why: Signs and reminders support awareness but depend on people's behavior. They do not physically prevent entry.
+TAKEAWAY: Physical access control: badges, locks, vestibules (stop tailgating), guards. Cameras detect. User awareness and training reduce human error such as holding doors or clicking phishing links.
+
+[a093] type=order domain=4 obj=4.5 (Describe the use of syslog features, including facilities and severity levels)
+Q: The NOC is setting logging trap levels on the campus devices. Drag the syslog severity keywords into order from level 0 (most severe) to level 7 (least severe).
+POOL:
+  [0] Warnings
+  [1] Emergencies
+  [2] Notifications
+  [3] Critical
+  [4] Debugging
+  [5] Alerts
+  [6] Informational
+  [7] Errors
+KEY (full order): [1] -> [5] -> [3] -> [7] -> [0] -> [2] -> [6] -> [4]
+why: 0 emergencies, 1 alerts, 2 critical, 3 errors, 4 warnings, 5 notifications, 6 informational, 7 debugging. A logging level includes its own number and every lower (more severe) number, so logging trap 6 sends levels 0 through 6.
+TAKEAWAY: Lower number = more severe. Setting a level sends that level and all lower numbers, so a higher level means more messages.
+
+[a094] type=mc domain=3 obj=3.4 (Configure and verify single area OSPFv2)
+Q: Refer to the exhibit. CORE-1 reaches the new data center router over a 10-Gb/s link (Te0/1) and a 1-Gb/s link (Gi0/2). OSPF sends half of the data center traffic over the 1-Gb/s link. Which change makes OSPF prefer the 10-Gb/s link and keeps costs consistent across the campus?
+EXHIBIT:
+    CORE-1# show ip ospf interface brief
+    Interface    PID   Area            IP Address/Mask    Cost  State Nbrs F/C
+    Te0/1        1     0               10.40.248.5/30     1     P2P   1/1
+    Gi0/2        1     0               10.40.248.1/30     1     P2P   1/1
+    Gi0/0        1     0               10.40.250.4/24     1     DROTH 2/3
+  * A. Configure auto-cost reference-bandwidth 10000 under router ospf 1 on every OSPF router
+        why: With the default 100-Mb/s reference, every link of 100 Mb/s or faster costs 1, so 10G and 1G tie. A 10,000-Mb/s reference gives 10G a cost of 1 and 1G a cost of 10. Every router must use the same reference for consistent metrics.
+    B. Configure bandwidth 10000000 on CORE-1 Te0/1
+        why: Te0/1 already runs at 10 Gb/s. With a 100-Mb/s reference, any bandwidth above 100 Mb/s still gives the minimum cost of 1, so the tie remains.
+    C. Configure ip ospf priority 255 on CORE-1 Te0/1
+        why: Priority only affects DR/BDR elections, and this point-to-point link has no election. It does not change path cost.
+    D. Configure maximum-paths 1 under router ospf 1 on CORE-1
+        why: This installs only one of the two equal-cost paths, but OSPF does not choose by bandwidth, so the 1-Gb/s path could be the one kept.
+TAKEAWAY: OSPF cost = reference bandwidth / interface bandwidth, minimum 1. Default reference 100 Mb/s makes Fa, Gi and Te all cost 1; raise it (auto-cost reference-bandwidth) on all routers, or set ip ospf cost.
+
+[a095] type=mc domain=5 obj=5.5 (Describe IPsec remote access and site-to-site VPNs)
+Q: Three satellite buildings across town each have an internet circuit and a small router. Their users must reach campus servers over the internet with all traffic between the sites encrypted, and staff there must not have to install or start VPN software. Which solution fits?
+  * A. Site-to-site IPsec VPNs between each satellite router and EDGE-1
+        why: The routers build permanent encrypted tunnels and protect all traffic between the networks. Hosts send traffic normally and need no client.
+    B. A remote-access VPN with a client on every satellite PC
+        why: Remote access protects one device at a time and requires each user to run a client, which the requirement rules out.
+    C. GRE tunnels between each satellite router and EDGE-1
+        why: GRE alone encapsulates traffic but does not encrypt it. It would need IPsec added to protect the data.
+    D. A clientless SSL VPN portal on EDGE-1
+        why: Clientless VPNs give individual users browser-based access to selected applications. Users must log in to a portal, and it does not connect whole sites.
+TAKEAWAY: Site-to-site IPsec = gateway to gateway, always on, transparent to hosts. Remote access = per user (client or clientless TLS/SSL). GRE adds multicast/routing support but no encryption.
+
+[a096] type=mc domain=3 obj=3.5 (Describe the purpose, functions, and concepts of first hop redundancy protocols)
+Q: The campus team wants both DIST-1 and DIST-2 to forward traffic from VLAN 40 hosts at the same time, while every host keeps the same default gateway address. Which first hop redundancy protocol does this within a single group?
+  * A. GLBP
+        why: In GLBP, the active virtual gateway (AVG) answers ARP requests for the one virtual IP with different virtual MACs, each owned by a forwarder (AVF). Hosts are spread across both switches automatically.
+    B. HSRP
+        why: One HSRP group has one active router that forwards for all hosts. Sharing load needs several groups and hosts split between different gateway addresses.
+    C. VRRP
+        why: Like HSRP, a VRRP group has one master that forwards. VRRP is the open-standard choice, but it does not load balance within a group.
+    D. HSRP version 2
+        why: Version 2 adds more group numbers, millisecond timers and IPv6. It still has only one active router per group.
+TAKEAWAY: HSRP (Cisco): active/standby, preempt off. VRRP (open): master/backup, preempt on. GLBP (Cisco): one virtual IP, several virtual MACs, AVG + AVFs share the load.
+
+[a097] type=mc domain=3 obj=3.3.b (Configure and verify IPv4 and IPv6 static routing — Network route)
+Q: Refer to the exhibit. LAB-R2, a temporary lab router, connects to CORE-1 Fa0/3. Its lab networks, 10.40.72.0 through 10.40.75.255, are not in OSPF. Which command on CORE-1 adds a single route that covers exactly the lab networks?
+EXHIBIT:
+    CORE-1# show ip interface brief | include FastEthernet0/3
+    FastEthernet0/3        10.40.246.1     YES manual up                    up
+    
+    LAB-R2# show ip interface brief | include 0/0
+    GigabitEthernet0/0     10.40.246.2     YES manual up                    up
+  * A. ip route 10.40.72.0 255.255.252.0 10.40.246.2
+        why: 72 to 75 is four values in the third octet starting on a multiple of 4: a /22, mask 255.255.252.0. The next hop is LAB-R2's address on the shared link.
+    B. ip route 10.40.72.0 255.255.255.0 10.40.246.2
+        why: A /24 covers only 10.40.72.x. Traffic to 10.40.73.0 through 10.40.75.255 would not match it.
+    C. ip route 10.40.72.0 0.0.3.255 10.40.246.2
+        why: ip route needs a subnet mask, not a wildcard. IOS rejects this as an inconsistent address and mask.
+    D. ip route 10.40.72.0 255.255.252.0 10.40.246.1
+        why: 10.40.246.1 is CORE-1's own Fa0/3 address. IOS refuses a next hop that belongs to the router itself; the next hop must be LAB-R2.
+TAKEAWAY: Static network route: ip route <network> <subnet mask> <next hop or exit interface>. Size the mask from the block: 4 consecutive /24s on a multiple of 4 = /22 = 255.255.252.0.
+
+[a098] type=mc domain=4 obj=4.9 (Describe the capabilities and functions of TFTP/FTP in the network)
+Q: The NOC wants a nightly job to copy each switch's configuration to an archive server. Security requires the transfer to log in with a username and password and to run over a connection-oriented transport. Of these, which protocol meets the requirement?
+  * A. FTP
+        why: FTP runs over TCP (control on port 21) and requires a username and password. IOS supports it with copy running-config ftp: and ip ftp username/password.
+    B. TFTP
+        why: TFTP runs over UDP 69 and has no authentication at all, which is why it is simple but unsuitable for this requirement.
+    C. SNMP
+        why: SNMP is for monitoring and management (Get, Set, traps). It is not a file transfer protocol for configuration archives.
+    D. Syslog
+        why: Syslog sends one-way event messages, usually over UDP 514. It does not transfer files.
+TAKEAWAY: TFTP: UDP 69, no login, no directory listing. FTP: TCP 20/21, username/password, but cleartext. SCP/SFTP add encryption. All are used to move IOS images and config backups.
+
+[a099] type=mc domain=5 obj=5.6 (Configure and verify access control lists)
+Q: Guest VLAN 30 (10.40.30.0/24) must be blocked from the server farm (10.40.50.0/24 behind CORE-1 Gi0/1), but guests must keep internet access and all other VLANs must keep server access. The engineer wrote access-list 15 deny 10.40.30.0 0.0.0.255 and access-list 15 permit any. Where should ACL 15 be applied?
+  * A. Outbound on CORE-1 Gi0/1, the server-farm interface
+        why: A standard ACL checks only the source address, so it belongs as close to the destination as possible. Outbound toward the servers, it affects only traffic headed into the server farm.
+    B. Inbound on the VLAN 30 SVI on DIST-2
+        why: Near the source, a source-only ACL drops all guest traffic, including internet traffic, which breaks the requirement.
+    C. Outbound on EDGE-1 Gi0/1 toward ISP-A
+        why: This blocks the guests' internet access and does nothing about guest traffic to the servers.
+    D. Inbound on CORE-1 Gi0/1
+        why: Inbound on the server-facing port only sees traffic coming from the servers, whose source addresses are 10.40.50.x. The deny for 10.40.30.0/24 would never match.
+TAKEAWAY: Standard ACL (source only): place near the destination. Extended ACL (source, destination, protocol, port): place near the source. Direction is from the router's point of view.
+
+[a100] type=mc domain=5 obj=5.8 (Compare authentication, authorization, and accounting concepts)
+Q: After an outage, the NOC needs to know which administrator entered which configuration commands on CORE-1 and at what time. Which AAA function provides this record?
+  * A. Accounting
+        why: Accounting records what authenticated users did: sessions, commands and times. With TACACS+, each command can be logged to the server.
+    B. Authentication
+        why: Authentication proves who the user is at login. It does not record what they did afterwards.
+    C. Authorization
+        why: Authorization decides which commands a user may run. It allows or denies; it does not keep a history.
+    D. Auditing
+        why: Auditing is a broader review activity, not one of the three AAA functions. The AAA function that produces the record is accounting.
+TAKEAWAY: AAA: authentication = who are you, authorization = what may you do, accounting = what did you do. TACACS+ (TCP 49) can authorize and account per command; RADIUS (UDP 1812/1813) combines authN and authZ.

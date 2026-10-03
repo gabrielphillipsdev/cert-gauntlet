@@ -1,8 +1,101 @@
 # ccna pack — content spec
 
-> Status: the **IOS simulator engine** section (Chat 7) and the **lab item / show-output reader / PBQ** sections (Chat 8) are written. The content sections (cards, twins, exam banks, show-output reader, lab items) are still to be written by the chats that build them (8 and 9), following the shape of `dev/specs/secplus.md`: files + exports, categories/domains with weights, every item schema, quotas, and the objective-tag rule (`obj` on every item, validator-enforced). Those chats also add the pack's exam rules to `packs/ccna/pack.js` (see `dev/ENGINE.md` → Pack manifest) and a `dev/FIDELITY-ccna.md` checklist built from the verified exam format in PLAN.md §1/§5.
+Pack: `packs/ccna/`. Manifest: `pack.js`. Topic map for tagging: `dev/specs/skills-ccna.json` (Cisco 200-301 **v1.1** exam topics, fetched Oct 3, 2026 from Cisco's official PDF). Validate with `node dev/check-ccna.mjs all` (strict CCNA rules) **and** `node dev/check-pack.mjs ccna` (generic engine rules) until both print PASS. Export for second-model review: `node dev/export-ccna.mjs` → `dev/export/ccna-*.txt`. Fidelity checklist: `dev/FIDELITY-ccna.md`. End-to-end: `python3 dev/tests/e2e-ccna.py` (serve the repo on :8765 first).
 
-Blueprint: Cisco 200-301 v1.1 — Network Fundamentals 20%, Network Access 20%, IP Connectivity 25%, IP Services 10%, Security Fundamentals 15%, Automation & Programmability 10%. Exam facts (no backtracking, 3–4 lab items with tabbed IOS terminals, 5–7 min each, partial credit) are in PLAN.md §1 and §5 and are the reason the simulator exists.
+Sections: §1 exam facts · §2 files · §3 categories/domains · §4 card · §5 twin · §6 exam banks · §7 lab slots (contract with Chat 8) · then the IOS simulator (Chat 7).
+
+All text original — never copy Cisco Press, Cisco's own sample questions, Boson, Jeremy's IT Lab, or any practice exam. Facts must be correct for IOS 15/16 and the v1.1 blueprint. Neutral voice, no real company names; addresses from RFC 1918 / RFC 5737 / `2001:db8::/32`. Escape `"` inside strings; no HTML (content is escaped on render). Every item carries `obj` — the topic it tests (`"3.4"`, or a sub-topic `"3.4.c"` when it targets one bullet). The obj's domain must equal the item's domain and its category's domain.
+
+## 1. Exam facts (sources)
+
+| Fact | Value | Source |
+|---|---|---|
+| Blueprint | v1.1: Network Fundamentals 20 · Network Access 20 · IP Connectivity 25 · IP Services 10 · Security Fundamentals 15 · Automation & Programmability 10 | Cisco exam topics PDF (skills-ccna.json `source`) |
+| Version cliff | v2.0 replaces v1.1 on Feb 3, 2027 | PLAN.md §1 (verified Oct 2, 2026) |
+| Length | 120 minutes; ~100–120 items | Cisco exam topics PDF; PLAN.md §1 |
+| Navigation | **No backtracking on any item.** Once you click Next the item is final | PLAN.md §1 |
+| Item types | MC single, multi-response (graded all-or-nothing), drag-and-drop, 3–4 lab items (tabbed IOS terminals, Tasks/Guidelines/Topology, 5–7 min each, partial credit) | PLAN.md §1/§5 |
+| Score | Scaled 300–1000; Cisco does **not** publish the passing score ("will not be the same number across all exams") | Cisco Learning Network, *Demystifying the Cisco score report* |
+| App pass line | 825 scaled (= 75% raw on the app's linear scale) — the commonly reported figure, unofficial. The **gate** decides booking: 85% raw on a fresh exam, every domain ≥ 70%, twice in a row (plus Boson ExSim ≥ 85% twice, PLAN.md §1) | PLAN.md §7 |
+| 6.6 wording | v1.1 names **Ansible and Terraform** (Puppet and Chef were v1.0). Puppet/Chef appear only as distractors and in one contrast twin | Cisco exam topics PDF |
+
+## 2. Files
+
+| file | export | count |
+|---|---|---|
+| `cards-d1.js` … `cards-d6.js` | `CCNA_CARDS_D1` … `CCNA_CARDS_D6` | ~450 cards, 26 decks |
+| `twins.js` | `CCNA_TWINS` | ~50 confusable pairs |
+| `bank-a.js`, `bank-b.js`, `bank-c.js` | `CCNA_BANK_A/B/C` | 100 questions each; each concatenates `bank-x.p1.js` (domains 1/2/6, x001–x050) and `bank-x.p2.js` (3/4/5, x051–x100) |
+| `exam-labs.js` | `LAB_SLOTS`, `fillLabSlots`, `loadLabs`, `LABS_READY` | 4 lab slots per exam (§7) |
+| `extras.js` | `DIAGRAMS`, `ACRONYMS`, `REFERENCE` | reference sheet tables, acronym list |
+| `sprints.js` | `SPRINTS` | speed rounds: masks, administrative distance, ports |
+| `subnet/` | standalone subnetting trainer (Chat 4) | |
+| `labs/` | **Chat 8** — lab items, show-output reader, config-order/topology PBQs | |
+
+## 3. Categories (`c` / `cat`) and domains
+
+| d | weight | decks (category keys) |
+|---|---|---|
+| 1 Network Fundamentals | 20 | `parts` (1.1–1.4) · `tcpip` (1.5–1.7, 1.10) · `ipv6` (1.8–1.9) · `wlbasics` (1.11–1.12) · `switching` (1.13) |
+| 2 Network Access | 20 | `vlan` (2.1–2.2) · `l2link` (2.3–2.4) · `stp` (2.5) · `wlan` (2.6, 2.7, 2.9) · `mgmt` (2.8) |
+| 3 IP Connectivity | 25 | `rtable` (3.1–3.2) · `static` (3.3) · `ospf` (3.4) · `fhrp` (3.5) |
+| 4 IP Services | 10 | `nat` (4.1) · `svc` (4.2, 4.3, 4.6, 4.8) · `mon` (4.4, 4.5, 4.9) · `qos` (4.7) |
+| 5 Security Fundamentals | 15 | `secbase` (5.1–5.4) · `vpn` (5.5, 5.8) · `acl` (5.6) · `l2sec` (5.7) · `wsec` (5.9–5.10) |
+| 6 Automation & Programmability | 10 | `sdn` (6.1–6.4) · `api` (6.5, 6.7) · `cfgmgmt` (6.6) |
+
+The topic → deck mapping is the `cat` field in skills-ccna.json. A card may use another deck in the same domain when it reads better there.
+
+## 4. Card
+
+```js
+{obj:"3.4.c", c:"ospf", q:"≤90 chars front", a:"#Big headline line\nsupporting line (1–3 lines)", s:"optional ≤60-char MC option text",
+ x:"2–4 sentences, 200–520 chars: teaches it, why it matters, how it differs from neighbors, the exam/CLI keyword", w:"optional hook ≤120", g:"optional distractor group"}
+```
+Same engine schema as Sec+ (dev/specs/secplus.md). Shorts (`s`, else the `#` line) unique within a deck (or `g` group). CLI cards put the command in the headline (`#show ip ospf neighbor`). Each deck ≥ 8 cards; every v1.1 topic has cards.
+
+Targets: d1 ~90 · d2 ~90 · d3 ~110 · d4 ~50 · d5 ~70 · d6 ~45. Shipped (Chat 9): 98 · 92 · 111 · 54 · 79 · 47 = 481.
+
+## 5. Twin
+
+```js
+{a:"Term A", b:"Term B", obj:"2.5.b", n:"2–3 sentence contrast", s:[["statement true of A","a"],["…","b"], … 4–6 statements, ≥2 each side]}
+```
+Required pairs (Chat 9 brief): OSPF states, STP port states/roles, standard vs extended ACL placement, NAT types, FHRPs, 802.11 standards/bands, Ansible vs Terraform (and Ansible vs Puppet/Chef as the pull-vs-push contrast), REST verbs, JSON vs YAML, TCP vs UDP apps, collision vs broadcast domains, SVI vs routed port — plus ~38 more of the pairs Cisco questions lean on.
+
+## 6. Exam banks
+
+100 questions per bank; ids `a001`…`a100` in file order. Authored in two halves (p1 = domains 1/2/6, p2 = 3/4/5), domains interleaved within each half; the runner shuffles items and options at sitting time, so file order never reaches the candidate. Correct options are conventionally listed first in the file for the same reason.
+
+| rule | value |
+|---|---|
+| Domain quota per bank | d1 **20** · d2 **20** · d3 **25** · d4 **10** · d5 **15** · d6 **10** |
+| Types (`t`) | `mc` (4 options, 1 ok) · `ms` multi-response (`pick` 2–3, 5–6 options, stem ends "(Choose two.)" / "(Choose three.)") · `order` drag-drop sequence · `build` drag-drop selection/sort |
+| Mix per bank | ≥ 10 `ms`, ≥ 4 `order`, ≥ 4 `build`, ≥ 30 with an `ex` exhibit (show output, running-config excerpt, routing table, topology described in text, JSON payload) |
+| Scoring | every item all-or-nothing, 1 point (no partial credit on MC/MS/drag-drop); lab items `exam.pbqPts` × partial credit |
+
+```js
+{id:"a017", obj:"3.1.e", d:3, cat:"rtable", t:"mc"|"ms", pick:2|3 (ms only),
+ q:"≤420 chars. Cisco voice: 'Refer to the exhibit.' first when there is one; 'Which command…?', 'What is the result…?'",
+ ex:"optional monospace exhibit, ≤26 lines, ≤78 chars per line (iPhone width)",
+ o:[{t:"≤130 chars", ok:true|false, x:"why right / why wrong HERE, ≤300"} ×4 (mc) | ×5–6 (ms)], w:"takeaway ≤280"}
+```
+Drag-and-drop uses the engine's Microsoft-format item renderers (`core/exam/msitems.js`), which work in any pack; the CCNA exam does **not** turn on Microsoft sectioning (no `itemTypes` in the manifest — the validator reads `exam.bankTypes` instead).
+```js
+{id:"a033", obj:"4.3", d:4, cat:"svc", t:"order",
+ q:"Drag and drop the DHCP messages into the order they are exchanged when a client joins the network.",
+ pool:["DHCPDISCOVER","DHCPOFFER","DHCPREQUEST","DHCPACK"], answer:[0,1,2,3], alt:[ /* optional equivalent orders */ ],
+ x:"why this order", w:"takeaway"}
+{id:"a061", obj:"1.5", d:1, cat:"tcpip", t:"build", ordered:false,
+ q:"Drag the characteristics of UDP into the answer area. Leave the characteristics that do not apply.",
+ pool:[6–8 entries incl. distractors], answer:[indexes that belong], x:"…", w:"…"}
+```
+`build` with `ordered:true` = pick the needed config lines and put them in order. Exhibits are real-shaped IOS output; the simulator in `core/sims/ios/` can generate it (`createLab(...)`, `lab.cli("R1").exec("show ip route")`).
+
+## 7. Lab slots — contract with Chat 8
+
+`exam.pbqCount = 4`, `exam.pbqPts = 3`. `exam-labs.js` holds `LAB_SLOTS` (4 topics per exam, all 12 lab topics covered across A/B/C) and fills each slot with the first Chat 8 lab whose `topic` matches, cloned under an exam id (`pa1`…`pc4`, `src` = the lab's own id).
+
+Chat 8's side (as merged): `loadLabs()` in `exam-labs.js` imports `labs.js` (`LABS`), `pbq.js` (`PBQ_ORDER`, `PBQ_TOPO`) and `reader.js` (`READER`) plus the `core/sims/ios/ui/` modules that register their sim types. Each of the 13 `ccna-lab` items carries `topic` (one of `vlan intervlan static ospf acl nat etherchannel dhcp portsec ssh ipv6 showread`), `d`, `obj`. `dev/check-pack.mjs` FAILs if any exam's slots cannot be filled. Nothing else in `packs/ccna/` needs to change: the PBQ Lab lists `LABS`, each exam gets its 4 labs, and the runner places them among the 100 questions at random positions (the real exam does not group them).
 
 ---
 

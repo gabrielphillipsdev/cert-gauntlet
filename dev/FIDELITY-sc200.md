@@ -28,14 +28,14 @@ Legend: ☐ not done · ☑ done · — not applicable to this chat
 ## Portal / hot-area deck
 - ☐ 60 items in `packs/sc200/portal.js` render as click targets once screenshots are attached (`img`, regions with `r:[x%,y%,w%,h%]`) — the `hotarea` sim already draws the rectangles when `img` is set; screenshots still to capture
 - ☑ Until screenshots exist, the deck runs as "pick the right label" using `regions`
-- ☐ Screenshot source: MSP tenant with Security Reader if granted, else Microsoft Learn screenshots
+- ☐ Screenshot source: MSP tenant with Security Reader if granted, else Microsoft Learn screenshots — **owner: Gabe** (needs portal access; nothing to build)
 
 ## Content gates
 - ☑ `node dev/check-sc200.js all` → PASS
 - ☑ `node dev/check-pack.mjs sc200` → PASS (cards + twins loaded; banks wired by Chat 6)
 - ☑ Every item tagged with a skills-measured bullet id (Oct 21, 2026 outline)
 - ☑ Independent wrong-key review of all bank items (1 wrong key, 5 fact errors, 7 ambiguities fixed)
-- ☐ Second-model review of `dev/export/sc200-bank-*.txt`; findings filed as issues
+- ☐ Second-model review of `dev/export/sc200-bank-*.txt`; findings filed as issues — **owner: Gabe** (paste the exports into Gemini/ChatGPT; PLAN §6 quality rules)
 
 ## Chat 6 run log (2026-10-03)
 - `node dev/tests/kql.test.mjs` → 227/227 (169 literal fixtures · 25 editor-style error messages · 33 independent checks on the sample tables)
@@ -47,3 +47,6 @@ Legend: ☐ not done · ☑ done · — not applicable to this chat
 ## Done-when (Chat 6)
 - ☑ A full 50-unit exam runs end to end on iPhone and iPad with case study first and solution series last
 - ☑ KQL Lab interpreter passes its 150-query suite (separate checklist in Chat 6)
+
+## Chat 9 pass (2026-10-03)
+- `node dev/check-sc200.js all`, `node dev/check-pack.mjs sc200`, `node dev/tests/kql.test.mjs`, `node dev/check-kql-drills.mjs`, `python3 dev/tests/e2e-sc200.py` re-run after the runner's no-backtrack change: all PASS (Microsoft sectioning untouched). The three ☐ items above are content/access tasks for Gabe, not code.
