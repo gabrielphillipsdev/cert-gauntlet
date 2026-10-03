@@ -387,7 +387,7 @@ function mvExpand(op, t, scope, db, ctx) {
   const rows = [];
   t.rows.forEach((r, ri) => {
     env.row = r; env.rowIndex = ri;
-    const lists = defs.map(d => { let v = evalExpr(d.expr, env); if (isStr(v)) v = safeJSON(v); if (N(v) || v === "") return []; if (Array.isArray(v)) return v; if (isDyn(v)) return Object.keys(v).map(k => ({ [k]: v[k] })); return [v]; }); /* null / empty → the record is dropped, as in Kusto */
+    const lists = defs.map(d => { const v = evalExpr(d.expr, env); if (N(v) || v === "") return []; if (Array.isArray(v)) return v; if (isDyn(v)) return Object.keys(v).map(k => ({ [k]: v[k] })); return [v]; }); /* a string is a scalar (NOT parsed as JSON — use parse_json); null / empty → the record is dropped, as in Kusto */
     const n = Math.min(limit, Math.max(...lists.map(l => l.length)));
     for (let k = 0; k < n; k++) { const out = r.slice(); while (out.length < cols.length) out.push(null); defs.forEach((d, j) => { const v = lists[j][k] ?? null; out[idx[j]] = d.type !== "dynamic" ? castTo(v, d.type) : v; }); if (idxCol >= 0) out[idxCol] = k; rows.push(out); }
   });

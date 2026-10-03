@@ -28,8 +28,15 @@ export function formatError(e) {
 /* Result-set equality used to grade "write it" drills: any query producing the same data passes.
    Column NAMES are ignored by default (summarize Total=count() vs count_ are both right); column ORDER is ignored
    (columns are matched by their value vectors); row order matters only when `ordered` is true. */
-export function sameResult(a, b, { ordered = false, names = false } = {}) {
+export function sameResult(a, b, { ordered = false, names = false, strict = false } = {}) {
   if (!a || !b) return { ok: false, why: "no result" };
+  if (strict) { /* what the grid shows must be identical: same column names in the same order, same rows */
+    if (a.cols.map(c => c.name).join("|") !== b.cols.map(c => c.name).join("|")) return { ok: false, why: "columns differ" };
+    const ka = a.rows.map(r => r.map(hashKey).join("\u0001")), kb = b.rows.map(r => r.map(hashKey).join("\u0001"));
+    if (!ordered) { ka.sort(); kb.sort(); }
+    if (ka.length !== kb.length || ka.some((k, i) => k !== kb[i])) return { ok: false, why: "rows differ" };
+    return { ok: true };
+  }
   if (a.cols.length !== b.cols.length) return { ok: false, why: `expected ${b.cols.length} column${b.cols.length === 1 ? "" : "s"}, got ${a.cols.length}` };
   if (a.rows.length !== b.rows.length) return { ok: false, why: `expected ${b.rows.length} row${b.rows.length === 1 ? "" : "s"}, got ${a.rows.length}` };
   if (names) { const an = a.cols.map(c => c.name).sort().join("|"), bn = b.cols.map(c => c.name).sort().join("|"); if (an !== bn) return { ok: false, why: `column names differ: ${a.cols.map(c => c.name).join(", ")} vs ${b.cols.map(c => c.name).join(", ")}` }; }

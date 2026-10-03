@@ -45,7 +45,8 @@ const devId = {}; HOSTS.forEach(h => devId[h] = hex(40));
 const userOfHost = {}; WKS.forEach((h, i) => userOfHost[h] = USERS[i % 25][0]);
 const CORP_IP = () => `10.${int(10, 12)}.${int(0, 40)}.${int(2, 250)}`;
 const PUB_IPS = ["20.42.73.11", "40.118.244.65", "52.96.165.242", "74.125.224.72", "104.18.32.47", "151.101.1.69", "172.217.14.206", "13.107.42.14"];
-const CITIES = [["Cincinnati", "Ohio", "US"], ["Columbus", "Ohio", "US"], ["Chicago", "Illinois", "US"], ["Austin", "Texas", "US"], ["Seattle", "Washington", "US"], ["Toronto", "Ontario", "CA"], ["Dublin", "Leinster", "IE"]];
+const US_CITIES = [["Cincinnati", "Ohio", "US"], ["Cincinnati", "Ohio", "US"], ["Columbus", "Ohio", "US"], ["Chicago", "Illinois", "US"], ["Austin", "Texas", "US"], ["Seattle", "Washington", "US"]];
+const CITIES = US_CITIES; /* background sign-ins: US only, so multi-country users are the storyline ones (spray from DE, mchen from NG) */
 const APPS = ["Office 365 Exchange Online", "Microsoft Teams", "Azure Portal", "Office 365 SharePoint Online", "Microsoft 365 Security and Compliance Center", "Windows Sign In", "OfficeHome", "Microsoft Graph Command Line Tools", "Azure Virtual Desktop Client"];
 const BROWSERS = ["Edge 130.0.0", "Chrome 130.0.0", "Edge 129.0.0", "Safari 18.0"];
 const OSS = ["Windows 11", "Windows 10", "MacOs", "iOS 18", "Android"];
