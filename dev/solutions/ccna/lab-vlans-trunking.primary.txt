@@ -1,0 +1,38 @@
+! device SW1
+enable
+configure terminal
+vlan 10
+name SALES
+vlan 20
+name HR
+exit
+interface fastethernet 0/1
+switchport mode access
+switchport access vlan 10
+interface fastethernet 0/2
+switchport mode access
+switchport access vlan 20
+interface gigabitethernet 0/1
+switchport mode trunk
+switchport trunk native vlan 99
+switchport trunk allowed vlan 10,20,99
+end
+! device SW2
+enable
+configure terminal
+vlan 10
+name SALES
+vlan 20
+name HR
+exit
+interface fastethernet 0/1
+switchport mode access
+switchport access vlan 10
+interface fastethernet 0/2
+switchport mode access
+switchport access vlan 20
+interface gigabitethernet 0/1
+switchport mode trunk
+switchport trunk native vlan 99
+switchport trunk allowed vlan 10,20,99
+end

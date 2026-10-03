@@ -86,3 +86,37 @@ Timers and counters: `show` output that carries uptime/age/dead-time uses consta
 - End state: `lab.state(name)` returns the configuration snapshot (`hostname`, `interfaces[...].ip/switchport/portsec/acl/nat/...`, `vlans`, `routes`, `ospf`, `acls`, `nat`, `dhcp`, `lines`, `users`, `startup`). Runtime (`rt`) is excluded so graders assert on configuration, and use `lab.topo.ping(...)`/`converge()` + `lab.topo.get(name).rt` for *effects* (neighbors, routes, STP roles, translations).
 - "Any method accepted": grade effects (does `PC1` reach `SRV`? is `Gi0/1` trunking with native 99? is `R2` in `show ip ospf neighbor`?) rather than exact commands.
 - Partial credit: one check per sub-task; the sim never throws on bad input, it returns IOS-style errors.
+
+---
+
+## Lab item fidelity (Chat 8) — what the UI copies and where the facts come from
+
+Source: Cisco Learning blog, *New Performance-Based Lab Exam Items Build Opportunities* (https://blogs.cisco.com/learning/new-performance-based-lab-exam-items-build-opportunities), fetched 2026-10-03. Facts taken from it, verbatim where quoted:
+
+- Layout: "horizontal split screen". "The left panel has three top tabs for easy navigation between the **Tasks** (instructions on the tasks at hand and requirements for each step), **Guidelines** (things candidates should not change), and the **Topology** (a network diagram for tasks). The right panel is a web-based terminal with tabs for each device."
+- Terminals: candidates "navigate between terminal tabs using keyboard shortcuts and may manually reorder terminal tabs, but they cannot split the right panel to see two or more terminals at the same time."
+- Time: "designed to give candidates 5-7 minutes to complete."
+- Grading: candidates "are often free to use their preferred configuration options, as long as they produce the expected outcome" — graded on outcome, "far beyond their respective 'running configuration'". → end-state checks, any method accepted.
+- Navigation: "Candidates can skip any item and move to the next item, but they cannot go back to a previous item." (no-backtrack is Chat 9's exam-runner job; the lab UI itself has no Previous.)
+- Exam shape (PLAN.md §1, verified Oct 2 2026): ~100–120 items, 120 min, 3–4 lab items, partial credit.
+
+Exam topics: Cisco *200-301 CCNA v1.1 exam topics* PDF (https://learningcontent.cisco.com/documents/marketing/exam-topics/200-301-CCNA-v1.1.pdf), fetched 2026-10-03. Every lab/reader/PBQ item carries `obj` = a topic number from it (`2.1`, `3.3.d`, …); the pack manifest declares `objPattern: "^[1-6]\\.\\d{1,2}(\\.[a-z])?$"` for the validator.
+
+What the simulated lab item does NOT copy (and why): no draggable tab reordering (keyboard shortcut switching is there); the timer shows the 5–7 minute target rather than enforcing it (the exam has one clock for the whole test); a per-item **Reset** exists because the PBQ Lab offers it on every sim (Cisco's lab item does not advertise one — the real-exam "no Reset, no going back" behaviour belongs to Chat 9's exam mode).
+
+## Lab item schema (`packs/ccna/labs.js`, sim type `ccna-lab`)
+
+```js
+{ id: "lab-vlans-trunking", type: "ccna-lab", obj: "2.1", d: 2, title, timeTargetMin: 6,
+  topology: { devices: { SW1: { type: "switch", x, y }, R1: { type: "router", x, y }, PC1: { host: true, ip, mask, gw, x, y } },
+              links: [["SW1", "g0/1", "SW2", "g0/1"], ["SW1", "f0/1", "PC1"]] },      // same shapes createLab() takes, plus x/y for the diagram (viewBox 480×300)
+  configs: { SW1: ["enable", "configure terminal", ...] },                           // pre-config typed as CLI (hidden from the student)
+  blocked: ["show running-config", "show startup-config"],                           // analyze lab: prefixes refused with "% This command is disabled in this lab"
+  tasks: [{ id: "t1", text: "..." }],                                               // Tasks tab (numbered)
+  guidelines: ["Do not change ..."],                                                // Guidelines tab
+  answers: [{ id: "a1", prompt: "...", accept: ["Gi0/2", "g0/2"] }],                // analyze lab: text answers graded with the checks
+  checks: [{ id, task: "t1", points: 1, type: "vlanExists", device: "SW1", vlan: 10, name: "SALES" },
+           { id, guideline: 0, points: 1, type: "runningConfigMatches", device: "SW1", re: "^hostname SW1$" }],  // guideline checks are penalties when they FAIL
+  why: "one paragraph shown after grading" }
+```
+Check types and their fields are documented at the top of `core/sims/ios/ui/labGrader.js`. Scoring: `earned = Σ points of passing task checks`, `penalty = Σ points of failing guideline checks`, `f = clamp((earned − penalty) / Σ task points, 0, 1)`. Solutions (never shipped) live in `dev/solutions/ccna/<id>.{primary,alt,partial}.txt`; `node dev/tests/ccna-labs.test.mjs` proves fresh = 0, primary = alt = 1, partial = its declared score, and that a guideline violation costs points.

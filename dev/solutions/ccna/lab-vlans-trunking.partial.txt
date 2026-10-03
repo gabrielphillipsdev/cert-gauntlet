@@ -1,0 +1,34 @@
+! device SW1
+en
+conf t
+vlan 10
+name SALES
+vlan 20
+name HR
+exit
+int f0/1
+sw mo acc
+sw acc vlan 10
+int f0/2
+sw mo acc
+sw acc vlan 20
+int g0/1
+sw mo tr
+end
+! device SW2
+en
+conf t
+vlan 10
+name SALES
+vlan 20
+name HR
+exit
+int f0/1
+sw mo acc
+sw acc vlan 10
+int f0/2
+sw mo acc
+sw acc vlan 20
+int g0/1
+sw mo tr
+end
