@@ -15,6 +15,7 @@
    interfaceUp        device iface                       line + protocol up after converge
    interfaceDesc      device iface re                    description matches regex
    noShutdown         device iface                       not administratively down
+   adminDown          device iface                       administratively shut down
    linkedUp           device                             no cabled interface is shut down (guideline guard; only for devices whose links start up)
    ipv6Address        device iface addr len [eui64]      address present (any textual form; eui64:true accepts the derived address)
    ipv6LinkLocal      device iface addr
@@ -28,6 +29,7 @@
    staticRoute        device prefix len [nh] [iface] [ad]  configured static; when nh and iface are both given either is accepted
    defaultRoute       device [nh] [iface] [ad]           staticRoute for 0.0.0.0/0
    routeInstalled     device prefix len [code] [via]     in the live routing table (code prefix match: "S", "O", "C"…)
+   staticRoute6       device prefix len [nh] [iface]      configured IPv6 static (any textual form of prefix / next hop)
    ospfNeighbor       device neighbor                    FULL adjacency with that device label
    ospfRoute          device prefix len                  an O route to prefix
    ospfPassive        device iface
@@ -118,6 +120,7 @@ export const CHECKS = {
   interfaceIp(c, k) { const i = c.iface(k.device, k.iface); if (!i) return R(false, `${k.device} has no ${k.iface}`); const ok = i.ip && i.ip.addr === k.ip && (k.len === undefined || i.ip.len === k.len); return R(ok, i.ip ? `${k.device} ${ifShort(i.name)} is ${i.ip.addr}/${i.ip.len}` : `${k.device} ${ifShort(i.name)} has no address`); },
   interfaceUp(c, k) { const i = c.iface(k.device, k.iface); if (!i) return R(false, `no ${k.iface}`); return R(i.rt.up && i.rt.proto !== false, `${k.device} ${ifShort(i.name)} is ${i.rt.up ? "up" : i.shutdown ? "administratively down" : "down"}`); },
   noShutdown(c, k) { const i = c.iface(k.device, k.iface); return R(i && !i.shutdown, i ? (i.shutdown ? `${ifShort(i.name)} is shut down` : `${ifShort(i.name)} is enabled`) : `no ${k.iface}`); },
+  adminDown(c, k) { const i = c.iface(k.device, k.iface); return R(i && i.shutdown, i ? `${ifShort(i.name)} is ${i.shutdown ? "administratively down" : "enabled"}` : `no ${k.iface}`); },
   linkedUp(c, k) { const d = c.dev(k.device); const down = Object.values(d.interfaces).filter(i => i.shutdown && c.topo.peer(d, i.name)); return R(!down.length, down.length ? `${k.device} shut down ${down.map(i => ifShort(i.name)).join(", ")}` : `${k.device}: all cabled interfaces enabled`); },
   interfaceDesc(c, k) { const i = c.iface(k.device, k.iface); return R(i && new RegExp(k.re, "i").test(i.desc || ""), i ? `description "${i.desc || ""}"` : `no ${k.iface}`); },
   ipv6Address(c, k) {
@@ -147,6 +150,12 @@ export const CHECKS = {
     return R(!!hit, rs.length ? `${k.device} has ${rs.map(r => `${r.prefix}/${r.len} via ${r.nh || ""}${r.iface ? " " + ifShort(r.iface) : ""} [AD ${r.ad}]`).join("; ")}` : `${k.device} has no static route to ${k.prefix}/${k.len}`);
   },
   defaultRoute(c, k) { return CHECKS.staticRoute(c, { ...k, prefix: "0.0.0.0", len: 0 }); },
+  staticRoute6(c, k) {
+    const d = c.dev(k.device); const want = parse6(k.prefix); const wi = k.iface ? ifName(k.iface) : null;
+    const rs = d.routes6.filter(r => r.len === k.len && samePrefix6(r.prefix, want, k.len));
+    const hit = rs.find(r => (!k.nh || (r.nh && sameIp6(r.nh, k.nh))) && (!wi || r.iface === wi));
+    return R(!!hit, rs.length ? `${k.device} has ${rs.map(r => `${fmt6(r.prefix)}/${r.len} via ${r.nh || ""}${r.iface ? " " + ifShort(r.iface) : ""}`).join("; ")}` : `${k.device} has no IPv6 static route to ${k.prefix}/${k.len}`);
+  },
   routeInstalled(c, k) {
     const d = c.dev(k.device); const r = (d.rt.routes || []).find(r => r.prefix === k.prefix && r.len === k.len && (!k.code || r.code.startsWith(k.code)) && (!k.via || r.nhs.some(h => h.via === k.via)));
     return R(!!r, r ? `${k.device}: ${r.code} ${r.prefix}/${r.len} via ${r.nhs.map(h => h.via || ifShort(h.iface)).join(",")}` : `${k.device} has no ${k.code || ""} route to ${k.prefix}/${k.len}`);

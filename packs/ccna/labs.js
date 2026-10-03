@@ -296,4 +296,132 @@ export const LABS = [
     ],
     why: "Exclusions are global on the server, not per pool, and both ranges are needed because the server hands out the lowest free address. DHCP Discover is a broadcast and routers do not forward broadcasts, so the remote LAN's gateway (R2 Gi0/0) needs `ip helper-address` pointing at the server; the server then picks the pool that matches the relay's interface address (giaddr), which is why the 10.1.20.0/24 pool lives on R1.",
   },
+  /* ---------------------------------------------------------------- 10 · port security */
+  {
+    id: "lab-port-security", type: "ccna-lab", obj: "5.7", d: 5, title: "Port security and unused ports", timeTargetMin: 6,
+    topology: {
+      devices: { SW1: { type: "switch", x: 240, y: 70 }, PC1: pc("10.1.10.11", "10.1.10.1", 90, 230), PC2: pc("10.1.10.12", "10.1.10.1", 240, 230), PC3: pc("10.1.10.13", "10.1.10.1", 390, 230) },
+      links: [["SW1", "f0/1", "PC1"], ["SW1", "f0/2", "PC2"], ["SW1", "f0/3", "PC3"]],
+    },
+    configs: { SW1: ["enable", "configure terminal", "hostname SW1", "no ip domain-lookup", "vlan 10", "name USERS", "vlan 999", "name PARKING", "exit", "interface range f0/1 - 3", "switchport mode access", "switchport access vlan 10", "end"] },
+    tasks: [
+      T("t1", "On Fa0/1, enable port security: allow at most 2 MAC addresses, learn them as sticky addresses, and on a violation drop the traffic and log it without disabling the port."),
+      T("t2", "On Fa0/2, enable port security with PC2's MAC address 00e0.4c00.0301 configured statically. Keep the default violation mode."),
+      T("t3", "Disable the unused ports Fa0/4 through Fa0/24 and move them to VLAN 999 as access ports."),
+      T("t4", "Verify PC1 can still ping PC2 and PC3, and that PC1's MAC has been learned as a sticky secure address."),
+    ],
+    guidelines: ["Do not configure port security on Fa0/3.", "Do not shut down Fa0/1, Fa0/2 or Fa0/3.", "Do not change the hostname."],
+    checks: [
+      C("c1", "t1", "portSecurity", { device: "SW1", iface: "f0/1", max: 2, sticky: true, violation: "restrict" }, 3),
+      C("c2", "t2", "portSecurity", { device: "SW1", iface: "f0/2", violation: "shutdown" }), C("c3", "t2", "portSecurityMac", { device: "SW1", iface: "f0/2", mac: "00e0.4c00.0301", sticky: false }),
+      C("c4", "t3", "adminDown", { device: "SW1", iface: "f0/4" }), C("c5", "t3", "adminDown", { device: "SW1", iface: "f0/24" }), C("c6", "t3", "adminDown", { device: "SW1", iface: "f0/15" }),
+      C("c7", "t3", "accessVlan", { device: "SW1", iface: "f0/4", vlan: 999 }), C("c8", "t3", "accessVlan", { device: "SW1", iface: "f0/24", vlan: 999 }),
+      C("c9", "t4", "portSecurityMac", { device: "SW1", iface: "f0/1", mac: "00e0.4c00.0201", sticky: true }),
+      C("c10", "t4", "ping", { from: "PC1", to: "10.1.10.12", requires: ["c3"] }), C("c11", "t4", "ping", { from: "PC1", to: "10.1.10.13", requires: ["c1"] }),
+      G("g0", 0, "runningConfigNotMatches", { device: "SW1", re: "interface FastEthernet0/3\\n(?: .*\\n)*? switchport port-security" }, 2),
+      G("g1", 1, "linkedUp", { device: "SW1" }, 2), G("g2", 2, "hostname", { device: "SW1", name: "SW1" }),
+    ],
+    why: "Port security only works on a static access (or trunk) port, never on a dynamic one. `restrict` drops and counts frames from unknown MACs; `protect` drops silently; `shutdown` (the default) err-disables the port. Sticky addresses are written into the running-config as they are learned, so `copy run start` keeps them. Shutting unused ports and parking them in an unused VLAN is the matching hardening step.",
+  },
+  /* ---------------------------------------------------------------- 11 · SSH + device hardening */
+  {
+    id: "lab-ssh-hardening", type: "ccna-lab", obj: "4.8", d: 4, title: "SSH access and basic hardening", timeTargetMin: 6,
+    topology: {
+      devices: { R1: { type: "router", x: 240, y: 60 }, SW1: { type: "switch", x: 240, y: 160 }, PC1: pc("10.1.10.11", "10.1.10.1", 240, 260) },
+      links: [["R1", "g0/0", "SW1", "g0/1"], ["SW1", "f0/1", "PC1"]],
+    },
+    configs: {
+      R1: ["enable", "configure terminal", "hostname R1", "no ip domain-lookup", "username backup privilege 15 secret B4ckup!Only", "interface g0/0", "ip address 10.1.10.1 255.255.255.0", "no shutdown", "end"],
+      SW1: ["enable", "configure terminal", "hostname SW1", "no ip domain-lookup", "end"],
+    },
+    tasks: [
+      T("t1", "On R1, set the domain name ccna.lab, generate a 2048-bit RSA key pair and force SSH version 2."),
+      T("t2", "Create a local user netadmin with the secret Ne7Adm!n. Allow only SSH on VTY lines 0–4 and authenticate them against the local user database."),
+      T("t3", "Protect privileged EXEC with the enable secret Pr1vEx3c, require the password C0ns0le! at the console, and encrypt all plain-text passwords in the configuration."),
+      T("t4", "Add a message-of-the-day banner that contains the word Authorized."),
+    ],
+    guidelines: ["Do not change the hostname (the RSA key name depends on it).", "Do not delete the existing local user backup.", "Do not change Gi0/0."],
+    checks: [
+      C("c1", "t1", "domainName", { device: "R1", name: "ccna.lab" }), C("c2", "t1", "rsaKey", { device: "R1", minBits: 2048 }), C("c3", "t1", "sshVersion", { device: "R1", v: 2 }),
+      C("c4", "t2", "userExists", { device: "R1", user: "netadmin" }), C("c5", "t2", "vtyLoginLocal", { device: "R1" }), C("c6", "t2", "vtyTransport", { device: "R1", only: ["ssh"] }),
+      C("c7", "t3", "enableSecret", { device: "R1" }), C("c8", "t3", "consolePassword", { device: "R1" }), C("c9", "t3", "servicePasswordEncryption", { device: "R1" }),
+      C("c10", "t4", "banner", { device: "R1", re: "authorized" }),
+      G("g0", 0, "hostname", { device: "R1", name: "R1" }), G("g1", 1, "userExists", { device: "R1", user: "backup" }, 2),
+      G("g2", 2, "interfaceIp", { device: "R1", iface: "g0/0", ip: "10.1.10.1", len: 24 }), G("g3", 2, "noShutdown", { device: "R1", iface: "g0/0" }),
+    ],
+    why: "The RSA key needs a hostname and a domain name because its label is hostname.domain; 768 bits is the minimum for SSHv2 and 2048 is the norm. `login local` uses the username database, `transport input ssh` refuses Telnet. `enable secret` is stored as a hash; `service password-encryption` only obscures the type 7 passwords (console, `enable password`, `username … password`) — it is not real encryption, which is why secrets are preferred.",
+  },
+  /* ---------------------------------------------------------------- 12 · IPv6 addressing + static routes */
+  {
+    id: "lab-ipv6", type: "ccna-lab", obj: "1.8", d: 1, title: "IPv6 addressing and static routes", timeTargetMin: 7,
+    topology: {
+      devices: { R1: { type: "router", x: 150, y: 100 }, R2: { type: "router", x: 330, y: 100 }, SW1: { type: "switch", x: 150, y: 230 }, SW2: { type: "switch", x: 330, y: 230 } },
+      links: [["R1", "g0/1", "R2", "g0/1"], ["R1", "g0/0", "SW1", "g0/1"], ["R2", "g0/0", "SW2", "g0/1"]],
+    },
+    configs: {
+      R1: ["enable", "configure terminal", "hostname R1", "no ip domain-lookup", "interface g0/0", "no shutdown", "interface g0/1", "no shutdown", "end"],
+      R2: ["enable", "configure terminal", "hostname R2", "no ip domain-lookup", "interface g0/0", "no shutdown", "interface g0/1", "no shutdown", "end"],
+      SW1: ["enable", "configure terminal", "hostname SW1", "end"], SW2: ["enable", "configure terminal", "hostname SW2", "end"],
+    },
+    tasks: [
+      T("t1", "Enable IPv6 routing on R1 and R2."),
+      T("t2", "Address the interfaces: R1 Gi0/0 2001:db8:acad:1::1/64, R1 Gi0/1 2001:db8:acad:12::1/64, R2 Gi0/1 2001:db8:acad:12::2/64. R2 Gi0/0 must take its interface ID from its MAC address (EUI-64) in prefix 2001:db8:acad:2::/64."),
+      T("t3", "Set the link-local addresses on the R1–R2 link to fe80::1 (R1) and fe80::2 (R2)."),
+      T("t4", "On R1, add a static route to 2001:db8:acad:2::/64 via 2001:db8:acad:12::2. On R2, add a default route via R1's link-local address. Verify R1 can ping R2's Gi0/0 address and R2 can ping 2001:db8:acad:1::1."),
+    ],
+    guidelines: ["Do not configure any IPv4 address.", "Do not shut down any interface.", "Do not change the hostnames."],
+    checks: [
+      C("c1", "t1", "ipv6Routing", { device: "R1" }), C("c2", "t1", "ipv6Routing", { device: "R2" }),
+      C("c3", "t2", "ipv6Address", { device: "R1", iface: "g0/0", addr: "2001:db8:acad:1::1", len: 64 }), C("c4", "t2", "ipv6Address", { device: "R1", iface: "g0/1", addr: "2001:db8:acad:12::1", len: 64 }),
+      C("c5", "t2", "ipv6Address", { device: "R2", iface: "g0/1", addr: "2001:db8:acad:12::2", len: 64 }), C("c6", "t2", "ipv6Address", { device: "R2", iface: "g0/0", addr: "2001:db8:acad:2::", len: 64, eui64: true }),
+      C("c7", "t3", "ipv6LinkLocal", { device: "R1", iface: "g0/1", addr: "fe80::1" }), C("c8", "t3", "ipv6LinkLocal", { device: "R2", iface: "g0/1", addr: "fe80::2" }),
+      C("c9", "t4", "staticRoute6", { device: "R1", prefix: "2001:db8:acad:2::", len: 64, nh: "2001:db8:acad:12::2" }),
+      C("c10", "t4", "staticRoute6", { device: "R2", prefix: "::", len: 0, nh: "fe80::1", iface: "g0/1" }),
+      C("c11", "t4", "ping6", { from: "R1", to: { device: "R2", iface: "g0/0" } }), C("c12", "t4", "ping6", { from: "R2", to: "2001:db8:acad:1::1" }),
+      G("g0", 0, "runningConfigNotMatches", { device: "R1", re: "^ ip address \\d" }), G("g1", 0, "runningConfigNotMatches", { device: "R2", re: "^ ip address \\d" }),
+      G("g2", 1, "linkedUp", { device: "R1" }), G("g3", 1, "linkedUp", { device: "R2" }),
+      G("g4", 2, "hostname", { device: "R1", name: "R1" }), G("g5", 2, "hostname", { device: "R2", name: "R2" }),
+    ],
+    why: "EUI-64 splits the 48-bit MAC, inserts FFFE in the middle and flips the seventh bit, so `ipv6 address 2001:db8:acad:2::/64 eui-64` produces a different interface ID on every router. A link-local next hop is only meaningful on one link, so a static route that uses one must name the exit interface as well (`ipv6 route ::/0 g0/1 fe80::1`). Without `ipv6 unicast-routing` a router has addresses but forwards nothing.",
+  },
+  /* ---------------------------------------------------------------- 13 · analyze show output (show running-config blocked) */
+  {
+    id: "lab-analyze-show", type: "ccna-lab", obj: "3.1", d: 3, title: "Troubleshoot from show output only", timeTargetMin: 6,
+    topology: {
+      devices: {
+        SW1: { type: "switch", x: 110, y: 70 }, SW2: { type: "switch", x: 370, y: 70 }, SW3: { type: "switch", x: 240, y: 190 },
+        R1: { type: "router", x: 110, y: 270 }, R2: { type: "router", x: 370, y: 270 },
+      },
+      links: [["SW1", "g0/1", "SW2", "g0/1"], ["SW2", "g0/2", "SW3", "g0/2"], ["SW1", "g0/2", "SW3", "g0/1"], ["R1", "g0/0", "SW3", "f0/24"], ["R1", "g0/1", "R2", "g0/1"]],
+    },
+    configs: {
+      SW1: ["enable", "configure terminal", "hostname SW1", "no ip domain-lookup", "vlan 10", "name USERS", "exit", "interface range g0/1 - 2", "switchport mode trunk", "end"],
+      SW2: ["enable", "configure terminal", "hostname SW2", "no ip domain-lookup", "vlan 10", "name USERS", "exit", "spanning-tree vlan 10 priority 4096", "interface range g0/1 - 2", "switchport mode trunk", "interface g0/1", "switchport trunk native vlan 99", "end"],
+      SW3: ["enable", "configure terminal", "hostname SW3", "no ip domain-lookup", "vlan 10", "name USERS", "exit", "interface range g0/1 - 2", "switchport mode trunk", "interface f0/24", "switchport mode access", "switchport access vlan 10", "end"],
+      R1: ["enable", "configure terminal", "hostname R1", "no ip domain-lookup", "interface g0/0", "ip address 10.1.10.1 255.255.255.0", "no shutdown", "interface g0/1", "ip address 10.0.12.1 255.255.255.252", "no shutdown", "exit", "ip route 10.9.9.0 255.255.255.0 10.0.12.2", "ip route 10.9.0.0 255.255.0.0 10.1.10.200", "router ospf 1", "network 10.0.12.0 0.0.0.3 area 0", "network 10.1.10.0 0.0.0.255 area 0", "end"],
+      R2: ["enable", "configure terminal", "hostname R2", "no ip domain-lookup", "interface g0/1", "ip address 10.0.12.2 255.255.255.252", "no shutdown", "interface loopback 9", "ip address 10.9.9.1 255.255.255.0", "exit", "router ospf 1", "network 10.0.12.0 0.0.0.3 area 1", "network 10.9.9.0 0.0.0.255 area 1", "end"],
+    },
+    blocked: ["show running-config", "show startup-config"],
+    tasks: [
+      T("t1", "Spanning tree, VLAN 10: answer questions 1 and 2 below using show commands only."),
+      T("t2", "OSPF: R1 and R2 are cabled and both interfaces are up/up, but they are not neighbors. Answer question 3."),
+      T("t3", "Answer questions 4 and 5: the next hop R1 uses for 10.9.9.77, and the native VLAN SW2 uses on its trunk to SW1."),
+    ],
+    guidelines: ["This lab is read-only: do not change the switches. show running-config and show startup-config are disabled.", "Do not change the routers."],
+    answers: [
+      { id: "a1", prompt: "1. Which switch is the root bridge for VLAN 10?", accept: ["SW2"] },
+      { id: "a2", prompt: "2. Which port is in the blocking (alternate) state for VLAN 10? Give switch and port, e.g. SW1 Gi0/1.", accept: ["SW3 Gi0/1", "SW3 g0/1", "SW3 GigabitEthernet0/1", "/^sw3\\s*(gi?|gigabitethernet)\\s*0\\/1$/"] },
+      { id: "a3", prompt: "3. What OSPF setting on R2's Gi0/1 prevents the adjacency? Give the setting and R2's value.", accept: ["/area\\s*1\\b/", "/area.*\\b1$/"] },
+      { id: "a4", prompt: "4. Next-hop address R1 uses to reach 10.9.9.77:", accept: ["10.0.12.2"] },
+      { id: "a5", prompt: "5. Native VLAN on SW2 Gi0/1:", accept: ["99", "vlan 99", "VLAN99"] },
+    ],
+    checks: [
+      C("c1", "t1", "answer", { answer: "a1", accept: ["SW2"] }), C("c2", "t1", "answer", { answer: "a2", accept: ["SW3 Gi0/1", "SW3 g0/1", "SW3 GigabitEthernet0/1", "/^sw3\\s*(gi?|gigabitethernet)\\s*0\\/1$/"] }),
+      C("c3", "t2", "answer", { answer: "a3", accept: ["/area\\s*1\\b/", "/area.*\\b1$/"] }, 2),
+      C("c4", "t3", "answer", { answer: "a4", accept: ["10.0.12.2"] }), C("c5", "t3", "answer", { answer: "a5", accept: ["99", "vlan 99", "VLAN99"] }),
+      ...["SW1", "SW2", "SW3"].map((d, i) => G("gs" + i, 0, "unchanged", { device: d })),
+      ...["R1", "R2"].map((d, i) => G("gr" + i, 1, "unchanged", { device: d })),
+    ],
+    why: "Root bridge: lowest bridge ID; SW2 has priority 4096 + 10 in `show spanning-tree vlan 10`. On the non-root SW3 both uplinks cost 4 to the root, so the tie goes to the lower upstream bridge ID: Gi0/2 (toward SW2, the root itself) is the root port and Gi0/1 (toward SW1) loses the segment to SW1 and blocks. `show ip ospf interface g0/1` on R2 shows Area 1 while R1 shows Area 0 — area mismatch, no adjacency. Longest match: 10.9.9.77 matches both 10.9.0.0/16 and 10.9.9.0/24, and the /24 wins (`show ip route 10.9.9.77`). `show interfaces trunk` on SW2 shows native 99 on Gi0/1 while SW1 uses 1 — a native VLAN mismatch CDP would also log.",
+  },
 ];

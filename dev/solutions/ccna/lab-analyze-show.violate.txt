@@ -1,0 +1,5 @@
+! device R2
+conf t
+interface g0/1
+ip ospf 1 area 0
+end

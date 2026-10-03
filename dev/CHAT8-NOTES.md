@@ -32,6 +32,15 @@ Branch `chat-8/ccna-labs`. Plan: `dev/CHAT8-PLAN.md`. Baseline on main: `node de
 - **No proxy ARP**: a static/default route with only an Ethernet exit interface (`ip route 0.0.0.0 0.0.0.0 g0/1`) can't resolve the far host → pings fail,
   where real IOS would answer with proxy ARP. Labs therefore say "using the next-hop address" when a ping check depends on the route; the `staticRoute` check itself accepts either form.
 - `show` commands in config mode need `do` (documented IOS-12 behaviour).
+- **`enable` typed at a `#` prompt** returns `Translating "enable"...` (IOS just stays in privileged EXEC). Harmless in labs; solution scripts avoid it.
+- Re-entering a `network` statement with the same address/wildcard but a different area is silently ignored (IOS prints an overlap error).
+- No OSPF MTU/EXSTART or hello/dead mismatch (documented out of scope) → the reader has no "stuck in EXSTART" items; area mismatch / passive / DR-BDR cover adjacency questions instead.
+- No `access-class` on vty lines → the standard-ACL lab uses an interface ACL near the destination.
 
 ## Fidelity sources (Cisco lab item) — see dev/specs/ccna.md "Lab item fidelity"
-(filled in Phase 0.4)
+Cisco blog "New Performance-Based Lab Exam Items Build Opportunities" + 200-301 v1.1 exam topics PDF (URLs in the spec).
+
+## Lab authoring conventions learned
+- Solution scripts: sessions keep their mode across the primary → violate append, and a device not touched by primary starts at `>` — violate scripts for such devices begin with `enable`.
+- Every "should still work" connectivity check that is already true on the starting config needs `requires: [<check that proves the change>]`, otherwise fresh ≠ 0 (the test catches it).
+- `partial.json` values are computed by hand from check points — if the test disagrees, recount before touching a check (twice the test was right).

@@ -1,0 +1,16 @@
+! device SW1
+enable
+configure terminal
+interface fastethernet 0/1
+switchport port-security
+switchport port-security maximum 2
+switchport port-security mac-address sticky
+switchport port-security violation restrict
+interface fastethernet 0/2
+switchport port-security
+switchport port-security mac-address 00e0.4c00.0301
+interface range fastethernet 0/4 - 24
+switchport mode access
+switchport access vlan 999
+shutdown
+end

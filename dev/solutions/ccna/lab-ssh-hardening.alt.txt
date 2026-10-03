@@ -1,0 +1,21 @@
+! device R1
+en
+conf t
+service password-encryption
+enable secret Pr1vEx3c
+line con 0
+password C0ns0le!
+login
+line vty 0 15
+transport input ssh
+login local
+exit
+username netadmin privilege 15 secret Ne7Adm!n
+ip domain name ccna.lab
+crypto key generate rsa
+2048
+ip ssh version 2
+banner motd ^
+Authorized users only.
+^
+end
