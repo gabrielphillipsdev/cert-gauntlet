@@ -23,6 +23,9 @@ core/
   sims/diagram.js     network diagram placement (palette → slots on an SVG topology)
   sims/appanel.js     wireless AP configuration panel
   sims/hardening.js   endpoint hardening panel
+  sims/ios/           IOS CLI simulator engine (CCNA subset): index.js createLab/Topology/Session · device.js · topology.js (converge, ping) ·
+                      cli.js (parser, modes, help, completion) · commands.js · show.js · config.js (running-config). No DOM; Chat 8 builds the lab UI.
+                      Spec + out-of-scope list: dev/specs/ccna.md. Test: node dev/tests/ios-conformance.mjs
   exam/runner.js      full exam: picker, item rendering, review grid, scoring, results, review, drill. Rules from manifest.exam.
   exam/msitems.js     Microsoft item types (order · build · hot · series · case-study tabs), section locking, flattenBank(), "hotarea" sim (+ msitems.css)
   exam/learnpane.js   open-book Learn pane: opens learn.microsoft.com beside the exam, logs lookup time per question, results readout
@@ -132,4 +135,4 @@ The two new modules inject their own stylesheets (`core/exam/msitems.css`, `core
 - No HTML from content: content strings are plain text; `esc()` everything. Diagrams are the one exception (trusted SVG strings in the pack).
 - CSS: use tokens; new components get their own section in styles.css; phone first, then `@media(min-width:768px)` / `1024px`.
 - `VERSION` in `core/app.js` and `sw.js` move together when a deploy should invalidate caches.
-- Validate before PR: `node dev/tests/merge.test.mjs && node dev/check-pack.mjs <pack> && python3 dev/tests/e2e.py` (serve the repo on :8765 first). SC-200 adds `node dev/tests/kql.test.mjs && node dev/check-kql-drills.mjs && python3 dev/tests/e2e-sc200.py`.
+- Validate before PR: `node dev/tests/merge.test.mjs && node dev/check-pack.mjs <pack> && python3 dev/tests/e2e.py` (serve the repo on :8765 first). SC-200 adds `node dev/tests/kql.test.mjs && node dev/check-kql-drills.mjs && python3 dev/tests/e2e-sc200.py`. Sec+ sims: also `node dev/tests/sims.test.mjs && node dev/tests/sims-lab.test.mjs` (`python3 dev/tests/sims-e2e.py` for the Chat 2 sims). Anything under `core/sims/ios/`: also `node dev/tests/ios-conformance.mjs`.
