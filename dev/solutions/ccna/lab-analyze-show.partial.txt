@@ -1,0 +1,5 @@
+! answer a1 SW2
+! answer a2 SW3 Gi0/2
+! answer a3 hello timers
+! answer a4 10.1.10.200
+! answer a5 99

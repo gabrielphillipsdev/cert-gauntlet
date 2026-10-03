@@ -1,0 +1,20 @@
+! device SW1
+enable
+configure terminal
+interface range gigabitethernet 0/1 - 2
+channel-group 1 mode active
+exit
+interface port-channel 1
+switchport mode trunk
+switchport trunk native vlan 99
+end
+! device SW2
+enable
+configure terminal
+interface range gigabitethernet 0/1 - 2
+channel-group 1 mode passive
+exit
+interface port-channel 1
+switchport mode trunk
+switchport trunk native vlan 99
+end

@@ -1,0 +1,26 @@
+! device SW1
+en
+conf t
+ip routing
+vlan 10
+name SALES
+exit
+vlan 20
+name HR
+exit
+vlan 30
+name ENG
+exit
+int g1/0/1
+sw acc vlan 10
+int g1/0/2
+sw acc vlan 20
+int g1/0/3
+sw acc vlan 30
+int vlan 10
+ip add 10.1.10.1 255.255.255.0
+int vlan 20
+ip add 10.1.20.1 255.255.255.0
+int vlan 30
+ip add 10.1.30.1 255.255.255.0
+end

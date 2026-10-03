@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B1220"><title>CCNA preview</title>
+<link rel="stylesheet" href="../../core/styles.css">
+<style>
+.view{max-width:var(--maxw-wide)}
+.pv-sec{margin:18px 0 6px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pv-grid{display:grid;grid-template-columns:1fr;gap:8px}@media(min-width:768px){.pv-grid{grid-template-columns:1fr 1fr}}
+.pv-card{display:flex;justify-content:space-between;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--ink);text-decoration:none}
+.pv-card small{color:var(--muted);display:block;margin-top:2px}.pv-card .pv-n{font-family:ui-monospace,Menlo,monospace;color:var(--muted);font-size:12px;white-space:nowrap}
+.pv-best{font-weight:800;font-size:13px}
+</style>
+</head><body>
+<div class="view wide" id="view"></div>
+<script type="module">
+/* CCNA preview (Chat 8): every CCNA PBQ Lab item outside the app shell, while the pack is still "soon" in the picker.
+   dev/pages/ccna-lab.html            list        ·  ?item=<id>  one item (?lab=<id> also works)
+   Serve the repo root (python3 -m http.server 8765) or open it on GitHub Pages after merge. Best scores are kept in this browser only. */
+import { LABS } from "../../packs/ccna/labs.js";
+import { READER } from "../../packs/ccna/reader.js";
+import { PBQ_ORDER, PBQ_TOPO } from "../../packs/ccna/pbq.js";
+import { sim } from "../../core/sims/registry.js";
+import "../../core/sims/ios/ui/labItem.js"; import "../../core/sims/ios/ui/showReader.js"; import "../../core/sims/ios/ui/configOrder.js"; import "../../core/sims/diagram.js";
+import { esc } from "../../core/util.js";
+const view = document.getElementById("view");
+const ALL = [...LABS, ...READER, ...PBQ_ORDER, ...PBQ_TOPO];
+const best = (() => { try { return JSON.parse(localStorage.getItem("cg-ccna-preview") || "{}"); } catch { return {}; } })();
+const saveBest = (id, pct) => { best[id] = Math.max(best[id] || 0, pct); try { localStorage.setItem("cg-ccna-preview", JSON.stringify(best)); } catch { } };
+const q = new URLSearchParams(location.search); const id = q.get("item") || q.get("lab");
+if (!id) {
+  const sec = (name, list, sub) => `<div class="pv-sec">${name} · ${list.length}</div><div class="pv-grid">${list.map(it => `<a class="pv-card" href="?item=${it.id}"><span>${esc(it.title)}<small>${esc(sub(it))}</small></span><span class="pv-n">${best[it.id] !== undefined ? `<span class="pv-best" style="color:${best[it.id] >= 80 ? "var(--green)" : "var(--amber)"}">${best[it.id]}%</span>` : "new"}</span></a>`).join("")}</div>`;
+  view.innerHTML = `<div class="tb"><div class="labtitle">CCNA preview</div></div><p class="lead">Every CCNA lab item and PBQ from Chat 8, outside the app while the pack is marked “soon”. Labs target 5–7 minutes; the timer starts when a lab opens.</p>` +
+    sec("IOS labs", LABS, it => `${it.timeTargetMin} min target · ${Object.values(it.topology.devices).filter(d => !d.host).length} devices · obj ${it.obj}`) +
+    sec("Config order", PBQ_ORDER, it => `${it.steps.length} lines · obj ${it.obj}`) + sec("Topology labels", PBQ_TOPO, it => `${it.slots.length} slots · obj ${it.obj}`) +
+    sec("Show-output reader", READER, it => `${it.device}# ${it.command}`);
+} else {
+  const item = ALL.find(x => x.id === id) || LABS[0]; const i = ALL.indexOf(item); const next = ALL[(i + 1) % ALL.length];
+  const def = sim(item.type); let st = def.create(item), locked = false;
+  view.innerHTML = `<div class="tb"><a href="?">All items</a><div class="labtitle">${esc(item.title)}</div><button class="ghost tiny" id="reset">Reset</button></div><div id="body" class="simbox"></div><div class="pbqfoot"><button class="bigbtn amber" id="submit">Check answers</button></div><div id="fb" class="pbqfb"></div>`;
+  const body = document.getElementById("body");
+  const draw = reveal => def.render(body, item, st, { onChange() { }, locked: reveal, reveal });
+  draw(false);
+  document.getElementById("reset").onclick = () => { if (locked || !confirmReset()) return; const t0 = st.t0; st = def.create(item); if (t0) st.t0 = t0; draw(false); };   // lab timer keeps running
+  function confirmReset() { return item.type !== "ccna-lab" || !Object.values(st.log || {}).some(l => l.length) || window.confirm("Reset every device to its starting configuration? The timer keeps running."); }
+  document.getElementById("submit").onclick = () => {
+    if (locked) return; locked = true; const r = def.score(item, st); const pct = Math.round(r.f * 100); saveBest(item.id, pct);
+    if (item.type === "ccna-lab") st.tEnd = Date.now();
+    draw(true); document.getElementById("submit").style.display = "none";
+    const fb = document.getElementById("fb"); fb.style.display = "block";
+    fb.innerHTML = `<div class="fbscore" style="color:${pct >= 80 ? "var(--green)" : pct >= 50 ? "var(--amber)" : "var(--red)"}">${pct}%</div><div class="fbwhy">${esc(r.notes.join("\n"))}${r.why ? "\n\n" + esc(r.why) : ""}</div><div class="fbbtns"><button id="again">Try again</button><button id="next">Next item</button></div>`;
+    document.getElementById("again").onclick = () => location.reload(); document.getElementById("next").onclick = () => location.search = "?item=" + next.id;
+  };
+  window.__pv = { item, get st() { return st; }, def };
+}
+</script></body></html>

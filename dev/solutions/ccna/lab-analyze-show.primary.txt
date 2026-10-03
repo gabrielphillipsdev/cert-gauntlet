@@ -1,0 +1,11 @@
+! answer a1 SW2
+! answer a2 SW3 Gi0/1
+! answer a3 area 1 (R1 uses area 0)
+! answer a4 10.0.12.2
+! answer a5 99
+! device SW3
+enable
+show spanning-tree vlan 10
+! device R2
+enable
+show ip ospf interface g0/1

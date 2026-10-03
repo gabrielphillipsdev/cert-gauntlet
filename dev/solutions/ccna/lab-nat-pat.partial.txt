@@ -1,0 +1,10 @@
+! device R1
+en
+conf t
+int g0/0
+ip nat inside
+int g0/1
+ip nat outside
+exit
+ip nat inside source static 10.1.10.50 203.0.113.50
+end

@@ -1,0 +1,10 @@
+! device SW1
+en
+conf t
+int f0/1
+sw port-security
+sw port-security maximum 2
+sw port-security mac-address sticky
+int range f0/4 - 24
+shutdown
+end

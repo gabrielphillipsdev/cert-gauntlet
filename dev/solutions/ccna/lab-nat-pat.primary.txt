@@ -1,0 +1,12 @@
+! device R1
+enable
+configure terminal
+interface gigabitethernet 0/0
+ip nat inside
+interface gigabitethernet 0/1
+ip nat outside
+exit
+ip nat inside source static 10.1.10.50 203.0.113.50
+access-list 1 permit 10.1.10.0 0.0.0.255
+ip nat inside source list 1 interface gigabitethernet 0/1 overload
+end

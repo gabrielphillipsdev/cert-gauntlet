@@ -1,0 +1,5 @@
+! device SW1
+conf t
+int f0/3
+switchport port-security
+end

@@ -1,0 +1,14 @@
+! device R3
+en
+conf t
+ip route 0.0.0.0 0.0.0.0 10.0.23.1
+ip route 10.1.1.0 255.255.255.0 s0/1/0 10.0.13.1 5
+ip route 10.1.1.0 255.255.255.0 g0/2 10.0.23.1
+do show ip route
+end
+! device R1
+en
+conf t
+ip route 10.3.3.0 255.255.255.0 10.0.13.2 5
+ip route 10.3.3.0 255.255.255.0 gigabitEthernet 0/1 10.0.12.2
+end

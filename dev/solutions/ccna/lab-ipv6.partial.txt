@@ -1,0 +1,18 @@
+! device R1
+en
+conf t
+ipv6 unicast-routing
+int g0/0
+ipv6 add 2001:db8:acad:1::1/64
+int g0/1
+ipv6 add 2001:db8:acad:12::1/64
+end
+! device R2
+en
+conf t
+ipv6 unicast-routing
+int g0/0
+ipv6 add 2001:db8:acad:2::1/64
+int g0/1
+ipv6 add 2001:db8:acad:12::2/64
+end

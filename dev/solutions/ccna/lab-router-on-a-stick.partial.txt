@@ -1,0 +1,12 @@
+! device R1
+en
+conf t
+int g0/0.10
+encapsulation dot1q 10
+ip add 10.1.10.1 255.255.255.0
+int g0/0.20
+encapsulation dot1q 20
+ip add 10.1.20.1 255.255.255.0
+int g0/0
+no shut
+end

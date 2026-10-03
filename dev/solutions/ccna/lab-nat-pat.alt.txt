@@ -1,0 +1,14 @@
+! device R1
+en
+conf t
+ip access-list standard LAN
+permit 10.1.10.0 0.0.0.255
+exit
+ip nat pool ONE 203.0.113.2 203.0.113.2 netmask 255.255.255.252
+ip nat inside source list LAN pool ONE overload
+ip nat inside source static 10.1.10.50 203.0.113.50
+int g0/1
+ip nat outside
+int g0/0
+ip nat inside
+end

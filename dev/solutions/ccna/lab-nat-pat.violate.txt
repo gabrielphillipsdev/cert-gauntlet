@@ -1,0 +1,5 @@
+! device ISP
+enable
+conf t
+ip route 10.0.0.0 255.0.0.0 203.0.113.2
+end

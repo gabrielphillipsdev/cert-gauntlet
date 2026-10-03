@@ -1,0 +1,14 @@
+! device R1
+en
+conf t
+router ospf 1
+router-id 1.1.1.1
+network 10.0.0.0 0.255.255.255 area 0
+end
+! device R3
+en
+conf t
+router ospf 1
+router-id 3.3.3.3
+network 10.0.0.0 0.255.255.255 area 0
+end
