@@ -44,4 +44,127 @@ export const LABS = [
     ],
     why: "Access ports carry one VLAN untagged; the trunk tags every VLAN except the native one. Pruning the allowed list to 10,20,99 is what the task asked for; a trunk that still allows 1-4094 works but does not meet the requirement. PC1 and PC2 cannot talk: different VLANs, and no router in this topology.",
   },
+  /* ---------------------------------------------------------------- 2 · router-on-a-stick */
+  {
+    id: "lab-router-on-a-stick", type: "ccna-lab", obj: "2.1.c", d: 2, title: "Inter-VLAN routing: router-on-a-stick", timeTargetMin: 6,
+    topology: {
+      devices: { R1: { type: "router", x: 240, y: 50 }, SW1: { type: "switch", x: 240, y: 160 }, PC1: pc("10.1.10.11", "10.1.10.1", 130, 270), PC2: pc("10.1.20.12", "10.1.20.1", 350, 270) },
+      links: [["R1", "g0/0", "SW1", "g0/1"], ["SW1", "f0/1", "PC1"], ["SW1", "f0/2", "PC2"]],
+    },
+    configs: {
+      R1: ["enable", "configure terminal", "hostname R1", "no ip domain-lookup", "end"],
+      SW1: ["enable", "configure terminal", "hostname SW1", "no ip domain-lookup", "vlan 10", "name SALES", "vlan 20", "name HR", "exit", "interface f0/1", "switchport mode access", "switchport access vlan 10", "interface f0/2", "switchport mode access", "switchport access vlan 20", "end"],
+    },
+    tasks: [
+      T("t1", "On SW1, make Gi0/1 (toward R1) a static 802.1Q trunk. The router does not negotiate trunking."),
+      T("t2", "On R1, create sub-interfaces of Gi0/0 for VLAN 10 (10.1.10.1/24) and VLAN 20 (10.1.20.1/24) with 802.1Q encapsulation."),
+      T("t3", "Bring R1 Gi0/0 up. Leave the physical interface without an IP address."),
+      T("t4", "Verify PC1 can ping PC2 (10.1.20.12) and PC2 can ping its gateway (10.1.20.1)."),
+    ],
+    guidelines: ["Do not change the hostname of either device.", "Do not change the VLAN assignments of Fa0/1 and Fa0/2 on SW1.", "Do not configure an IP address on the physical interface Gi0/0 of R1."],
+    checks: [
+      C("c1", "t1", "trunk", { device: "SW1", iface: "g0/1" }, 2),
+      C("c2", "t2", "subinterface", { device: "R1", iface: "g0/0.10", vlan: 10, ip: "10.1.10.1", len: 24 }), C("c3", "t2", "subinterface", { device: "R1", iface: "g0/0.20", vlan: 20, ip: "10.1.20.1", len: 24 }),
+      C("c4", "t3", "interfaceUp", { device: "R1", iface: "g0/0" }),
+      C("c5", "t4", "ping", { from: "PC1", to: "10.1.20.12" }), C("c6", "t4", "ping", { from: "PC2", to: "10.1.20.1" }),
+      ...hostnameGuards("R1", "SW1"),
+      G("g2", 1, "accessVlan", { device: "SW1", iface: "f0/1", vlan: 10 }), G("g3", 1, "accessVlan", { device: "SW1", iface: "f0/2", vlan: 20 }),
+      G("g4", 2, "runningConfigNotMatches", { device: "R1", re: "interface GigabitEthernet0/0\\n(?: .*\\n)*? ip address" }),
+    ],
+    why: "The switch port must be a trunk because a router never speaks DTP; left in dynamic auto it becomes an access port in VLAN 1 and the tagged frames never arrive. Each sub-interface needs `encapsulation dot1q <vlan>` before its address, and the physical interface only needs `no shutdown`. Sub-interface numbers are a convention; what matters is the VLAN in the encapsulation command.",
+  },
+  /* ---------------------------------------------------------------- 3 · SVI routing on a Layer 3 switch */
+  {
+    id: "lab-svi-routing", type: "ccna-lab", obj: "2.1.c", d: 2, title: "Inter-VLAN routing with SVIs", timeTargetMin: 6,
+    topology: {
+      devices: { SW1: { type: "l3switch", x: 240, y: 60 }, PC1: pc("10.1.10.11", "10.1.10.1", 90, 230), PC2: pc("10.1.20.12", "10.1.20.1", 240, 230), PC3: pc("10.1.30.13", "10.1.30.1", 390, 230) },
+      links: [["SW1", "g1/0/1", "PC1"], ["SW1", "g1/0/2", "PC2"], ["SW1", "g1/0/3", "PC3"]],
+    },
+    configs: { SW1: ["enable", "configure terminal", "hostname SW1", "no ip domain-lookup", "end"] },
+    tasks: [
+      T("t1", "Create VLANs 10 (SALES), 20 (HR) and 30 (ENG) on SW1."),
+      T("t2", "Assign Gi1/0/1 to VLAN 10, Gi1/0/2 to VLAN 20 and Gi1/0/3 to VLAN 30 as access ports."),
+      T("t3", "Create an SVI for each VLAN with the first usable address of its /24 (10.1.10.1, 10.1.20.1, 10.1.30.1)."),
+      T("t4", "Enable routing between the VLANs. Verify PC1 can ping PC2 (10.1.20.12) and PC3 (10.1.30.13)."),
+    ],
+    guidelines: ["Do not change the hostname.", "Do not convert any physical port to a routed port (no `no switchport`).", "Do not shut down Gi1/0/1–3."],
+    checks: [
+      C("c1", "t1", "vlanExists", { device: "SW1", vlan: 10, name: "SALES" }), C("c2", "t1", "vlanExists", { device: "SW1", vlan: 20, name: "HR" }), C("c3", "t1", "vlanExists", { device: "SW1", vlan: 30, name: "ENG" }),
+      C("c4", "t2", "accessVlan", { device: "SW1", iface: "g1/0/1", vlan: 10 }), C("c5", "t2", "accessVlan", { device: "SW1", iface: "g1/0/2", vlan: 20 }), C("c6", "t2", "accessVlan", { device: "SW1", iface: "g1/0/3", vlan: 30 }),
+      C("c7", "t3", "svi", { device: "SW1", vlan: 10, ip: "10.1.10.1", len: 24 }), C("c8", "t3", "svi", { device: "SW1", vlan: 20, ip: "10.1.20.1", len: 24 }), C("c9", "t3", "svi", { device: "SW1", vlan: 30, ip: "10.1.30.1", len: 24 }),
+      C("c10", "t4", "ipRouting", { device: "SW1" }), C("c11", "t4", "ping", { from: "PC1", to: "10.1.20.12" }), C("c12", "t4", "ping", { from: "PC1", to: "10.1.30.13" }),
+      ...hostnameGuards("SW1"), G("g1", 0, "hostname", { device: "SW1", name: "SW1" }),
+      G("g2", 1, "runningConfigNotMatches", { device: "SW1", re: "^ no switchport$" }), G("g3", 2, "linkedUp", { device: "SW1" }),
+    ],
+    why: "An SVI comes up only when its VLAN exists and at least one port in that VLAN is up, and a multilayer switch forwards between SVIs only after `ip routing`. Everything else here is plain VLAN work; the classic miss is forgetting `ip routing` and wondering why the SVIs are up/up but nothing crosses.",
+  },
+  /* ---------------------------------------------------------------- 4 · static, default and floating routes */
+  {
+    id: "lab-static-routes", type: "ccna-lab", obj: "3.3", d: 3, title: "Static, default and floating static routes", timeTargetMin: 7,
+    topology: {
+      devices: {
+        R1: { type: "router", x: 110, y: 90 }, R2: { type: "router", x: 240, y: 40 }, R3: { type: "router", x: 370, y: 90 },
+        PC1: pc("10.1.1.10", "10.1.1.1", 70, 240), PC3: pc("10.3.3.10", "10.3.3.1", 410, 240),
+      },
+      links: [["R1", "g0/1", "R2", "g0/1"], ["R2", "g0/2", "R3", "g0/2"], ["R1", "s0/1/0", "R3", "s0/1/0"], ["R1", "g0/0", "PC1"], ["R3", "g0/0", "PC3"]],
+    },
+    configs: {
+      R1: ["enable", "configure terminal", "hostname R1", "no ip domain-lookup", "interface g0/0", "ip address 10.1.1.1 255.255.255.0", "no shutdown", "interface g0/1", "description Primary to R2", "ip address 10.0.12.1 255.255.255.252", "no shutdown", "interface s0/1/0", "description Backup to R3", "ip address 10.0.13.1 255.255.255.252", "no shutdown", "interface loopback 0", "description Simulated Internet", "ip address 192.0.2.1 255.255.255.255", "end"],
+      R2: ["enable", "configure terminal", "hostname R2", "no ip domain-lookup", "interface g0/1", "ip address 10.0.12.2 255.255.255.252", "no shutdown", "interface g0/2", "ip address 10.0.23.1 255.255.255.252", "no shutdown", "exit", "ip route 10.1.1.0 255.255.255.0 10.0.12.1", "ip route 10.3.3.0 255.255.255.0 10.0.23.2", "ip route 192.0.2.1 255.255.255.255 10.0.12.1", "end"],
+      R3: ["enable", "configure terminal", "hostname R3", "no ip domain-lookup", "interface g0/0", "ip address 10.3.3.1 255.255.255.0", "no shutdown", "interface g0/2", "description Primary to R2", "ip address 10.0.23.2 255.255.255.252", "no shutdown", "interface s0/1/0", "description Backup to R1", "ip address 10.0.13.2 255.255.255.252", "no shutdown", "end"],
+    },
+    tasks: [
+      T("t1", "R2 already routes to both LANs. Add a static route on R1 to 10.3.3.0/24 and on R3 to 10.1.1.0/24, each via R2's next-hop address on the primary Gigabit path. PC1 must reach PC3."),
+      T("t2", "Add a floating static route for the same two destinations over the backup serial link (10.0.13.0/30) with an administrative distance of 5, so it is used only when the primary path fails."),
+      T("t3", "On R3, add a default route via 10.0.23.1 so unknown destinations go toward R2. Verify PC3 can ping 192.0.2.1 (a loopback on R1 that stands in for the Internet)."),
+    ],
+    guidelines: ["Do not change any interface address or description.", "Do not enable a routing protocol; this lab is static routing only.", "Do not change the hostnames."],
+    checks: [
+      C("c1", "t1", "staticRoute", { device: "R1", prefix: "10.3.3.0", len: 24, nh: "10.0.12.2", ad: 1 }), C("c2", "t1", "staticRoute", { device: "R3", prefix: "10.1.1.0", len: 24, nh: "10.0.23.1", ad: 1 }),
+      C("c3", "t1", "ping", { from: "PC1", to: "10.3.3.10" }),
+      C("c4", "t2", "staticRoute", { device: "R1", prefix: "10.3.3.0", len: 24, nh: "10.0.13.2", ad: 5 }), C("c5", "t2", "staticRoute", { device: "R3", prefix: "10.1.1.0", len: 24, nh: "10.0.13.1", ad: 5 }),
+      C("c6", "t2", "routeInstalled", { device: "R1", prefix: "10.3.3.0", len: 24, code: "S", via: "10.0.12.2" }),
+      C("c7", "t3", "defaultRoute", { device: "R3", nh: "10.0.23.1" }), C("c8", "t3", "ping", { from: "PC3", to: "192.0.2.1" }),
+      G("g0", 0, "interfaceIp", { device: "R1", iface: "g0/1", ip: "10.0.12.1" }), G("g1", 0, "interfaceIp", { device: "R3", iface: "g0/2", ip: "10.0.23.2" }), G("g2", 0, "interfaceIp", { device: "R1", iface: "s0/1/0", ip: "10.0.13.1" }),
+      G("g3", 1, "runningConfigNotMatches", { device: "R1", re: "^router " }), G("g4", 1, "runningConfigNotMatches", { device: "R3", re: "^router " }),
+      ...hostnameGuards("R1", "R2", "R3").map((g, i) => ({ ...g, id: "gh" + i, guideline: 2 })),
+    ],
+    why: "A floating static is the same route with a worse administrative distance: it stays out of the table while the AD-1 route is valid and takes over when the primary next hop stops resolving. `show ip route` only ever shows the floating route after the primary is gone — check the config with `show running-config | include ip route`. The default route on R3 covers 192.0.2.1 because R2 knows how to reach it.",
+  },
+  /* ---------------------------------------------------------------- 5 · single-area OSPFv2 */
+  {
+    id: "lab-ospf-single-area", type: "ccna-lab", obj: "3.4", d: 3, title: "Single-area OSPFv2", timeTargetMin: 7,
+    topology: {
+      devices: {
+        R1: { type: "router", x: 120, y: 120 }, R2: { type: "router", x: 240, y: 40 }, R3: { type: "router", x: 360, y: 120 }, ISP: { type: "router", x: 120, y: 20 },
+        PC1: pc("10.1.1.10", "10.1.1.1", 80, 250), PC3: pc("10.3.3.10", "10.3.3.1", 400, 250),
+      },
+      links: [["R1", "g0/1", "R2", "g0/1"], ["R2", "g0/2", "R3", "g0/2"], ["R1", "g0/2", "R3", "g0/1"], ["R1", "s0/1/0", "ISP", "s0/1/0"], ["R1", "g0/0", "PC1"], ["R3", "g0/0", "PC3"]],
+    },
+    configs: {
+      R1: ["enable", "configure terminal", "hostname R1", "no ip domain-lookup", "interface g0/0", "ip address 10.1.1.1 255.255.255.0", "no shutdown", "interface g0/1", "ip address 10.0.12.1 255.255.255.252", "no shutdown", "interface g0/2", "ip address 10.0.13.1 255.255.255.252", "no shutdown", "interface s0/1/0", "description To ISP", "ip address 203.0.113.2 255.255.255.252", "no shutdown", "end"],
+      R2: ["enable", "configure terminal", "hostname R2", "no ip domain-lookup", "interface loopback 0", "ip address 2.2.2.2 255.255.255.255", "interface g0/1", "ip address 10.0.12.2 255.255.255.252", "no shutdown", "interface g0/2", "ip address 10.0.23.1 255.255.255.252", "no shutdown", "exit", "router ospf 1", "router-id 2.2.2.2", "network 10.0.12.0 0.0.0.3 area 0", "network 10.0.23.0 0.0.0.3 area 0", "network 2.2.2.2 0.0.0.0 area 0", "end"],
+      R3: ["enable", "configure terminal", "hostname R3", "no ip domain-lookup", "interface g0/0", "ip address 10.3.3.1 255.255.255.0", "no shutdown", "interface g0/1", "ip address 10.0.13.2 255.255.255.252", "no shutdown", "interface g0/2", "ip address 10.0.23.2 255.255.255.252", "no shutdown", "end"],
+      ISP: ["enable", "configure terminal", "hostname ISP", "no ip domain-lookup", "interface s0/1/0", "ip address 203.0.113.1 255.255.255.252", "no shutdown", "interface loopback 0", "ip address 8.8.8.8 255.255.255.255", "exit", "ip route 10.0.0.0 255.0.0.0 203.0.113.2", "end"],
+    },
+    tasks: [
+      T("t1", "R2 already runs OSPF process 1 in area 0. Configure OSPF process 1 on R1 with router ID 1.1.1.1 and on R3 with router ID 3.3.3.3, advertising every 10.x.x.x interface in area 0. Both must become FULL neighbors of R2 and of each other."),
+      T("t2", "Make the LAN interfaces (Gi0/0 on R1 and R3) passive so no hellos are sent toward the PCs, while their networks stay advertised."),
+      T("t3", "R1 is the exit to the ISP: add a default route via 203.0.113.1 and have OSPF advertise that default to the other routers."),
+      T("t4", "Verify PC1 reaches PC3 (10.3.3.10) and PC3 reaches 8.8.8.8 through the OSPF-learned default."),
+    ],
+    guidelines: ["Do not change R2's configuration.", "Do not change any interface address.", "Do not change the hostnames."],
+    checks: [
+      C("c1", "t1", "ospfRouterId", { device: "R1", rid: "1.1.1.1" }), C("c2", "t1", "ospfRouterId", { device: "R3", rid: "3.3.3.3" }),
+      C("c3", "t1", "ospfNeighbor", { device: "R1", neighbor: "R2" }), C("c4", "t1", "ospfNeighbor", { device: "R1", neighbor: "R3" }), C("c5", "t1", "ospfNeighbor", { device: "R3", neighbor: "R2" }),
+      C("c6", "t1", "ospfRoute", { device: "R3", prefix: "10.1.1.0", len: 24 }), C("c7", "t1", "ospfRoute", { device: "R1", prefix: "10.3.3.0", len: 24 }),
+      C("c8", "t2", "ospfPassive", { device: "R1", iface: "g0/0" }), C("c9", "t2", "ospfPassive", { device: "R3", iface: "g0/0" }), C("c10", "t2", "ospfActive", { device: "R1", iface: "g0/1", area: 0 }),
+      C("c11", "t3", "defaultRoute", { device: "R1", nh: "203.0.113.1" }), C("c12", "t3", "ospfDefaultOriginate", { device: "R1" }), C("c13", "t3", "routeInstalled", { device: "R3", prefix: "0.0.0.0", len: 0, code: "O" }),
+      C("c14", "t4", "ping", { from: "PC1", to: "10.3.3.10" }), C("c15", "t4", "ping", { from: "PC3", to: "8.8.8.8" }),
+      G("g0", 0, "unchanged", { device: "R2" }, 2),
+      G("g1", 1, "interfaceIp", { device: "R1", iface: "g0/1", ip: "10.0.12.1" }), G("g2", 1, "interfaceIp", { device: "R3", iface: "g0/2", ip: "10.0.23.2" }),
+      ...hostnameGuards("R1", "R3").map((g, i) => ({ ...g, id: "gh" + i, guideline: 2 })),
+    ],
+    why: "`network` statements with wildcard masks (or `ip ospf 1 area 0` on each interface) decide which interfaces join area 0; the router ID is set with `router-id` and only takes effect with `clear ip ospf process` on a running process — here the process is new so it applies immediately. `passive-interface` keeps advertising the LAN prefix but stops hellos. `default-information originate` injects R1's default as an O*E2 route only while R1 itself has a default route.",
+  },
 ];

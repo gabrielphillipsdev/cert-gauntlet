@@ -1,0 +1,20 @@
+! device R1
+en
+conf t
+int g0/0
+no shut
+int g0/0.100
+encapsulation dot1Q 10
+ip add 10.1.10.1 255.255.255.0
+int g0/0.200
+encapsulation dot1Q 20
+ip add 10.1.20.1 255.255.255.0
+end
+! device SW1
+en
+conf t
+int g0/1
+sw tr allowed vlan all
+sw mo tr
+do sh int trunk
+end

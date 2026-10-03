@@ -1,0 +1,23 @@
+! device R1
+enable
+configure terminal
+router ospf 1
+router-id 1.1.1.1
+network 10.1.1.0 0.0.0.255 area 0
+network 10.0.12.0 0.0.0.3 area 0
+network 10.0.13.0 0.0.0.3 area 0
+passive-interface gigabitethernet 0/0
+default-information originate
+exit
+ip route 0.0.0.0 0.0.0.0 203.0.113.1
+end
+! device R3
+enable
+configure terminal
+router ospf 1
+router-id 3.3.3.3
+network 10.3.3.0 0.0.0.255 area 0
+network 10.0.13.0 0.0.0.3 area 0
+network 10.0.23.0 0.0.0.3 area 0
+passive-interface gigabitethernet 0/0
+end

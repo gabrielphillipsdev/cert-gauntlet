@@ -1,0 +1,5 @@
+! device SW1
+conf t
+int f0/2
+switchport access vlan 10
+end

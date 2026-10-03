@@ -7,8 +7,9 @@
    isBlocked(item, line)     -> true when a line is a prefix of one of item.blocked (abbreviations allowed, `do` stripped)
    gradeLab(item, lab, answers) -> { f, earned, max, penalty, tasks:[{id, text, earned, max, checks}], guidelines:[{idx, text, pass, points}], checks:[{id, pass, detail, points}] }
 
-   Check schema: { id, task: "t1" | guideline: <index into item.guidelines>, points?: 1, type, ...fields }.
-   Task checks add points when they PASS; guideline checks subtract points when they FAIL. Fields per type:
+   Check schema: { id, task: "t1" | guideline: <index into item.guidelines>, points?: 1, requires?: [check ids], type, ...fields }.
+   Task checks add points when they PASS; guideline checks subtract points when they FAIL. `requires` makes a check count only
+   when the listed checks pass (used for "expect: false" pings so an untouched lab cannot earn credit for traffic that was never blocked). Fields per type:
 
    interfaceIp        device iface ip [len]              configured address (and prefix length)
    interfaceUp        device iface                       line + protocol up after converge
@@ -37,7 +38,7 @@
    aclPacket          device (acl | iface+dir) pkt{src dst proto dport sport} expect "permit"|"deny"
    forward            from pkt{dst proto dport sport} expect true|false     a TCP/UDP packet from a host through the whole path
    ping               from to [expect=true] [source]
-   ping6              from to [expect=true]
+   ping6              from to [expect=true]               to may be {device, iface} → that interface's first global address (EUI-64 targets)
    natInside / natOutside  device iface
    natStatic          device il ig
    natOverload        device [iface] [pool] [list]       a dynamic rule with overload
@@ -45,8 +46,9 @@
    etherChannel       device po members[] [protocol LACP|PAgP|on] [mode] [up=true]
    dhcpPool           device network len [router] [dns] [excluded:[[lo,hi]]]
    dhcpHelper         device iface addr
-   dhcpLease          host network len                   the host actually leased an address in that network
+   dhcpLease          host network len [notIn:[lo,hi]]   the host actually leased an address in that network (and outside the excluded range)
    portSecurity       device iface [max] [violation] [sticky]
+   portSecurityMac    device iface mac [sticky]          a secure MAC (static or sticky-learned) is present
    domainName         device [name]
    rsaKey             device [minBits]
    sshVersion         device [v=2]
@@ -58,10 +60,12 @@
    banner             device [re]
    consolePassword    device                             line con 0 has a password and login
    svi                device vlan ip len
-   subinterface       device iface vlan [ip] [len] [native]
+   subinterface       device iface vlan [ip] [len] [native]  any sub-interface of iface's parent whose encapsulation is dot1q vlan
    stpRole            device iface vlan role             Root | Desg | Altn (uses live STP)
    stpRoot            device vlan
-   answer             answer accept[]                    analyze lab text answer (answer = id in item.answers; case/space-insensitive; interface names normalized)
+   answer             answer accept[]                    analyze lab text answer (answer = id in item.answers; case/space-insensitive; interface names normalized;
+                                                         an accept entry written as /regex/ is tested as a regex against the normalized answer)
+   unchanged          device                             running-config identical to the lab's starting config (analyze lab guard)
    runningConfigMatches / runningConfigNotMatches  device re [flags]
    cmd                device line re                     run a show command on a scratch session and regex its output   */
 import { createLab, runningConfig, parseIfName, makeSession, net } from "../index.js";
@@ -149,7 +153,7 @@ export const CHECKS = {
   },
   ospfNeighbor(c, k) { const d = c.dev(k.device); const n = d.rt.ospfNbrs.filter(n => n.dev.label === k.neighbor); const full = n.some(x => x.full); return R(full, n.length ? `${k.device} sees ${k.neighbor} in ${n.map(x => x.state).join("/")}` : `${k.device} has no OSPF neighbor ${k.neighbor}`); },
   ospfRoute(c, k) { return CHECKS.routeInstalled(c, { ...k, code: "O" }); },
-  ospfPassive(c, k) { const d = c.dev(k.device); const n = ifName(k.iface); const p = d.ospf && (d.ospf.passive.includes(n) || (d.ospf.passiveDefault && !d.ospf.noPassive.includes(n))); return R(!!p, p ? `${ifShort(n)} is passive` : `${ifShort(n)} is not passive`); },
+  ospfPassive(c, k) { const d = c.dev(k.device); const n = ifName(k.iface); const has = (x, v) => x ? (x instanceof Set ? x.has(v) : x.includes(v)) : false; const p = d.ospf && (has(d.ospf.passive, n) || (d.ospf.passiveDefault && !has(d.ospf.noPassive, n))); return R(!!p, p ? `${ifShort(n)} is passive` : `${ifShort(n)} is not passive`); },
   ospfActive(c, k) { const d = c.dev(k.device); const n = ifName(k.iface); const x = d.rt.ospfIfs.find(o => o.iface.name === n); return R(x && !x.passive && (k.area === undefined || x.area === k.area), x ? `${ifShort(n)} in area ${x.area}${x.passive ? " (passive)" : ""}` : `${ifShort(n)} is not running OSPF`); },
   ospfRouterId(c, k) { const d = c.dev(k.device); return R(d.rt.ospfRid === k.rid, `router ID ${d.rt.ospfRid || "none"}`); },
   ospfDefaultOriginate(c, k) { const o = c.dev(k.device).ospf; return R(o?.defOrig?.on && (!k.always || o.defOrig.always), o?.defOrig?.on ? "default-information originate set" : "no default-information originate"); },
@@ -163,7 +167,7 @@ export const CHECKS = {
   },
   forward(c, k) { c.topo.converge(); const r = c.topo.forward(c.dev(k.from), { src: null, ttl: 255, proto: "tcp", sport: 40000 + Math.floor(Math.random() * 1000), id: 9000, ...k.pkt }, null, []); const want = k.expect !== false; return R(r.ok === want, `${k.from} → ${k.pkt.dst}${k.pkt.dport ? ":" + k.pkt.dport : ""} (${k.pkt.proto || "tcp"}) ${r.ok ? "reaches" : "fails: " + r.why}`); },
   ping(c, k) { const p = c.topo.ping(k.from, k.to, k.source ? { source: k.source } : {}); const want = k.expect !== false; const got = p.pct >= 60; return R(got === want, `ping ${k.from} → ${k.to}: ${p.marks}${p.why && !got ? " (" + p.why + ")" : ""}`); },
-  ping6(c, k) { const p = c.topo.ping6(k.from, k.to); const want = k.expect !== false; return R((p.pct === 100) === want, `ping ${k.from} → ${k.to}: ${p.marks}${p.why && !p.pct ? " (" + p.why + ")" : ""}`); },
+  ping6(c, k) { let to = k.to; if (typeof to === "object") { const i = c.iface(to.device, to.iface); const a = i?.rt.v6?.find(x => !to.linkLocal); to = a ? fmt6(a.g) : "::"; } const p = c.topo.ping6(k.from, to); const want = k.expect !== false; return R((p.pct === 100) === want, `ping ${k.from} → ${to}: ${p.marks}${p.why && !p.pct ? " (" + p.why + ")" : ""}`); },
   natInside(c, k) { const i = c.iface(k.device, k.iface); return R(i?.nat === "inside", `${k.iface}: ip nat ${i?.nat || "none"}`); },
   natOutside(c, k) { const i = c.iface(k.device, k.iface); return R(i?.nat === "outside", `${k.iface}: ip nat ${i?.nat || "none"}`); },
   natStatic(c, k) { const d = c.dev(k.device); const s = d.nat.static.find(s => s.il === k.il && s.ig === k.ig && !s.proto); return R(!!s, s ? `static NAT ${k.il} ↔ ${k.ig}` : `no static NAT for ${k.il} → ${k.ig} (${d.nat.static.map(s => s.il + "→" + s.ig).join(", ") || "none"})`); },
@@ -190,7 +194,7 @@ export const CHECKS = {
     return R(true, `pool ${p.name} ${p.network}/${p.len} router ${p.router}`);
   },
   dhcpHelper(c, k) { const i = c.iface(k.device, k.iface); return R(i && i.helper.includes(k.addr), i ? `helper ${i.helper.join(",") || "none"} on ${ifShort(i.name)}` : `no ${k.iface}`); },
-  dhcpLease(c, k) { c.topo.converge(); const h = c.dev(k.host); return R(h.ip && inPrefix(h.ip, k.network, k.len), `${k.host} got ${h.ip || "no address"}`); },
+  dhcpLease(c, k) { c.topo.converge(); const h = c.dev(k.host); const ok = h.ip && inPrefix(h.ip, k.network, k.len) && !(k.notIn && inRange(h.ip, k.notIn[0], k.notIn[1])); return R(ok, `${k.host} got ${h.ip || "no address"}${h.ip && k.notIn && inRange(h.ip, k.notIn[0], k.notIn[1]) ? " (inside the excluded range)" : ""}${h.ip && h.gw ? ", gateway " + h.gw : ""}`); },
   portSecurity(c, k) {
     const i = c.iface(k.device, k.iface); if (!i) return R(false, `no ${k.iface}`); const p = i.portsec;
     if (!p.on) return R(false, `port security off on ${ifShort(i.name)}`);
@@ -199,6 +203,7 @@ export const CHECKS = {
     if (k.sticky !== undefined && p.sticky !== k.sticky) return R(false, `${ifShort(i.name)} sticky ${p.sticky ? "on" : "off"}`);
     return R(true, `${ifShort(i.name)}: port-security max ${p.max} violation ${p.violation}${p.sticky ? " sticky" : ""}`);
   },
+  portSecurityMac(c, k) { const i = c.iface(k.device, k.iface); if (!i) return R(false, `no ${k.iface}`); const want = k.mac.toLowerCase().replace(/[^0-9a-f]/g, ""); const m = i.portsec.macs.find(m => m.mac.replace(/[^0-9a-f]/g, "") === want && (k.sticky === undefined || !!m.sticky === k.sticky)); return R(!!m, m ? `${ifShort(i.name)} secures ${m.mac}${m.sticky ? " (sticky)" : ""}` : `${ifShort(i.name)} secure MACs: ${i.portsec.macs.map(m => m.mac).join(", ") || "none"}`); },
   domainName(c, k) { const d = c.dev(k.device); return R(d.domainName && (!k.name || norm(d.domainName) === norm(k.name)), `domain ${d.domainName || "not set"}`); },
   rsaKey(c, k) { const d = c.dev(k.device); return R(d.rsaBits >= (k.minBits || 1), d.rsaBits ? `RSA ${d.rsaBits}-bit` : "no RSA key"); },
   sshVersion(c, k) { const d = c.dev(k.device); return R(d.sshVersion === (k.v || 2), `ip ssh version ${d.sshVersion || "(default)"}`); },
@@ -211,7 +216,10 @@ export const CHECKS = {
   consolePassword(c, k) { const l = c.dev(k.device).lines["con 0"]; return R(l.password && l.login !== "none", l.password ? `console password set, login ${l.login}` : "console has no password"); },
   svi(c, k) { const i = c.iface(k.device, "Vlan" + k.vlan); return R(i && i.ip && i.ip.addr === k.ip && (k.len === undefined || i.ip.len === k.len) && !i.shutdown, i ? `Vlan${k.vlan} ${i.ip ? i.ip.addr + "/" + i.ip.len : "no ip"}${i.shutdown ? " shutdown" : ""}` : `no interface Vlan${k.vlan}`); },
   subinterface(c, k) {
-    const i = c.iface(k.device, k.iface); if (!i) return R(false, `no ${k.iface}`);
+    /* any sub-interface number is accepted: the parent is k.iface without its ".n", the match is by encapsulation VLAN */
+    const d = c.dev(k.device); const parent = ifName(k.iface).split(".")[0];
+    const i = Object.values(d.interfaces).find(x => x.name.startsWith(parent + ".") && x.encap?.vlan === k.vlan) || c.iface(k.device, k.iface);
+    if (!i) return R(false, `no sub-interface of ${ifShort(parent)} for VLAN ${k.vlan}`);
     if (!i.encap || i.encap.vlan !== k.vlan) return R(false, `${ifShort(i.name)} encapsulation ${i.encap ? "dot1q " + i.encap.vlan : "none"}`);
     if (k.native !== undefined && !!i.encap.native !== k.native) return R(false, `${ifShort(i.name)} native ${i.encap.native}`);
     if (k.ip && !(i.ip && i.ip.addr === k.ip && (k.len === undefined || i.ip.len === k.len))) return R(false, `${ifShort(i.name)} ${i.ip ? i.ip.addr + "/" + i.ip.len : "no ip"}`);
@@ -221,9 +229,10 @@ export const CHECKS = {
   stpRoot(c, k) { c.topo.converge(); const d = c.dev(k.device); return R(d.rt.stp?.[k.vlan]?.root, `${k.device} ${d.rt.stp?.[k.vlan]?.root ? "is" : "is not"} root for VLAN ${k.vlan}`); },
   answer(c, k, answers) {
     const got = answers?.[k.answer] ?? ""; const g = norm(got); const gi = parseIfName(g)?.short?.toLowerCase();
-    const ok = k.accept.some(a => { const n = norm(a); return n === g || (gi && parseIfName(n)?.short?.toLowerCase() === gi); });
+    const ok = k.accept.some(a => { if (/^\/.*\/$/.test(a)) return new RegExp(a.slice(1, -1), "i").test(g); const n = norm(a); return n === g || (gi && parseIfName(n)?.short?.toLowerCase() === gi); });
     return R(ok, got ? `you answered "${got}"` : "no answer");
   },
+  unchanged(c, k) { const fresh = runningConfig(buildLab(c.item).topo.get(k.device)); const now = c.rc(k.device); return R(fresh === now, fresh === now ? `${k.device} configuration untouched` : `${k.device} configuration was changed`); },
   runningConfigMatches(c, k) { const re = new RegExp(k.re, k.flags || "m"); return R(re.test(c.rc(k.device)), `${k.device} running-config ${re.test(c.rc(k.device)) ? "contains" : "lacks"} /${k.re}/`); },
   runningConfigNotMatches(c, k) { const re = new RegExp(k.re, k.flags || "m"); return R(!re.test(c.rc(k.device)), `${k.device} running-config ${re.test(c.rc(k.device)) ? "contains" : "lacks"} /${k.re}/`); },
   /* scratch session so the student's own terminal mode is untouched */
@@ -233,11 +242,13 @@ export const CHECKS = {
 /* ---------- grading ---------- */
 export function gradeLab(item, lab, answers = {}) {
   lab.topo.converge();
-  const c = ctxFor(lab);
+  const c = ctxFor(lab); c.item = item;
   const results = [];
   for (const k of item.checks) {
     const fn = CHECKS[k.type]; let r;
+    const missing = (k.requires || []).filter(id => !results.find(x => x.id === id)?.pass);
     if (!fn) r = R(false, `unknown check type ${k.type}`);
+    else if (missing.length) r = R(false, `not evaluated until ${missing.join(", ")} pass${missing.length > 1 ? "" : "es"}`);
     else { try { r = fn(c, k, answers); } catch (e) { r = R(false, `check error: ${e.message}`); } }
     results.push({ id: k.id, type: k.type, task: k.task, guideline: k.guideline, points: k.points ?? 1, pass: r.pass, detail: r.detail });
   }
