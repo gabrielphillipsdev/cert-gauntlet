@@ -1,6 +1,6 @@
 # ccna pack — content spec
 
-> Status: the **IOS simulator engine** section below is written (Chat 7). The content sections (cards, twins, exam banks, show-output reader, lab items) are still to be written by the chats that build them (8 and 9), following the shape of `dev/specs/secplus.md`: files + exports, categories/domains with weights, every item schema, quotas, and the objective-tag rule (`obj` on every item, validator-enforced). Those chats also add the pack's exam rules to `packs/ccna/pack.js` (see `dev/ENGINE.md` → Pack manifest) and a `dev/FIDELITY-ccna.md` checklist built from the verified exam format in PLAN.md §1/§5.
+> Status: the **IOS simulator engine** section (Chat 7) and the **lab item / show-output reader / PBQ** sections (Chat 8) are written. The content sections (cards, twins, exam banks, show-output reader, lab items) are still to be written by the chats that build them (8 and 9), following the shape of `dev/specs/secplus.md`: files + exports, categories/domains with weights, every item schema, quotas, and the objective-tag rule (`obj` on every item, validator-enforced). Those chats also add the pack's exam rules to `packs/ccna/pack.js` (see `dev/ENGINE.md` → Pack manifest) and a `dev/FIDELITY-ccna.md` checklist built from the verified exam format in PLAN.md §1/§5.
 
 Blueprint: Cisco 200-301 v1.1 — Network Fundamentals 20%, Network Access 20%, IP Connectivity 25%, IP Services 10%, Security Fundamentals 15%, Automation & Programmability 10%. Exam facts (no backtracking, 3–4 lab items with tabbed IOS terminals, 5–7 min each, partial credit) are in PLAN.md §1 and §5 and are the reason the simulator exists.
 
@@ -120,3 +120,23 @@ What the simulated lab item does NOT copy (and why): no draggable tab reordering
   why: "one paragraph shown after grading" }
 ```
 Check types and their fields are documented at the top of `core/sims/ios/ui/labGrader.js`. Scoring: `earned = Σ points of passing task checks`, `penalty = Σ points of failing guideline checks`, `f = clamp((earned − penalty) / Σ task points, 0, 1)`. Solutions (never shipped) live in `dev/solutions/ccna/<id>.{primary,alt,partial}.txt`; `node dev/tests/ccna-labs.test.mjs` proves fresh = 0, primary = alt = 1, partial = its declared score, and that a guideline violation costs points.
+
+## Show-output reader (`packs/ccna/reader.js`, sim type `show-reader`) — Chat 8
+
+GENERATED: `node dev/tools/gen-reader.mjs` builds each scenario in `dev/tools/reader-scenarios.mjs`, runs the show command, stores the exact output, and derives the key from simulator state (generation fails if the key is missing from the options or equals a distractor). Never hand-edit `reader.js`; edit the generator and regenerate.
+```js
+{ id: "rd-route-1", type: "show-reader", obj: "3.2", d: 3, title, device: "HQ", command: "show ip route", output, q, opts: [4 strings], ans: 0..3, why }
+```
+Quotas: ≥40 items, ≥3 per command (ip route, ip interface brief, spanning-tree, vlan brief, ip ospf neighbor, ip ospf interface, interfaces trunk, access-lists, ip nat translations, mac address-table, etherchannel summary). Validator: `node dev/validate-ccna-reader.mjs` (also runs `gen-reader --check`).
+
+## Config-order PBQs (`packs/ccna/pbq.js` → `PBQ_ORDER`, sim type `ccna-order`) — Chat 8
+```js
+{ id: "po-ssh", type: "ccna-order", obj, d, title, prompt, task: [≥2], device: "router"|"switch"|"l3switch", pre?: [cli], steps: [lines, canonical working order], why }
+```
+Steps are typed from global configuration mode. Graded by `core/sims/ios/ui/configOrder.js`: the student's order is replayed on a fresh device; identical running-config to the canonical order = 100 %, otherwise partial credit for lines in their canonical position (by text). No `eq` list is needed — any working order passes, which `dev/tests/ccna-pbq.test.mjs` checks for every single-line move.
+
+## Topology-label PBQs (`PBQ_TOPO`, core sim type `diagram`) — Chat 8
+Reuses Chat 3's diagram placement sim with CCNA palettes (`devices: {root:{n,s}, …}`, `reuse: true` where a label repeats). Keys are read from the simulator in `dev/tools/gen-pbq.mjs` (STP port roles, OSPF interface state, `topo.lookup()` next hops, NAT translation fields, interface NAT roles of a configuration proven to work). Validator: `node dev/validate-ccna-pbq.mjs`; proofs + `--check`: `node dev/tests/ccna-pbq.test.mjs`.
+
+## Tests for this pack
+`node dev/tests/ccna-labs.test.mjs && node dev/tests/ccna-pbq.test.mjs && node dev/validate-ccna-reader.mjs && node dev/validate-ccna-pbq.mjs && node dev/check-pack.mjs ccna && node dev/tests/ios-conformance.mjs`, then `python3 dev/tests/ccna-e2e.py` with the repo served on :8765. Preview page: `dev/pages/ccna-lab.html`.

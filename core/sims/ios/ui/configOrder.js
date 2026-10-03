@@ -29,7 +29,8 @@ const base = () => sim("order");
 registerSim("ccna-order", {
   label: "Config order", color: "#FFD166",
   create(item) { return base().create(item); },
-  render(el, item, st, ctx) { base().render(el, { ...item, eq: [] }, st, ctx); },
+  /* the order component's instructions pane reads item.tasks; add the grading rule so nobody hunts for "the" canonical order */
+  render(el, item, st, ctx) { base().render(el, { ...item, eq: [], tasks: [...(item.task || []), "Drag the handles (or use the arrows) to order the lines, first at the top. Any order that produces this configuration is accepted."] }, st, ctx); },
   answered: (item, st) => st.seq.length > 0,
   score(item, st) {
     if (!st.seq.length) return { f: 0, notes: ["Not answered."], why: item.why || "" };

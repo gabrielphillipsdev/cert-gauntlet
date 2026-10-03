@@ -50,3 +50,10 @@ Cisco blog "New Performance-Based Lab Exam Items Build Opportunities" + 200-301 
 - Solution scripts: sessions keep their mode across the primary → violate append, and a device not touched by primary starts at `>` — violate scripts for such devices begin with `enable`.
 - Every "should still work" connectivity check that is already true on the starting config needs `requires: [<check that proves the change>]`, otherwise fresh ≠ 0 (the test catches it).
 - `partial.json` values are computed by hand from check points — if the test disagrees, recount before touching a check (twice the test was right).
+
+## Final state (for Chat 9)
+- Lab ids for exam placement: `lab-vlans-trunking lab-router-on-a-stick lab-svi-routing lab-static-routes lab-ospf-single-area lab-acls lab-nat-pat lab-etherchannel lab-dhcp lab-port-security lab-ssh-hardening lab-ipv6 lab-analyze-show` (each carries `d` for domain scoring). They are ordinary sim items: `sim("ccna-lab").score(item, state).f` is the partial credit.
+- `content.lab` = labs + config-order + topology PBQs + reader items (73). Chat 9 can split reader items into its own practice mode (`type === "show-reader"`).
+- Manifest has sections/weights, `domName`, `objPattern`, `backtrack:false`; exam numbers, cards, banks and `status:"ready"` are Chat 9's.
+- `sw.js` caches everything stale-while-revalidate, so new files need no precache entry; a `VERSION` bump (core/app.js + sw.js, Chat 1) is still needed on deploy.
+- Preview without the pack enabled: `dev/pages/ccna-lab.html` (lists all 73 items, `?item=<id>`).

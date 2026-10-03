@@ -654,48 +654,48 @@ export const PBQ_TOPO = [
   "nodes": [
    {
     "id": "LAN",
-    "label": "Ethernet segment 10.50.0.0/24",
+    "label": "Ethernet segment\n10.50.0.0/24",
     "x": 240,
-    "y": 150,
+    "y": 152,
     "k": "sw",
-    "w": 200,
-    "h": 30
+    "w": 150,
+    "h": 40
    },
    {
     "id": "RA",
-    "label": "RA\nGi0/0 10.50.0.1\npriority 1\nrouter-id 1.1.1.1",
+    "label": "RA\nGi0/0 .1 · pri 1\nrouter-id 1.1.1.1",
     "x": 90,
-    "y": 60,
+    "y": 52,
     "k": "rtr",
-    "w": 150,
-    "h": 58
+    "w": 160,
+    "h": 50
    },
    {
     "id": "RB",
-    "label": "RB\nGi0/0 10.50.0.2\npriority 100\nrouter-id 2.2.2.2",
+    "label": "RB\nGi0/0 .2 · pri 100\nrouter-id 2.2.2.2",
     "x": 390,
-    "y": 60,
+    "y": 52,
     "k": "rtr",
-    "w": 150,
-    "h": 58
+    "w": 160,
+    "h": 50
    },
    {
     "id": "RC",
-    "label": "RC\nGi0/0 10.50.0.3\npriority 1\nrouter-id 3.3.3.3",
+    "label": "RC\nGi0/0 .3 · pri 1\nrouter-id 3.3.3.3",
     "x": 90,
-    "y": 250,
+    "y": 252,
     "k": "rtr",
-    "w": 150,
-    "h": 58
+    "w": 160,
+    "h": 50
    },
    {
     "id": "RD",
-    "label": "RD\nGi0/0 10.50.0.4\npriority 0\nrouter-id 4.4.4.4",
+    "label": "RD\nGi0/0 .4 · pri 0\nrouter-id 4.4.4.4",
     "x": 390,
-    "y": 250,
+    "y": 252,
     "k": "rtr",
-    "w": 150,
-    "h": 58
+    "w": 160,
+    "h": 50
    }
   ],
   "links": [
@@ -720,29 +720,29 @@ export const PBQ_TOPO = [
    {
     "id": "RA-role",
     "label": "RA role",
-    "x": 210,
-    "y": 60,
+    "x": 90,
+    "y": 122,
     "want": "drother"
    },
    {
     "id": "RB-role",
     "label": "RB role",
-    "x": 270,
-    "y": 60,
+    "x": 390,
+    "y": 122,
     "want": "dr"
    },
    {
     "id": "RC-role",
     "label": "RC role",
-    "x": 210,
-    "y": 250,
+    "x": 90,
+    "y": 192,
     "want": "bdr"
    },
    {
     "id": "RD-role",
     "label": "RD role",
-    "x": 270,
-    "y": 250,
+    "x": 390,
+    "y": 192,
     "want": "drother"
    }
   ],
@@ -784,48 +784,48 @@ export const PBQ_TOPO = [
   "nodes": [
    {
     "id": "LAN",
-    "label": "Ethernet segment 10.50.0.0/24",
+    "label": "Ethernet segment\n10.50.0.0/24",
     "x": 240,
-    "y": 150,
+    "y": 152,
     "k": "sw",
-    "w": 200,
-    "h": 30
+    "w": 150,
+    "h": 40
    },
    {
     "id": "RA",
-    "label": "RA\nGi0/0 10.50.0.1\npriority 1\nLoopback0 10.0.0.9",
+    "label": "RA\nGi0/0 .1 · pri 1\nLo0 10.0.0.9",
     "x": 90,
-    "y": 60,
+    "y": 52,
     "k": "rtr",
-    "w": 150,
-    "h": 58
+    "w": 160,
+    "h": 50
    },
    {
     "id": "RB",
-    "label": "RB\nGi0/0 10.50.0.2\npriority 1\nLoopback0 10.0.0.20",
+    "label": "RB\nGi0/0 .2 · pri 1\nLo0 10.0.0.20",
     "x": 390,
-    "y": 60,
+    "y": 52,
     "k": "rtr",
-    "w": 150,
-    "h": 58
+    "w": 160,
+    "h": 50
    },
    {
     "id": "RC",
-    "label": "RC\nGi0/0 10.50.0.3\npriority 1\nLoopback0 192.168.1.1",
+    "label": "RC\nGi0/0 .3 · pri 1\nLo0 192.168.1.1",
     "x": 90,
-    "y": 250,
+    "y": 252,
     "k": "rtr",
-    "w": 150,
-    "h": 58
+    "w": 160,
+    "h": 50
    },
    {
     "id": "RD",
-    "label": "RD\nGi0/0 10.50.0.4\npriority 1\nno router-id, no loopback",
+    "label": "RD\nGi0/0 .4 · pri 1\nno router-id, no loopback",
     "x": 390,
-    "y": 250,
+    "y": 252,
     "k": "rtr",
-    "w": 150,
-    "h": 58
+    "w": 160,
+    "h": 50
    }
   ],
   "links": [
@@ -850,29 +850,29 @@ export const PBQ_TOPO = [
    {
     "id": "RA-role",
     "label": "RA role",
-    "x": 210,
-    "y": 60,
+    "x": 90,
+    "y": 122,
     "want": "drother"
    },
    {
     "id": "RB-role",
     "label": "RB role",
-    "x": 270,
-    "y": 60,
+    "x": 390,
+    "y": 122,
     "want": "drother"
    },
    {
     "id": "RC-role",
     "label": "RC role",
-    "x": 210,
-    "y": 250,
+    "x": 90,
+    "y": 192,
     "want": "dr"
    },
    {
     "id": "RD-role",
     "label": "RD role",
-    "x": 270,
-    "y": 250,
+    "x": 390,
+    "y": 192,
     "want": "bdr"
    }
   ],

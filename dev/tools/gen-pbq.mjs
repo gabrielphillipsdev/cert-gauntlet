@@ -96,13 +96,15 @@ function drItem(id, title, prompt, routers, why) {
   conv(lab);
   const item = { id, type: "diagram", obj: "3.4", d: 3, title, prompt, w: 480, h: 300, reuse: true, devices: DR_DEV, palette: ["dr", "bdr", "drother"], nodes: [{ id: "LAN", label: "Ethernet segment 10.50.0.0/24", x: 240, y: 150, k: "sw", w: 200, h: 30 }], links: [], slots: [],
     task: ["All four routers run OSPF on Gi0/0 in area 0 and booted at the same moment.", "Label each router's role on the segment."], why };
-  const pos = [[90, 60], [390, 60], [90, 250], [390, 250]];
+  /* routers in the corners, each role slot between its router and the segment so nothing overlaps */
+  const pos = [[90, 52], [390, 52], [90, 252], [390, 252]];
+  item.nodes[0] = { id: "LAN", label: "Ethernet segment\n10.50.0.0/24", x: 240, y: 152, k: "sw", w: 150, h: 40 };
   routers.forEach((r, i) => {
     const d = lab.topo.get(r.name); const oi = d.rt.ospfIfs.find(x => x.iface.name === "GigabitEthernet0/0");
-    const facts = [`Gi0/0 ${r.ip}`, `priority ${r.pri ?? 1}`, r.rid ? `router-id ${r.rid}` : r.lo ? `Loopback0 ${r.lo}` : "no router-id, no loopback"];
-    item.nodes.push({ id: r.name, label: `${r.name}\n${facts.join("\n")}`, x: pos[i][0], y: pos[i][1] + (i < 2 ? 0 : 0), k: "rtr", w: 150, h: 58 });
+    const facts = [`Gi0/0 .${r.ip.split(".")[3]} · pri ${r.pri ?? 1}`, r.rid ? `router-id ${r.rid}` : r.lo ? `Lo0 ${r.lo}` : "no router-id, no loopback"];
+    item.nodes.push({ id: r.name, label: `${r.name}\n${facts.join("\n")}`, x: pos[i][0], y: pos[i][1], k: "rtr", w: 160, h: 50 });
     item.links.push([r.name, "LAN"]);
-    item.slots.push({ id: `${r.name}-role`, label: `${r.name} role`, x: pos[i][0] + (i % 2 ? -120 : 120), y: pos[i][1], want: { DR: "dr", BDR: "bdr", DROTHER: "drother" }[oi.state] });
+    item.slots.push({ id: `${r.name}-role`, label: `${r.name} role`, x: pos[i][0], y: i < 2 ? 122 : 192, want: { DR: "dr", BDR: "bdr", DROTHER: "drother" }[oi.state] });
   });
   return item;
 }

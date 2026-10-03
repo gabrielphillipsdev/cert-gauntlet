@@ -212,10 +212,16 @@ injectCss("cg-sim-ccna-lab", `
 .cl.reveal .cl-term{opacity:.85}
 @media(min-width:768px){
   .cl{min-height:0}.cl-seg,.cl-up{display:none}.cl-kb{display:inline}
-  .cl-body{flex-direction:row;align-items:stretch;height:calc(100vh - 230px);min-height:480px}
+  .cl-body{flex:none;flex-direction:row;align-items:stretch;height:calc(100vh - 230px);min-height:480px}
   .cl-left{display:flex;flex:0 0 34%;max-width:420px}.cl-right{display:flex;flex:1}
   .cl-tabs{display:flex}
   .cl-out{height:auto;font-size:13px}
 }
 @media(min-width:1024px){.cl-body{height:calc(100vh - 210px)}}
+/* iPad portrait: a 34% left pane is too narrow for the topology, so stack the panes — both stay on screen, like the exam's split */
+@media(min-width:768px) and (max-width:1023px) and (orientation:portrait){
+  .cl-body{flex-direction:column;height:calc(100vh - 200px)}
+  .cl-left{flex:0 0 40%;max-width:none}.cl-right{flex:1;min-height:0}
+  .cl-topo .cl-svg{max-height:calc(40vh - 120px)}
+}
 `);
