@@ -1,0 +1,648 @@
+# AZ-900 practice questions
+# Export for second-model review. '*' marks the keyed answer. Report any item where you believe the key or an explanation is wrong, citing a Microsoft Learn page.
+
+[z001] type=mc domain=1 obj=1.1.2 (Describe the shared responsibility model)
+Q: Fabrikam runs a line-of-business application on an Azure virtual machine that runs Windows Server. A critical operating system security update is released. According to the shared responsibility model, who is responsible for installing the update?
+  * A. Fabrikam
+        why: A virtual machine is IaaS. The customer owns everything from the guest operating system upward, including OS patching.
+    B. Microsoft
+        why: Microsoft patches the physical hosts and the hypervisor, not the guest operating system inside a customer's VM.
+    C. Fabrikam and Microsoft share the task equally
+        why: Guest OS maintenance is not a shared item in IaaS; it belongs entirely to the customer.
+    D. The software vendor of the line-of-business application
+        why: An application vendor supports its own product and has no role in the operating system beneath it.
+TAKEAWAY: IaaS: customer owns the guest OS and everything above it. The provider owns the physical datacenter, network and hosts in every model.
+
+[z002] type=mc domain=2 obj=2.1.2 (Describe availability zones)
+Q: Northwind plans to deploy a web application to Azure. The application must remain available if a single datacenter in the region fails, and all data must stay within one region. Which Azure feature should Northwind use?
+  * A. Availability zones
+        why: Zones are physically separate datacenter groups within one region, so deploying across zones survives a datacenter failure while keeping data in the region.
+    B. Region pairs
+        why: A region pair involves a second region, which would move data outside the single region the requirement specifies.
+    C. Resource groups
+        why: A resource group is a logical container for management; it provides no physical redundancy.
+    D. Management groups
+        why: Management groups organize subscriptions for governance and have nothing to do with datacenter resilience.
+TAKEAWAY: Datacenter failure inside a region = availability zones. Whole-region failure = a second region (often the paired region).
+
+[z003] type=mc domain=3 obj=3.1.4 (Describe the purpose of tags)
+Q: Tailspin applies the tags shown in the exhibit. A user then creates a new virtual machine named VM3 in RG-Finance without specifying any tags. Which tags does VM3 have?
+EXHIBIT:
+    Scope                     Tag
+    ------------------------  --------------------
+    Subscription Sub-Prod     Owner=CloudOps
+    Resource group RG-Finance Dept=Finance
+    VM1 (in RG-Finance)       Env=Prod
+    VM2 (in RG-Finance)       Env=Test
+  * A. No tags
+        why: Tags are not inherited from the resource group or subscription. A resource carries only the tags set directly on it, so VM3 starts with none.
+    B. Dept=Finance only
+        why: The resource group's tag does not flow down to resources created inside it unless an Azure Policy copies it.
+    C. Owner=CloudOps and Dept=Finance
+        why: Neither subscription nor resource group tags are inherited by child resources by default.
+    D. Owner=CloudOps, Dept=Finance and Env=Prod
+        why: Tags on a sibling VM have no effect on a new VM, and parent-scope tags are not inherited.
+TAKEAWAY: Use Azure Policy built-ins (Require a tag = Deny, Append a tag = Append, Inherit a tag from the resource group = Modify) to make child resources carry the parent's tag.
+
+[z004] type=ms domain=1 obj=1.1.3 (Define cloud models, including public, private, and hybrid)
+Q: Select the two statements that are true about the public cloud model. Each correct answer presents a complete solution.
+(choose 2)
+  * A. The cloud provider owns and operates the physical infrastructure
+        why: In a public cloud a third party such as Microsoft owns the datacenters and hardware.
+  * B. Services are available to any customer over the internet
+        why: Public cloud resources are offered to the general public and reached over the internet.
+    C. Hardware is dedicated to a single organization
+        why: Dedicated hardware describes a private cloud; public cloud infrastructure is shared among tenants.
+    D. The customer must purchase the servers before deploying workloads
+        why: Public cloud has no up-front hardware purchase; that is the capital-expenditure model it replaces.
+    E. Workloads must be split between on-premises and cloud locations
+        why: Splitting workloads across locations describes a hybrid cloud, not a public cloud.
+TAKEAWAY: Public = provider-owned, shared, internet-delivered, no CapEx. Private = dedicated to one organization. Hybrid = both connected.
+
+[z005] type=mc domain=2 obj=2.1.6 (Describe management groups)
+Q: Woodgrove is designing the governance hierarchy shown in the exhibit. The architect wants to add two more levels of management groups beneath MG-Retail-EU before the subscriptions. Will the design work, and why?
+EXHIBIT:
+    Tenant Root Group
+      MG-Corp
+        MG-Retail
+          MG-Retail-EU
+            MG-Retail-EU-Stores
+              MG-Retail-EU-Stores-Online
+                (subscriptions)
+  * A. No, because management groups support a maximum depth of six levels below the root
+        why: The exhibit already has five levels under the root. Adding two more would make seven, which exceeds the six-level limit (root and subscription levels do not count).
+    B. No, because a management group can contain only one child management group
+        why: A management group can hold many children; the single-parent rule applies in the other direction.
+    C. Yes, because management groups can be nested without limit
+        why: Nesting is limited to six levels below the root management group.
+    D. Yes, because subscriptions can be placed at any depth up to ten levels
+        why: The depth limit is six, not ten, and it applies to management groups regardless of where subscriptions sit.
+TAKEAWAY: Management groups: up to 10,000 per directory, up to six levels deep (excluding root and subscriptions), one parent each.
+
+[z006] type=mc domain=3 obj=3.1.2 (Explore the pricing calculator)
+Q: Litware is proposing a new solution that will use Azure App Service, Azure SQL Database and Azure Storage. Nothing has been deployed yet. Management wants an estimate of the monthly Azure cost to include in the proposal. Which tool should Litware use?
+  * A. The Azure pricing calculator
+        why: The pricing calculator builds an estimate from the services, regions, sizes and quantities you choose, without needing any deployed resources.
+    B. Cost analysis in Microsoft Cost Management
+        why: Cost analysis reports on actual spending of existing resources; nothing is deployed yet.
+    C. Azure Advisor cost recommendations
+        why: Advisor recommends savings on resources that already exist and have usage data.
+    D. A Cost Management budget
+        why: A budget tracks real spend against a threshold; it does not estimate the cost of a design.
+TAKEAWAY: Pricing calculator = estimate before deployment. Cost Management = analyze, budget and alert on actual spend after deployment.
+
+[z007] type=mc domain=1 obj=1.1.5 (Describe the consumption-based model)
+Q: Select the answer that correctly completes the sentence. In a consumption-based pricing model, an organization pays for ______.
+  * A. the resources it actually uses, with no up-front commitment
+        why: Consumption-based pricing meters usage and bills only for what is consumed, which is the defining feature of the model.
+    B. a fixed monthly fee regardless of usage
+        why: A flat fee independent of usage is the opposite of consumption-based billing.
+    C. the physical servers that host its workloads
+        why: Buying servers is a capital expenditure and belongs to the on-premises model.
+    D. the maximum capacity it estimates it will ever need
+        why: Paying for peak capacity in advance is the traditional datacenter approach the cloud model avoids.
+TAKEAWAY: Consumption-based: no up-front cost, no wasted capacity, pay only for what you use, stop paying when you stop using.
+
+[z008] type=mc domain=2 obj=2.1.4 (Describe Azure resources and resource groups)
+Q: Fabrikam has a resource group named RG1 located in East US. An administrator attempts to create a storage account in West Europe inside RG1. What is the result?
+  * A. The storage account is created in West Europe inside RG1
+        why: A resource group's location only stores its metadata. Resources inside it can be deployed to any region.
+    B. The operation fails because resources must match the resource group's region
+        why: There is no such restriction; co-locating is recommended but not required.
+    C. The storage account is created in East US automatically
+        why: Azure does not silently change the region you select for a resource.
+    D. RG1 is moved to West Europe to match the resource
+        why: A resource group's region does not change based on the resources placed in it.
+TAKEAWAY: Resource group region = where metadata lives. Members can be in any region, cannot be in two groups, and groups cannot be nested.
+
+[z009] type=mc domain=3 obj=3.1.3 (Describe cost management capabilities in Azure)
+Q: Northwind configured the budget shown in the exhibit on subscription Sub-Dev. On the 20th of the month, actual spend reaches 4,100 USD. What happens?
+EXHIBIT:
+    Budget name:   Dev-Monthly
+    Scope:         Subscription Sub-Dev
+    Amount:        5,000 USD / month
+    Alert 1:       Actual cost >= 80%  -> email devleads@northwind.example
+    Alert 2:       Actual cost >= 100% -> email finance@northwind.example
+  * A. An email is sent to devleads@northwind.example and resources keep running
+        why: 4,100 USD is 82 percent of 5,000, so the 80 percent alert fires. A budget only notifies; it does not stop or delete resources.
+    B. All resources in Sub-Dev are stopped until the next month
+        why: Budgets never shut resources down by themselves; that would require an action group with automation.
+    C. An email is sent to finance@northwind.example only
+        why: The 100 percent condition has not been reached, so the finance alert does not fire.
+    D. Nothing happens until spending reaches 5,000 USD
+        why: The 80 percent threshold is 4,000 USD, which has already been exceeded.
+TAKEAWAY: A budget alert notifies at the thresholds you define. It never stops spending on its own; pair it with an action group if you want automation.
+
+[z010] type=mc domain=1 obj=1.2.1 (Describe the benefits of high availability and scalability in the cloud)
+Q: Tailspin's online store receives ten times its normal traffic during sales events. The company wants Azure to add virtual machines automatically when load rises and remove them when load falls, without an administrator intervening. Which cloud benefit does this describe?
+  * A. Elasticity
+        why: Elasticity is automatic scaling in both directions in response to demand, which is exactly the scenario.
+    B. High availability
+        why: High availability is about staying reachable despite failures, not about matching capacity to demand.
+    C. Predictability
+        why: Predictability concerns consistent performance and forecastable cost, not automatic resource changes.
+    D. Agility
+        why: Agility refers to deploying and reconfiguring resources quickly, not to automatic scaling based on load.
+TAKEAWAY: Scalability = you can add or remove resources. Elasticity = it happens automatically as demand changes. Agility = you can do it fast.
+
+[z011] type=mc domain=2 obj=2.2.2 (Describe virtual machine options, including Azure virtual machines, Azure Virtual Machine Scale Sets, availability sets, and Azure Virtual Desktop)
+Q: Woodgrove hosts a stateless web tier on Azure virtual machines. The company needs the number of identical VMs to increase automatically when CPU utilization is high and decrease when it is low. Which Azure service should Woodgrove use?
+  * A. Azure Virtual Machine Scale Sets
+        why: A scale set manages a group of identical VMs and adds or removes instances automatically based on metrics or a schedule.
+    B. An availability set
+        why: An availability set spreads existing VMs across fault and update domains; it does not change the number of VMs.
+    C. Azure Virtual Desktop
+        why: Azure Virtual Desktop delivers Windows desktops and apps to users; it is not a general web-tier scaling solution.
+    D. Azure Container Instances
+        why: Container Instances runs individual containers without orchestration or VM autoscaling.
+TAKEAWAY: Scale sets = identical VMs that scale out and in automatically. Availability sets = spread VMs over fault and update domains, no scaling.
+
+[z012] type=mc domain=3 obj=3.2.3 (Describe the purpose of resource locks)
+Q: Litware applies a ReadOnly lock to a resource group that contains a production SQL database and a virtual machine. A user who has the Owner role on the resource group attempts to resize the virtual machine. What is the result?
+  * A. The resize is blocked until the lock is removed
+        why: A ReadOnly lock prevents modification regardless of RBAC. Even an Owner must remove the lock first.
+    B. The resize succeeds because Owner overrides locks
+        why: Locks are not overridden by role assignments; they apply to all users.
+    C. The resize succeeds but the database cannot be deleted
+        why: ReadOnly blocks updates as well as deletes, so the resize does not proceed.
+    D. The virtual machine is deleted and recreated at the new size
+        why: Deletion is also prevented by the lock, and resizing never deletes a VM.
+TAKEAWAY: CanNotDelete: read and modify allowed, delete blocked. ReadOnly: only reads allowed. Locks override RBAC and inherit to child resources.
+
+[z013] type=ms domain=2 obj=2.2.5 (Describe virtual networking, including the purpose of Azure virtual networks, subnets, peering, Azure DNS, Azure VPN Gateway, and ExpressRoute)
+Q: Fabrikam has three virtual networks: VNet1 and VNet2 in East US and VNet3 in West Europe. VNet1 is peered with VNet2, and VNet2 is peered with VNet3. Select the two statements that are true. Each correct answer presents a complete solution.
+(choose 2)
+  * A. Resources in VNet1 can communicate with resources in VNet2 over the Microsoft backbone
+        why: Peered VNets exchange traffic privately on Microsoft's network with no internet or gateway involved.
+  * B. Resources in VNet1 cannot communicate directly with resources in VNet3
+        why: Peering is not transitive. VNet1 is not peered with VNet3, so there is no direct path.
+    C. VNet2 and VNet3 cannot be peered because they are in different regions
+        why: Global virtual network peering connects VNets in different regions.
+    D. Traffic between VNet1 and VNet2 traverses the public internet
+        why: Peered traffic stays on the Microsoft backbone and never touches the public internet.
+    E. VNet1 and VNet2 must use overlapping address spaces
+        why: Peered networks must have non-overlapping address spaces, not overlapping ones.
+TAKEAWAY: Peering: private backbone path, regional or global, non-overlapping address spaces, and never transitive.
+
+[z014] type=mc domain=1 obj=1.1.4 (Identify appropriate use cases for each cloud model)
+Q: Northwind must keep a regulated manufacturing control system in its own datacenter because of a legal requirement, but wants to move its customer-facing website to Azure and allow the two environments to exchange data securely. Which cloud model should Northwind adopt?
+  * A. Hybrid cloud
+        why: Keeping some workloads on-premises while running others in a public cloud, with connectivity between them, is the definition of hybrid.
+    B. Public cloud
+        why: A public-only approach would move everything to Azure, which the legal requirement prevents.
+    C. Private cloud
+        why: A private cloud alone would keep everything on dedicated infrastructure and would not deliver the public-cloud website.
+    D. Multi-cloud
+        why: Multi-cloud means using two or more public providers; the scenario involves on-premises plus one provider.
+TAKEAWAY: Some workloads must stay local + some go to Azure + the two connect = hybrid cloud.
+
+[z015] type=mc domain=3 obj=3.2.2 (Describe the purpose of Azure Policy)
+Q: Tailspin needs to ensure that no one can create virtual machines in any region other than West Europe across every subscription in the company. Which Azure feature should Tailspin use?
+  * A. Azure Policy assigned at the root management group with a Deny effect
+        why: Policy evaluates resource properties such as location and can deny creation; assigning at the root covers all subscriptions through inheritance.
+    B. Azure RBAC with a custom role that excludes other regions
+        why: RBAC controls which actions a principal may perform, not which property values (like location) a resource may have.
+    C. A ReadOnly resource lock on each subscription
+        why: A lock would block all changes in the subscriptions, not just VMs outside West Europe.
+    D. Tags that record the allowed region on each resource group
+        why: Tags are metadata and enforce nothing by themselves.
+TAKEAWAY: Policy = what resources must look like (Deny blocks non-compliant creates). RBAC = who can act. Locks = prevent change or delete for everyone.
+
+[z016] type=mc domain=2 obj=2.2.5 (Describe virtual networking, including the purpose of Azure virtual networks, subnets, peering, Azure DNS, Azure VPN Gateway, and ExpressRoute)
+Q: Woodgrove needs to connect its on-premises datacenter to an Azure virtual network. The connection must not traverse the public internet and must provide consistent latency for large daily data transfers. Which Azure service should Woodgrove use?
+  * A. Azure ExpressRoute
+        why: ExpressRoute is a private dedicated connection through a connectivity partner that bypasses the public internet and offers predictable performance.
+    B. Azure VPN Gateway with a site-to-site connection
+        why: A site-to-site VPN is encrypted but still travels across the public internet.
+    C. Global virtual network peering
+        why: Peering connects two Azure VNets; it does not connect an on-premises network.
+    D. A point-to-site VPN
+        why: Point-to-site connects individual client devices over the internet, not a whole datacenter.
+TAKEAWAY: VPN Gateway = encrypted tunnel over the internet. ExpressRoute = private circuit that avoids the internet, with higher reliability and cost.
+
+[z017] type=ms domain=1 obj=1.3.4 (Identify appropriate use cases for each cloud service type (IaaS, PaaS, and SaaS))
+Q: Litware is evaluating Azure services. Select the two services that are examples of platform as a service (PaaS). Each correct answer presents a complete solution.
+(choose 2)
+  * A. Azure App Service
+        why: App Service provides a managed runtime for web apps; the customer deploys code and data while Azure manages the OS and platform.
+  * B. Azure SQL Database
+        why: Azure SQL Database is a managed database platform; Microsoft patches the OS and database engine.
+    C. Azure Virtual Machines
+        why: Virtual machines are IaaS; the customer manages the operating system.
+    D. Microsoft 365
+        why: Microsoft 365 is a complete application delivered as SaaS.
+    E. Azure Virtual Network
+        why: Virtual networking is an infrastructure building block and classified as IaaS.
+TAKEAWAY: IaaS = VMs, disks, networks. PaaS = managed platforms you deploy code or data into (App Service, SQL Database). SaaS = finished apps (Microsoft 365).
+
+[z018] type=mc domain=3 obj=3.2.1 (Describe the purpose of Microsoft Purview in Azure)
+Q: Fabrikam stores data in Azure SQL Database, Azure Blob Storage, an on-premises SQL Server and Microsoft 365. The compliance team needs a single catalog that discovers these sources, classifies sensitive data and shows how data flows between systems. Which Microsoft service should Fabrikam use?
+  * A. Microsoft Purview
+        why: Purview's Data Map scans multicloud, Microsoft 365 and on-premises sources, applies classifications and records lineage in a unified catalog.
+    B. Azure Policy
+        why: Policy enforces resource configuration standards; it does not catalog or classify the data inside resources.
+    C. Microsoft Defender for Cloud
+        why: Defender for Cloud assesses security posture and detects threats; it is not a data governance catalog.
+    D. Azure Monitor
+        why: Azure Monitor collects telemetry about resource health and performance, not data classification and lineage.
+TAKEAWAY: Purview = data governance (catalog, classification, lineage), data security and compliance across Microsoft 365, Azure, other clouds and on-premises.
+
+[z019] type=mc domain=2 obj=2.2.6 (Define public and private endpoints)
+Q: Northwind has an Azure Storage account that must be reachable only from virtual machines in a specific virtual network by using a private IP address. The storage account's public endpoint must be disabled. Which feature should Northwind configure?
+  * A. A private endpoint
+        why: A private endpoint gives the storage account a network interface with a private IP in the VNet through Private Link, so the public endpoint can be turned off.
+    B. A public IP address on the storage account
+        why: A public IP is the opposite of the requirement and storage accounts do not take one directly.
+    C. A network security group on the storage account
+        why: NSGs attach to subnets and NICs, not to PaaS services like storage accounts.
+    D. Azure DNS public zone
+        why: A public DNS zone publishes names on the internet; it does not create a private path to the service.
+TAKEAWAY: Public endpoint = reachable via public IP. Private endpoint = private IP in your VNet via Private Link, so the public side can be disabled.
+
+[z020] type=mc domain=1 obj=1.1.5 (Describe the consumption-based model)
+Q: Tailspin's finance team wants to stop making large up-front purchases of servers every few years and instead pay for IT capacity as a recurring operating cost. Which change does moving to Azure make possible?
+  * A. Shifting spending from capital expenditure to operational expenditure
+        why: Cloud consumption is billed as an ongoing operating expense, replacing the capital outlay for hardware.
+    B. Shifting spending from operational expenditure to capital expenditure
+        why: This is backwards; the cloud reduces CapEx, not OpEx.
+    C. Eliminating all IT spending
+        why: Cloud services still cost money; the model of spending changes, not its existence.
+    D. Prepaying for three years of hardware depreciation
+        why: Depreciating owned hardware is the CapEx model the company wants to leave.
+TAKEAWAY: CapEx = buy assets up front and depreciate them. OpEx = pay for services as you use them. Cloud moves IT to OpEx.
+
+[z021] type=ms domain=3 obj=3.3.2 (Describe Azure Cloud Shell, Azure CLI, and Azure PowerShell)
+Q: Select the two statements that are true about Azure Cloud Shell. Each correct answer presents a complete solution.
+(choose 2)
+  * A. It can be opened from the Azure portal in a web browser
+        why: Cloud Shell launches from the portal toolbar, shell.azure.com and other entry points without any local installation.
+  * B. It offers a choice of Bash or PowerShell
+        why: Users select either shell experience, and both include the Azure CLI and Azure PowerShell.
+    C. It requires the Azure CLI to be installed on the local computer
+        why: Nothing is installed locally; the tools run in a hosted session.
+    D. It can run only on Windows devices
+        why: Cloud Shell is browser-based and works from any operating system.
+    E. It cannot persist files between sessions
+        why: An Azure Files share can be mounted as the home directory so files persist across sessions.
+TAKEAWAY: Cloud Shell: browser-based, authenticated, Bash or PowerShell, CLI and PowerShell preinstalled, optional Azure Files share for persistence.
+
+[z022] type=mc domain=2 obj=2.3.2 (Describe storage tiers)
+Q: Woodgrove must retain scanned legal records in Azure Blob Storage for seven years. The records are almost never read, and when one is requested a retrieval delay of several hours is acceptable. The company wants the lowest storage cost. Which access tier should Woodgrove use?
+  * A. Archive
+        why: Archive is the cheapest tier for data kept at least 180 days and read rarely; it is offline and must be rehydrated, which can take hours.
+    B. Hot
+        why: Hot has the highest storage cost and is meant for frequently accessed data.
+    C. Cool
+        why: Cool is cheaper than hot but still an online tier priced above archive.
+    D. Cold
+        why: Cold is an online tier with instant access; it costs more to store than archive.
+TAKEAWAY: Hot > cool > cold > archive in storage cost. Archive is offline: rehydration takes hours (standard up to 15) and the minimum retention is 180 days.
+
+[z023] type=mc domain=2 obj=2.3.3 (Describe redundancy options)
+Q: Litware stores application files in an Azure Storage account. The data must remain readable and writable if one datacenter in the region fails, but the company does not want to pay for replication to a second region. Which redundancy option should Litware choose?
+  * A. Zone-redundant storage (ZRS)
+        why: ZRS replicates synchronously across availability zones in the primary region, surviving a datacenter outage without a second region.
+    B. Locally redundant storage (LRS)
+        why: LRS keeps all three copies in one datacenter, so a datacenter failure can make the data unavailable.
+    C. Geo-redundant storage (GRS)
+        why: GRS replicates to a second region, which the company wants to avoid paying for.
+    D. Read-access geo-zone-redundant storage (RA-GZRS)
+        why: RA-GZRS adds a second region and read access, which exceeds the requirement and the budget.
+TAKEAWAY: LRS = one datacenter. ZRS = zones in one region. GRS/GZRS = add a second region. RA- prefix = secondary is readable.
+
+[z024] type=mc domain=1 obj=1.1.6 (Compare cloud pricing models)
+Q: Fabrikam runs a database server on an Azure virtual machine that must operate 24 hours a day for at least the next three years. The company wants to reduce the compute cost of this VM as much as possible without changing its size. What should Fabrikam do?
+  * A. Purchase a three-year reservation for the virtual machine
+        why: A reservation commits to a VM configuration for one or three years in exchange for a significant discount, ideal for steady 24x7 workloads.
+    B. Switch the virtual machine to Spot pricing
+        why: Spot VMs can be evicted at any time, which is unacceptable for a database that must run continuously.
+    C. Move the virtual machine to pay-as-you-go pricing
+        why: Pay-as-you-go is the baseline list price with no discount.
+    D. Deallocate the virtual machine each night
+        why: The database must run around the clock, so it cannot be stopped nightly.
+TAKEAWAY: Steady, long-running workload = reservation or savings plan. Interruptible batch = Spot. Unpredictable or short-lived = pay-as-you-go.
+
+[z025] type=mc domain=3 obj=3.3.3 (Describe the purpose of Azure Arc)
+Q: Northwind has 200 Windows and Linux servers in its own datacenter and 50 virtual machines in Azure. The operations team wants to apply Azure Policy, assign Azure RBAC roles and view all 250 machines in the Azure portal as a single inventory. Which Azure service should Northwind use?
+  * A. Azure Arc
+        why: Arc projects non-Azure servers into Azure Resource Manager so they can be governed with Policy, RBAC, tags and monitoring alongside native resources.
+    B. Azure Migrate
+        why: Migrate discovers and moves servers to Azure; the scenario wants to manage them where they are.
+    C. Azure Virtual Desktop
+        why: Azure Virtual Desktop delivers desktops to users and has nothing to do with managing on-premises servers.
+    D. Azure Site Recovery
+        why: Site Recovery replicates machines for disaster recovery; it does not provide governance of on-premises servers.
+TAKEAWAY: Azure Arc = extend Azure management (Policy, RBAC, Monitor, Defender, Update Manager) to servers, Kubernetes and data services outside Azure.
+
+[z026] type=mc domain=2 obj=2.3.6 (Describe migration options, including Azure Migrate and Azure Data Box)
+Q: Tailspin needs to move 120 TB of archived video footage from a remote site to Azure Blob Storage. The site has a 20 Mbps internet connection that is also used for daily operations. Which option should Tailspin use to transfer the data?
+  * A. Azure Data Box
+        why: Data Box is a physical appliance shipped to you for offline bulk transfer, suited to tens or hundreds of terabytes over a slow link.
+    B. AzCopy over the existing connection
+        why: At 20 Mbps, 120 TB would take well over a year and saturate the shared connection.
+    C. Azure Storage Explorer
+        why: Storage Explorer is a desktop GUI that still transfers over the network.
+    D. Azure File Sync
+        why: File Sync keeps Windows Server file shares in sync with Azure Files; it is not a bulk one-time import tool and still uses the network.
+TAKEAWAY: Huge dataset + slow or unavailable network = ship a Data Box. Scriptable network transfers = AzCopy. Visual management = Storage Explorer.
+
+[z027] type=mc domain=3 obj=3.3.5 (Describe Azure Resource Manager (ARM) and ARM templates)
+Q: Woodgrove wants to deploy an identical set of Azure resources to five regions. The deployment files must describe the desired end state rather than a sequence of commands, must be repeatable, and should be as readable as possible. Which option should Woodgrove use?
+  * A. Bicep files deployed through Azure Resource Manager
+        why: Bicep is a declarative, idempotent language with concise syntax that compiles to ARM JSON templates.
+    B. An Azure CLI script that runs az create commands in order
+        why: A command sequence is imperative, not a description of the desired state.
+    C. Manual deployment through the Azure portal in each region
+        why: Manual portal work is neither repeatable nor expressed as code.
+    D. An Azure PowerShell script that creates each resource
+        why: PowerShell scripts are imperative step-by-step instructions.
+TAKEAWAY: Declarative IaC on Azure = ARM templates (JSON) or Bicep (simpler syntax, same engine). CLI and PowerShell scripts are imperative.
+
+[z028] type=mc domain=1 obj=1.1.7 (Describe serverless)
+Q: Select the answer that correctly completes the sentence. In a serverless computing model, the customer ______.
+  * A. deploys code and is billed only for its execution while the provider manages all servers
+        why: Serverless abstracts the infrastructure entirely: the platform provisions, scales and bills by execution and resources consumed.
+    B. manages the operating system of the servers that run the code
+        why: OS management belongs to IaaS; serverless hides the servers completely.
+    C. pays a fixed monthly fee for a dedicated server
+        why: Fixed fees for dedicated capacity are the opposite of execution-based serverless billing.
+    D. must provision virtual machines before the code can run
+        why: No VMs are provisioned by the customer; that is what makes it serverless.
+TAKEAWAY: Serverless = no servers to manage, automatic scaling (including to zero), billed per execution. Azure Functions and Container Apps are the examples.
+
+[z029] type=mc domain=2 obj=2.4.1 (Describe directory services in Azure, including Microsoft Entra ID and Microsoft Entra Domain Services)
+Q: Litware is moving a legacy application to Azure virtual machines. The application requires LDAP queries, Kerberos authentication and Group Policy, and the company does not want to deploy or manage domain controllers. Which service should Litware use?
+  * A. Microsoft Entra Domain Services
+        why: Domain Services provides a managed domain with LDAP, Kerberos/NTLM, domain join and Group Policy, synchronized from Entra ID, with no domain controllers to run.
+    B. Microsoft Entra ID alone
+        why: Entra ID speaks web protocols such as SAML and OpenID Connect; it does not provide LDAP, Kerberos or Group Policy.
+    C. Microsoft Entra External ID
+        why: External ID handles guests and customer identities; it is unrelated to legacy domain protocols.
+    D. Active Directory Domain Services on Azure virtual machines
+        why: This would work but requires deploying and managing domain controllers, which the company wants to avoid.
+TAKEAWAY: Entra ID = cloud identity for modern apps. Entra Domain Services = managed legacy domain (LDAP, Kerberos, Group Policy) with no DCs to run.
+
+[z030] type=mc domain=3 obj=3.4.1 (Describe the purpose of Azure Advisor)
+Q: An administrator at Fabrikam opens a tool in the Azure portal that lists recommendations such as resizing underutilized virtual machines, enabling backup for a database and adding availability zones to a critical workload. Which tool is the administrator using?
+  * A. Azure Advisor
+        why: Advisor produces personalized recommendations across cost, reliability, security, performance and operational excellence.
+    B. Azure Service Health
+        why: Service Health reports platform incidents and maintenance, not configuration recommendations.
+    C. Azure Monitor metrics explorer
+        why: Metrics explorer charts telemetry; it does not generate best-practice advice.
+    D. Microsoft Cost Management
+        why: Cost Management analyzes spend; it surfaces Advisor's cost items but not reliability recommendations.
+TAKEAWAY: Advisor = five categories of recommendations (reliability, security, performance, cost, operational excellence) drawn from your configuration and usage.
+
+[z031] type=ms domain=2 obj=2.4.4 (Describe Microsoft Entra Conditional Access)
+Q: Northwind wants to require multifactor authentication only when users sign in from outside the corporate network or from a device that is not managed by the company. Which two signals should the Conditional Access policy evaluate? Each correct answer presents part of the solution.
+(choose 2)
+  * A. IP location
+        why: Named locations based on IP ranges let the policy distinguish the corporate network from everywhere else.
+  * B. Device state
+        why: Device compliance or join state identifies whether the device is managed.
+    C. The user's password length
+        why: Password characteristics are not a Conditional Access signal.
+    D. The storage redundancy of the user's OneDrive
+        why: Storage configuration has nothing to do with sign-in conditions.
+    E. The Azure region of the application's resource group
+        why: Resource location is not a sign-in signal evaluated by Conditional Access.
+TAKEAWAY: Conditional Access signals: user or group, IP location, device, application, real-time risk. Decisions: block, or grant with MFA, compliant device and similar controls.
+
+[z032] type=mc domain=1 obj=1.2.1 (Describe the benefits of high availability and scalability in the cloud)
+Q: Tailspin signs an agreement with Microsoft that guarantees an Azure service will be reachable 99.99 percent of the time each month. Which cloud benefit does this guarantee describe?
+  * A. High availability
+        why: High availability is the ability of a service to stay reachable despite failures, expressed as an uptime SLA percentage.
+    B. Scalability
+        why: Scalability is about adding or removing capacity, not guaranteed uptime.
+    C. Governance
+        why: Governance concerns enforcing standards and compliance, not uptime.
+    D. Manageability
+        why: Manageability covers the tools and automation for operating resources, not availability guarantees.
+TAKEAWAY: Uptime SLA percentage = high availability. Each additional nine cuts the allowed downtime by a factor of ten.
+
+[z033] type=mc domain=3 obj=3.4.2 (Describe Azure Service Health)
+Q: Woodgrove's operations team wants to be told in advance when Microsoft schedules maintenance that could affect the virtual machines in the company's subscriptions, and to see the history of such events for the past three months. Which Azure service should the team use?
+  * A. Azure Service Health
+        why: Service Health shows planned maintenance, service issues, health advisories and security advisories personalized to your subscriptions, with 90 days of history and alerting.
+    B. Azure Advisor
+        why: Advisor gives best-practice recommendations; it does not publish maintenance schedules.
+    C. Azure Monitor Application Insights
+        why: Application Insights monitors application performance, not platform maintenance.
+    D. The Azure status page
+        why: The public status page shows global incidents and is not personalized to your subscriptions or maintenance windows.
+TAKEAWAY: Azure status = global, public. Service Health = personalized events (issues, planned maintenance, advisories) with alerts. Resource Health = one resource.
+
+[z034] type=mc domain=2 obj=2.4.5 (Describe Azure role-based access control (RBAC))
+Q: Litware needs to give a contractor the ability to create, modify and delete all resources in a resource group, but the contractor must not be able to grant anyone else access to the resource group. Which built-in Azure role should Litware assign?
+  * A. Contributor
+        why: Contributor grants full control over resources but excludes the ability to assign roles.
+    B. Owner
+        why: Owner includes the ability to assign roles, which would let the contractor grant access to others.
+    C. Reader
+        why: Reader can only view resources and cannot create or change anything.
+    D. User Access Administrator
+        why: This role manages role assignments and cannot manage the resources themselves; it is the opposite of what is needed.
+TAKEAWAY: Owner = everything including role assignment. Contributor = everything except role assignment. Reader = view only. User Access Administrator = access management only.
+
+[z035] type=mc domain=3 obj=3.4.3 (Describe Azure Monitor, including Log Analytics, Azure Monitor alerts, and Azure Monitor Application Insights)
+Q: Fabrikam hosts a web application in Azure App Service. Developers need to see request rates, response times, failed dependency calls and exceptions for the live application, and run availability tests against it from outside Azure. Which Azure Monitor feature should Fabrikam use?
+  * A. Application Insights
+        why: Application Insights is Azure Monitor's application performance monitoring feature, covering requests, dependencies, exceptions and availability tests.
+    B. Azure Monitor metrics for the App Service plan
+        why: Plan metrics show CPU and memory of the hosting infrastructure, not application-level request and dependency telemetry.
+    C. Azure Service Health
+        why: Service Health reports Azure platform events, not application behavior.
+    D. Azure Advisor
+        why: Advisor provides recommendations, not live application telemetry.
+TAKEAWAY: Application Insights = APM for live web apps (requests, dependencies, exceptions, availability tests). Metrics and logs cover the infrastructure underneath.
+
+[z036] type=mc domain=1 obj=1.3.3 (Describe software as a service (SaaS))
+Q: Northwind subscribes to Microsoft 365 so that employees can use email and collaboration tools from a browser. Northwind does not install or patch any servers or application software. Which cloud service type is Northwind consuming?
+  * A. Software as a service (SaaS)
+        why: A complete application delivered over the internet on a subscription, with the provider running everything beneath the data, is SaaS.
+    B. Platform as a service (PaaS)
+        why: PaaS provides a platform for the customer's own code; Northwind is not deploying any code.
+    C. Infrastructure as a service (IaaS)
+        why: IaaS would require Northwind to manage virtual machines and operating systems.
+    D. Function as a service (FaaS)
+        why: FaaS runs the customer's event-driven code, which is not the scenario.
+TAKEAWAY: SaaS = finished application you subscribe to (Microsoft 365). You still own your data and user access.
+
+[z037] type=mc domain=2 obj=2.4.6 (Describe the concept of Zero Trust)
+Q: Tailspin adopts a security model in which every access request is authenticated and authorized using all available signals, regardless of whether it originates from inside or outside the corporate network. Which Zero Trust principle does this describe?
+  * A. Verify explicitly
+        why: Verify explicitly means always authenticating and authorizing based on all available data points, never trusting network location.
+    B. Use least privilege access
+        why: Least privilege limits how much access is granted and for how long; it is not about verifying each request.
+    C. Assume breach
+        why: Assume breach drives segmentation, encryption and detection on the premise that attackers are already inside.
+    D. Defense in depth
+        why: Defense in depth is a layered-control model, not one of the three Zero Trust principles.
+TAKEAWAY: Zero Trust principles: verify explicitly, use least privilege access, assume breach.
+
+[z038] type=ms domain=3 obj=3.1.1 (Describe factors that can affect costs in Azure)
+Q: Woodgrove is reviewing why its Azure bill changed this month. Select the three factors that can affect the cost of Azure resources. Each correct answer presents a complete solution.
+(choose 3)
+  * A. The region in which resources are deployed
+        why: Prices for the same resource differ by geography because of power, labor, taxes and fees.
+  * B. The amount of outbound network traffic leaving Azure
+        why: Egress and cross-region data transfer are billed by zone; inbound is generally free.
+  * C. Unused resources such as orphaned disks that were never deleted
+        why: Resources keep billing until removed; maintenance of the environment is a listed cost factor.
+    D. The number of users signed in to the Azure portal
+        why: Portal access is free and does not affect resource charges.
+    E. The name chosen for each resource group
+        why: Resource names have no effect on pricing.
+    F. The number of tags applied to a resource
+        why: Tags are free metadata and do not change costs.
+TAKEAWAY: Cost factors: resource type, consumption, maintenance, geography, network traffic, subscription type, Azure Marketplace.
+
+[z039] type=ms domain=1 obj=1.1.2 (Describe the shared responsibility model)
+Q: Select the three statements that are true about the shared responsibility model. Each correct answer presents a complete solution.
+(choose 3)
+  * A. The customer is always responsible for the data it stores in the cloud
+        why: Data, devices and identities remain the customer's responsibility in every service model.
+  * B. The cloud provider is always responsible for the physical datacenter
+        why: Physical hosts, network and datacenter belong to the provider in every service model.
+  * C. Responsibility for the operating system depends on the service type
+        why: The customer manages the OS in IaaS; the provider manages it in PaaS and SaaS.
+    D. In SaaS the provider is responsible for managing the customer's user accounts
+        why: Accounts and identities stay with the customer even in SaaS.
+    E. In IaaS the provider patches the guest operating system
+        why: Guest OS patching in IaaS is the customer's job.
+    F. The customer is responsible for the physical network in PaaS
+        why: Physical networking is always the provider's responsibility.
+TAKEAWAY: Always customer: data, devices, accounts. Always provider: physical layer. Varies: OS, network controls, applications, identity infrastructure.
+
+[z040] type=mc domain=2 obj=2.4.7 (Describe the purpose of the defense-in-depth model)
+Q: Litware enables Azure DDoS Protection on the virtual network that hosts its public web application. In the defense-in-depth model, which layer does this control belong to?
+  * A. Perimeter
+        why: The perimeter layer defends against network-based attacks arriving from outside, and DDoS protection is its signature control.
+    B. Network
+        why: The network layer limits connectivity between resources inside the environment, such as with NSGs and segmentation.
+    C. Compute
+        why: The compute layer covers securing virtual machines and endpoints, such as patching and anti-malware.
+    D. Identity and access
+        why: Identity and access covers authentication, SSO, MFA and auditing of access.
+TAKEAWAY: Defense in depth layers outside in: physical, identity and access, perimeter (DDoS, firewalls), network, compute, application, data.
+
+[z041] type=mc domain=3 obj=3.4.3 (Describe Azure Monitor, including Log Analytics, Azure Monitor alerts, and Azure Monitor Application Insights)
+Q: Fabrikam has created an Azure Monitor alert rule that fires when a virtual machine's CPU exceeds 90 percent for five minutes. The on-call engineer must receive an SMS message and a Logic App must run when the alert fires. Where should Fabrikam define these notifications and actions?
+  * A. In an action group attached to the alert rule
+        why: Action groups hold the notification channels and automated actions (SMS, email, Logic App, webhook, runbook) that alert rules invoke.
+    B. In the virtual machine's diagnostic settings
+        why: Diagnostic settings control where telemetry is sent, not who is notified when an alert fires.
+    C. In a Log Analytics workspace query
+        why: Queries define conditions and analysis; they do not send notifications.
+    D. In Azure Service Health
+        why: Service Health concerns Azure platform events, not custom metric alerts on your VMs.
+TAKEAWAY: Alert rule = the condition. Action group = the response (email, SMS, push, voice, webhook, Logic App, Function, runbook). Many rules can share one group.
+
+[z042] type=mc domain=2 obj=2.4.8 (Describe the purpose of Microsoft Defender for Cloud)
+Q: Northwind's security lead wants a single numeric indicator that reflects how well the company's Azure, AWS and on-premises resources follow security best practices, together with prioritized recommendations to improve it. Which capability should the lead use?
+  * A. Secure score in Microsoft Defender for Cloud
+        why: Defender for Cloud's posture management rates resources against the cloud security benchmark and expresses the result as a secure score with recommendations, across Azure, other clouds and Arc-connected machines.
+    B. Advisor score in Azure Advisor
+        why: Advisor score aggregates all five Advisor categories; Advisor's security items themselves come from Defender for Cloud, and Advisor does not cover AWS.
+    C. Compliance state in Azure Policy
+        why: Policy compliance counts resources against your assigned policies; it is not a security best-practice score across clouds.
+    D. Cost analysis in Microsoft Cost Management
+        why: Cost analysis is about spending, not security posture.
+TAKEAWAY: Defender for Cloud = CSPM (recommendations, secure score) plus CWP (Defender plans that detect threats), across Azure, AWS, GCP and on-premises via Arc.
+
+[z043] type=mc domain=1 obj=1.2.3 (Describe the benefits of security and governance in the cloud)
+Q: Tailspin wants every resource deployed by any team to meet corporate standards automatically, with non-compliant deployments reported or blocked, instead of relying on manual reviews. Which benefit of cloud computing does this describe?
+  * A. Governance
+        why: Cloud governance uses templates and policy to enforce standards across all deployments and audit compliance automatically.
+    B. Elasticity
+        why: Elasticity is automatic scaling with demand, unrelated to standards enforcement.
+    C. Reliability
+        why: Reliability is the ability to recover from failures, not compliance with standards.
+    D. Predictability
+        why: Predictability concerns consistent performance and forecastable cost.
+TAKEAWAY: Governance benefit = standards enforced by templates and policy, with compliance reporting. Implemented by Azure Policy and management groups.
+
+[z044] type=mc domain=3 obj=3.3.1 (Describe the Azure portal)
+Q: A new administrator at Woodgrove needs to create a storage account and review the health of several virtual machines from a managed laptop on which no software can be installed. Which tool should the administrator use?
+  * A. The Azure portal
+        why: The portal is a browser-based graphical console for creating, configuring and monitoring every Azure resource without installing anything.
+    B. Azure PowerShell installed locally
+        why: Local installation is not permitted on the laptop.
+    C. The Azure CLI installed locally
+        why: The CLI would need to be installed on the device.
+    D. Azure Storage Explorer
+        why: Storage Explorer is a desktop app that must be installed and manages only storage, not VM health.
+TAKEAWAY: Portal = browser GUI, nothing to install, good for one-off tasks and visual monitoring. Cloud Shell inside it gives command-line access too.
+
+[z045] type=mc domain=2 obj=2.2.2 (Describe virtual machine options, including Azure virtual machines, Azure Virtual Machine Scale Sets, availability sets, and Azure Virtual Desktop)
+Q: Litware places four virtual machines in an availability set that uses the default settings. During planned platform maintenance, how are the VMs restarted?
+  * A. One update domain at a time, so the VMs in other update domains keep running
+        why: Update domains are groups rebooted together during planned maintenance; Azure services only one update domain at a time with recovery time between them.
+    B. All four VMs at the same time
+        why: Spreading VMs across update domains exists precisely to avoid simultaneous reboots.
+    C. One fault domain at a time
+        why: Fault domains protect against hardware failures (shared power and switch); update domains govern maintenance reboots.
+    D. The VMs are never restarted during planned maintenance
+        why: Some planned maintenance requires a reboot; availability sets limit the impact rather than eliminate it.
+TAKEAWAY: Availability set: fault domains (up to 3, hardware failure isolation) and update domains (default 5, max 20, rebooted one at a time).
+
+[z046] type=mc domain=3 obj=3.3.4 (Describe infrastructure as code (IaC))
+Q: Fabrikam keeps the definition of its Azure environment in template files stored in a Git repository. Every change is reviewed in a pull request and deployed by a pipeline, and the production environment can be recreated from the files at any time. Which practice does this describe?
+  * A. Infrastructure as code
+        why: Treating infrastructure definitions as version-controlled, reviewed and pipeline-deployed source files is infrastructure as code.
+    B. Lift and shift
+        why: Lift and shift is a migration approach that moves workloads unchanged.
+    C. Zero Trust
+        why: Zero Trust is a security model about verifying every access request.
+    D. Vertical scaling
+        why: Vertical scaling changes the size of a resource; it is unrelated to how environments are defined.
+TAKEAWAY: IaC = infrastructure defined in files, version-controlled, reviewed and deployed repeatably. ARM templates, Bicep and Terraform implement it on Azure.
+
+[z047] type=mc domain=1 obj=1.1.3 (Define cloud models, including public, private, and hybrid)
+Q: Northwind deploys a cloud environment that offers self-service provisioning and elastic scaling, but the hardware is used exclusively by Northwind and is hosted in a third-party facility. Which cloud model is this?
+  * A. Private cloud
+        why: Infrastructure dedicated to one organization is a private cloud whether it sits on-premises or is hosted by a third party.
+    B. Public cloud
+        why: Public cloud hardware is shared among many customers of the provider.
+    C. Hybrid cloud
+        why: Hybrid requires a public and a private environment working together; only one environment is described.
+    D. Community cloud
+        why: Community cloud is shared among several organizations with common concerns, not dedicated to one.
+TAKEAWAY: Private cloud = dedicated to one organization, on-premises or third-party hosted. Dedicated is the test, not the location.
+
+[z048] type=mc domain=2 obj=2.3.1 (Compare Azure Storage services)
+Q: Tailspin is migrating an application that reads and writes to a shared network drive by using the SMB protocol. The application will run on Azure virtual machines and must continue to use SMB without code changes. Which Azure Storage service should Tailspin use?
+  * A. Azure Files
+        why: Azure Files provides fully managed file shares accessible over SMB (and NFS), ideal for lift-and-shift applications that expect a network drive.
+    B. Azure Blob Storage
+        why: Blob Storage is object storage accessed over HTTP, not an SMB share.
+    C. Azure Queue Storage
+        why: Queue Storage holds messages for asynchronous processing, not files.
+    D. Azure Table Storage
+        why: Table Storage is a NoSQL key-value store.
+TAKEAWAY: Blob = unstructured objects over HTTP. Files = SMB/NFS shares. Queue = messages. Table = NoSQL key-value. Disks = block storage for VMs.
+
+[z049] type=mc domain=3 obj=3.4.2 (Describe Azure Service Health)
+Q: Users report that a specific Azure virtual machine named VM-ERP01 is unreachable. The Woodgrove administrator wants to determine whether the outage is caused by an Azure platform problem affecting that VM or by something the company changed. Which tool should the administrator check first?
+  * A. Resource Health for VM-ERP01
+        why: Resource Health reports the availability of an individual resource and indicates whether a problem is platform-initiated or user-initiated.
+    B. The Azure status page
+        why: The public status page shows global incidents and does not report on a single resource.
+    C. Azure Advisor
+        why: Advisor offers recommendations, not real-time health of a specific VM.
+    D. Microsoft Cost Management
+        why: Cost Management is about spending and has no health information.
+TAKEAWAY: Resource Health = health of one resource, minute by minute, platform versus user caused. Service Health = your services and regions. Status page = global.
+
+[z050] type=mc domain=2 obj=2.4.3 (Describe external identities in Azure)
+Q: Litware wants to let an employee of a partner company access a Litware SharePoint site. The partner must sign in with the credentials from their own organization, and Litware must be able to apply its own Conditional Access policies to the partner. Which Microsoft Entra capability should Litware use?
+  * A. B2B collaboration
+        why: B2B collaboration invites the partner as a guest user who authenticates with their home credentials while Litware controls access and policies.
+    B. Microsoft Entra External ID for customers
+        why: External ID for customers is a separate tenant for consumer-facing apps, and it does not provide SSO to Microsoft 365 resources like SharePoint.
+    C. Microsoft Entra Domain Services
+        why: Domain Services provides legacy domain protocols; it is unrelated to partner access.
+    D. A new internal user account for the partner
+        why: Creating a Litware account would require the partner to use separate credentials, violating the requirement.
+TAKEAWAY: B2B collaboration = guest users with their own credentials. B2B direct connect = Teams shared channels without guest objects. External ID for customers = consumer apps in an external tenant.

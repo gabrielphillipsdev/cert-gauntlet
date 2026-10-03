@@ -1,0 +1,102 @@
+{
+  "exam": "SC-900",
+  "title": "Microsoft Security, Compliance, and Identity Fundamentals",
+  "skillsAsOf": "2026-10-21",
+  "source": "https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/sc-900",
+  "fetched": "2026-10-02",
+  "format": {"durationMin": 45, "seatMin": 65, "passScore": 700, "scaleMax": 1000, "learnPane": false, "itemTypes": ["mc", "ms"]},
+  "domains": [
+    {"d": 1, "name": "Describe the concepts of security, compliance, and identity", "weight": [10, 15], "groups": [
+      {"g": "1.1", "name": "Describe security and compliance concepts", "bullets": {
+        "1.1.1": "Describe the shared responsibility model",
+        "1.1.2": "Describe defense-in-depth",
+        "1.1.3": "Describe the Zero Trust model",
+        "1.1.4": "Describe encryption and hashing",
+        "1.1.5": "Describe Governance, Risk, and Compliance (GRC) concepts"}},
+      {"g": "1.2", "name": "Define identity concepts", "bullets": {
+        "1.2.1": "Define identity as the primary security perimeter",
+        "1.2.2": "Define authentication",
+        "1.2.3": "Define authorization",
+        "1.2.4": "Describe identity providers",
+        "1.2.5": "Describe the concept of directory services and Active Directory",
+        "1.2.6": "Describe the concept of federation"}}
+    ]},
+    {"d": 2, "name": "Describe the capabilities of Microsoft Entra", "weight": [25, 30], "groups": [
+      {"g": "2.1", "name": "Describe function and identity types of Microsoft Entra ID", "bullets": {
+        "2.1.1": "Describe Microsoft Entra ID",
+        "2.1.2": "Describe types of identities, including workload identities",
+        "2.1.3": "Describe hybrid identity"}},
+      {"g": "2.2", "name": "Describe authentication capabilities of Microsoft Entra ID", "bullets": {
+        "2.2.1": "Describe the authentication methods",
+        "2.2.2": "Describe multifactor authentication (MFA)",
+        "2.2.3": "Describe password protection and management capabilities"}},
+      {"g": "2.3", "name": "Describe access management capabilities of Microsoft Entra ID", "bullets": {
+        "2.3.1": "Describe Microsoft Entra Conditional Access",
+        "2.3.2": "Describe Microsoft Entra roles and role-based access control (RBAC)"}},
+      {"g": "2.4", "name": "Describe identity protection and governance capabilities of Microsoft Entra", "bullets": {
+        "2.4.1": "Describe Microsoft Entra ID Governance",
+        "2.4.2": "Describe access reviews",
+        "2.4.3": "Describe the capabilities of Microsoft Entra Privileged Identity Management",
+        "2.4.4": "Describe Microsoft Entra ID Protection"}}
+    ]},
+    {"d": 3, "name": "Describe the capabilities of Microsoft security solutions", "weight": [35, 40], "groups": [
+      {"g": "3.1", "name": "Describe core infrastructure security services in Azure", "bullets": {
+        "3.1.1": "Describe Azure DDoS Protection",
+        "3.1.2": "Describe Azure Firewall",
+        "3.1.3": "Describe Azure Web Application Firewall (WAF)",
+        "3.1.4": "Describe network segmentation with Azure virtual networks",
+        "3.1.5": "Describe network security groups (NSGs)",
+        "3.1.6": "Describe Azure Bastion",
+        "3.1.7": "Describe Azure Key Vault"}},
+      {"g": "3.2", "name": "Describe security management capabilities of Azure", "bullets": {
+        "3.2.1": "Describe Microsoft Defender for Cloud",
+        "3.2.2": "Describe Cloud Security Posture Management (CSPM)",
+        "3.2.3": "Describe how security policies, standards, and recommendations improve the cloud security posture",
+        "3.2.4": "Describe enhanced security features provided by cloud workload protection"}},
+      {"g": "3.3", "name": "Describe capabilities of Microsoft Sentinel", "bullets": {
+        "3.3.1": "Define the concepts of security information and event management (SIEM) and security orchestration automated response (SOAR)",
+        "3.3.2": "Describe threat detection and mitigation capabilities in Microsoft Sentinel"}},
+      {"g": "3.4", "name": "Describe threat protection with Microsoft Defender XDR", "bullets": {
+        "3.4.1": "Describe Microsoft Defender XDR services",
+        "3.4.2": "Describe Microsoft Defender for Office 365",
+        "3.4.3": "Describe Microsoft Defender for Endpoint",
+        "3.4.4": "Describe Microsoft Defender for Cloud Apps",
+        "3.4.5": "Describe Microsoft Defender for Identity",
+        "3.4.6": "Describe Microsoft Defender Vulnerability Management",
+        "3.4.7": "Describe Microsoft Threat Intelligence",
+        "3.4.8": "Describe the Microsoft Defender portal"}}
+    ]},
+    {"d": 4, "name": "Describe the capabilities of Microsoft compliance solutions", "weight": [20, 25], "groups": [
+      {"g": "4.1", "name": "Describe Microsoft Service Trust Portal and privacy principles", "bullets": {
+        "4.1.1": "Describe the Service Trust Portal offerings",
+        "4.1.2": "Describe the privacy principles of Microsoft"}},
+      {"g": "4.2", "name": "Describe compliance management capabilities of Microsoft Purview", "bullets": {
+        "4.2.1": "Describe the Microsoft Purview portal",
+        "4.2.2": "Describe Compliance Manager",
+        "4.2.3": "Describe the uses and benefits of compliance score"}},
+      {"g": "4.3", "name": "Describe information protection, data lifecycle management, and data governance capabilities of Microsoft Purview", "bullets": {
+        "4.3.1": "Describe the data classification capabilities",
+        "4.3.2": "Describe the benefits of Content explorer and Activity explorer",
+        "4.3.3": "Describe sensitivity labels and sensitivity label policies",
+        "4.3.4": "Describe data loss prevention (DLP)",
+        "4.3.5": "Describe records management",
+        "4.3.6": "Describe retention policies, retention labels, and retention label policies"}},
+      {"g": "4.4", "name": "Describe insider risk, eDiscovery, and audit capabilities in Microsoft Purview", "bullets": {
+        "4.4.1": "Describe insider risk management",
+        "4.4.2": "Describe eDiscovery solutions in Microsoft Purview",
+        "4.4.3": "Describe audit solutions in Microsoft Purview"}}
+    ]}
+  ],
+  "categories": {
+    "concepts": {"d": 1, "name": "Security, compliance & identity concepts", "groups": ["1.1", "1.2"]},
+    "entra":    {"d": 2, "name": "Microsoft Entra: identities, authentication, access", "groups": ["2.1", "2.2", "2.3"]},
+    "entragov": {"d": 2, "name": "Entra governance & protection: ID Governance, access reviews, PIM, ID Protection", "groups": ["2.4"]},
+    "aznet":    {"d": 3, "name": "Azure infrastructure security services", "groups": ["3.1"]},
+    "dfc":      {"d": 3, "name": "Defender for Cloud, CSPM, CWP & Sentinel", "groups": ["3.2", "3.3"]},
+    "xdr":      {"d": 3, "name": "Defender XDR services & portal", "groups": ["3.4"]},
+    "purview":  {"d": 4, "name": "Purview compliance, data protection, lifecycle", "groups": ["4.1", "4.2", "4.3"]},
+    "risk":     {"d": 4, "name": "Insider risk, eDiscovery, audit", "groups": ["4.4"]}
+  },
+  "cardTargets": {"concepts": 20, "entra": 26, "entragov": 16, "aznet": 20, "dfc": 18, "xdr": 20, "purview": 20, "risk": 10},
+  "questionQuota": {"1": 6, "2": 14, "3": 19, "4": 11}
+}

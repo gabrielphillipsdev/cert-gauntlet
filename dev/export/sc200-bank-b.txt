@@ -1,0 +1,703 @@
+# SC-200 exam bank B
+# Export for second-model review. '*' marks the keyed answer. Report any item where you believe the key or an explanation is wrong, citing a Microsoft Learn page.
+
+==== CASE STUDY b001: Northwind Traders multi-stage intrusion ====
+--- OVERVIEW ---
+Northwind Traders is a manufacturing company with 4,200 employees across two plants and a head office. Last week the SOC confirmed a multi-stage intrusion: a finance user received a phishing email, clicked a link, and granted consent to a third-party OAuth application named 'Invoice Sync Helper'. The attacker used the app's tokens to read mail, then signed in interactively with a stolen session token, moved laterally from the user's laptop to the file server NW-FS01, and staged several archives in a hidden folder before the activity was disrupted. The SOC lead wants the environment hardened and the response finished with as little manual effort as possible.
+
+--- ENVIRONMENT ---
+Licensing: Microsoft 365 E5 for all users, which includes Defender for Endpoint Plan 2, Defender for Office 365 Plan 2, Defender for Identity, Defender for Cloud Apps, Microsoft Entra ID P2, and Purview Audit (Premium). All Windows devices are onboarded to Defender for Endpoint. Two device groups exist: 'Production-Servers' (rank 1, matches names NW-SRV* and NW-FS*, remediation level Semi - require approval for all folders) and 'Workstations' (rank 2, all remaining Windows devices, Full - remediate threats automatically). The company runs four domain controllers named NW-DC01 to NW-DC04; Defender for Identity sensors are installed on NW-DC01, NW-DC02, and NW-DC03. The Defender for Identity sensors were switched to a dedicated gMSA action account named gMSA-MDI, which was granted only read permissions in the domain. Defender for Cloud Apps is connected to Microsoft 365 and to a Salesforce-style CRM via an app connector, and app governance is enabled. A Microsoft Sentinel workspace is connected to the Defender portal. Live response is enabled in Advanced features; no other Advanced features were changed from their defaults. The SOC has a Tier 1 analyst group (Entra group 'SOC-Tier1') and a Tier 2 group ('SOC-Tier2'). Finance users are hybrid identities synced from on-premises Active Directory with password hash synchronization.
+
+--- REQUIREMENTS ---
+R1: Compromised user accounts must be contained automatically, including hybrid users whose source of authority is on-premises Active Directory.
+R2: Automated remediation and automatic containment must never run on devices in the Production-Servers group; other devices must keep full automation.
+R3: Tier 1 analysts must be able to isolate and run antivirus scans on workstations and production servers but must never be able to isolate a domain controller.
+R4: Every Microsoft Purview audit record, including Teams and Power BI activity, must be retained for at least one year.
+R5: The 'Block all Office applications from creating child processes' ASR rule must stay enforced in Block mode on all workstations.
+R6: The SOC lead must receive an email whenever a high-severity incident is created for any device group; medium and low incidents must not generate email.
+
+--- ISSUES ---
+I1: The Block mode ASR rule from R5 blocks NW-Quote.exe, a line-of-business quoting tool that Excel launches from a signed macro. Finance cannot produce quotes until it is fixed, and the security team refuses to weaken the rule for other child processes.
+I2: During the intrusion, automatic attack disruption contained the finance user's laptop, but the 'Disable user' action for the hybrid finance account shows as failed; the cloud session was not revoked until an analyst did it by hand.
+I3: Tier 2 attempted a live response session on NW-FS01 (Windows Server 2019) to collect the staged archives. The session never connected and the device page shows live response as unavailable, although the same analyst can open a session on any workstation.
+I4: All four domain controllers currently fall into the Workstations group because no dedicated domain controller group exists; the Tier 1 role is currently assigned to both existing device groups.
+
+  [b001-1] type=ms domain=1 obj=1.1.9 (Configure and manage device groups, permissions, and automation levels in Microsoft Defender for Endpoint)
+  Q: You need to meet requirement R3 while resolving issue I4. Which two actions should you perform? Each correct answer presents part of the solution.
+  (choose 2)
+    * A. Create a device group named Domain-Controllers that matches NW-DC* and rank it above Production-Servers
+          why: The domain controllers currently fall into Workstations (I4). A higher-ranked group that matches NW-DC* captures them first, so the DCs can be scoped separately from the servers Tier 1 must still manage.
+    * B. Assign the SOC-Tier1 role only to the Workstations and Production-Servers device groups
+          why: Unified RBAC scopes a role's response permissions by device group. Leaving the new Domain-Controllers group out of the Tier 1 assignment is what blocks isolating a DC while R3's isolate and scan rights on the other two groups stay intact.
+      C. Set the Domain-Controllers group remediation level to No automated response
+          why: Automation level controls what the platform does automatically; it has no effect on what a Tier 1 analyst can do manually, which is the subject of R3.
+      D. Remove the Response (manage) permission from the SOC-Tier1 role
+          why: Without Response (manage), Tier 1 could not isolate workstations or production servers either, which violates the first half of R3.
+      E. Add a device tag named DC to each domain controller and exclude the tag in Advanced features
+          why: Tags alone do not control permissions, and Advanced features has no per-tag permission setting. Tags are useful only as the matching condition for the new device group.
+      F. Onboard the domain controllers again with a restricted security operations package
+          why: Restricted onboarding would remove isolation for everyone, including Tier 2, and requires offboarding and re-onboarding the DCs. R3 only limits Tier 1, which device-group scoping handles.
+  TAKEAWAY: Manual response rights in Defender for Endpoint are role permissions scoped to device groups. Carve the sensitive devices into their own higher-ranked group and leave that group out of the junior role's assignment.
+
+  [b001-2] type=mc domain=1 obj=1.1.6 (Configure security policies for Microsoft Defender for Endpoint, including attack surface reduction (ASR) rules)
+  Q: You need to resolve issue I1 while meeting requirement R5. What should you do?
+    * A. Add a per-rule exclusion for the NW-Quote.exe path on the Office child process ASR rule
+          why: ASR rules support per-rule file and folder exclusions. Excluding only the quoting tool on only that rule keeps Block mode enforced for every other child process, which is exactly what R5 and the security team demand.
+      B. Switch the rule to Audit mode on the Workstations device group
+          why: Audit mode stops blocking everything, not just NW-Quote.exe. R5 requires the rule to stay in Block mode on all workstations.
+      C. Switch the rule to Warn mode so finance users can bypass the block
+          why: Warn lets any user bypass the rule for any child process, which weakens protection for everything else and does not satisfy the 'stay in Block mode' wording of R5.
+      D. Create an alert tuning rule that hides the ASR alerts generated for NW-Quote.exe
+          why: Tuning hides alerts; it does not change ASR enforcement, so Excel still cannot launch the quoting tool.
+  TAKEAWAY: When one ASR rule breaks one line-of-business app, use a per-rule exclusion for that binary. Changing the rule's mode weakens it globally; hiding the alerts changes nothing about enforcement.
+
+  [b001-3] type=mc domain=1 obj=1.1.8 (Configure automatic attack disruption in Microsoft Defender XDR)
+  Q: You need to resolve issue I2 so that requirement R1 is met for hybrid finance users, while continuing to use the dedicated gMSA action account. What should you do?
+    * A. Grant the gMSA-MDI action account Write permission on userAccountControl for user objects
+          why: Disable user runs as the sensor's action account — LocalSystem by default, or the gMSA you configured. The gMSA was granted read only, so the on-premises disable step fails until it can write userAccountControl.
+      B. Switch the sensors back to the default LocalSystem action account
+          why: LocalSystem would work because the DC's machine account can write to the directory, but it abandons the dedicated gMSA the question requires you to keep. Fixing the gMSA's permissions is the change that satisfies both constraints.
+      C. Raise the Workstations device group to Full - remediate threats automatically
+          why: Workstations is already Full, and the laptop was contained successfully. The failure is on the identity action, not the device action.
+      D. Add the finance user to the attack disruption identity exclusions
+          why: Exclusions stop automated identity actions entirely, the opposite of R1.
+  TAKEAWAY: Disable user requires the action account (default LocalSystem, or a gMSA) to hold Read/Write userAccountControl on the target users.
+
+  [b001-4] type=mc domain=1 obj=1.1.1 (Configure email notifications in Microsoft Defender XDR, including incidents, actions, and threat analytics)
+  Q: You need to meet requirement R6. What should you configure?
+    * A. An Incidents email notification rule with severity High, scoped to all device groups, with the SOC lead as recipient
+          why: Incident notification rules in Settings, Microsoft Defender XDR, Email notifications filter by severity and device group scope. High only across all groups matches R6 exactly.
+      B. An Actions email notification rule for pending remediation actions
+          why: The Actions tab notifies about response actions in the Action center, not about new incidents by severity.
+      C. A Threat analytics notification rule for new high-impact reports
+          why: Threat analytics notifications announce new or updated Microsoft reports, not incidents created in the tenant.
+      D. An automation rule in Microsoft Sentinel that assigns high-severity incidents to the SOC lead
+          why: Assigning an owner changes the incident record but sends no email. R6 asks for an email on high incidents, which the XDR incident notification rule provides directly.
+  TAKEAWAY: Defender XDR email notifications have three kinds: Incidents (filter by severity, source, device group), Actions (Action center activity), and Threat analytics (new reports). Severity-based incident email lives in the first.
+
+  [b001-5] type=mc domain=2 obj=2.2.2 (Perform actions on the device, including live response and collecting investigation packages)
+  Q: You need to resolve issue I3 so that Tier 2 can collect the staged archives from NW-FS01. What should you do first?
+    * A. Turn on Enable live response for servers in Advanced features
+          why: Live response on server operating systems requires its own toggle in addition to the general live response setting. The environment enabled only live response, which is why workstations work and the Windows Server 2019 file server does not.
+      B. Grant the SOC-Tier2 role the Advanced live response permission
+          why: The same analyst already opens sessions on workstations, so the role has live response rights. The gap is a server-specific tenant setting, not a permission.
+      C. Move NW-FS01 into the Workstations device group
+          why: Device group membership does not change which operating systems support live response; the server toggle is tenant-wide.
+      D. Turn on Allow unsigned script execution in live response
+          why: That setting only matters once a session exists and an unsigned script is run. It does not allow a session to connect to a server.
+  TAKEAWAY: Two Advanced features gate live response: 'Enable live response' for clients and 'Enable live response for servers' for server OS. A session that works on laptops but not on servers points at the second toggle.
+
+  [b001-6] type=build domain=2 obj=2.1.5, 2.1.4 (Investigate and remediate compromised identities that are identified by Microsoft Entra ID)
+  Q: You need to evict the attacker from the finance user's identity and the OAuth application described in the overview. Which four actions should you perform? Build the list from the pool; sequence is not graded.
+  POOL:
+    [0] Disable the Invoice Sync Helper app in app governance
+    [1] Confirm the user as compromised in Microsoft Entra ID Protection
+    [2] Require the user to sign in again to revoke refresh tokens and session cookies
+    [3] Reset the user's on-premises password and allow password hash sync to update the cloud password
+    [4] Delete the finance user's mailbox
+    [5] Offboard the finance laptop from Defender for Endpoint
+    [6] Run a full antivirus scan on every domain controller
+    [7] Create a transport rule that blocks all external mail to finance
+  KEY (unordered subset): [0] -> [1] -> [2] -> [3]
+  why: Eviction has to cover both footholds. Disabling the OAuth app removes the token the attacker obtained through consent. Confirming compromise raises user risk to High so risk-based policy enforces, revoking sessions kills the stolen session token, and a password reset that syncs through PHS closes the credential path for a hybrid user. Deleting mailboxes, offboarding devices, scanning DCs, or blocking external mail destroys evidence or punishes the business without removing attacker access.
+  TAKEAWAY: Token theft plus OAuth consent means four closures: disable the app, confirm compromise, revoke sessions, reset the password. MFA alone does not clear token-theft risk.
+
+  [b001-7] type=mc domain=2 obj=2.3.1 (Investigate threats by using Microsoft Purview Audit)
+  Q: You need to meet requirement R4. What should you do?
+    * A. Create an audit log retention policy that covers all record types with a one-year duration
+          why: With Audit (Premium), Exchange, SharePoint, OneDrive, and Entra records already keep for one year by default, but every other workload, including Teams and Power BI, keeps for 180 days. A custom retention policy is what extends them to a year.
+      B. Purchase the 10-year audit log retention add-on for every user
+          why: The add-on is only needed for retention beyond one year. R4 asks for one year, which Premium can deliver through a retention policy without an extra license.
+      C. Enable Audit (Standard) for the tenant
+          why: Audit (Standard) is already on with the E5 licenses in the environment and its retention is 180 days, which does not satisfy R4.
+      D. Export the audit log to an Azure Storage account every day
+          why: Copying records elsewhere does not change how long Purview retains them, and R4 is about Purview audit retention.
+  TAKEAWAY: Audit (Premium) defaults: one year for Exchange, SharePoint, OneDrive, and Entra; 180 days for everything else. Audit log retention policies extend other workloads up to one year, or ten years with the add-on.
+
+  [b001-8] type=mc domain=3 obj=3.1.1 (Identify the appropriate table to use in a KQL query)
+  Q: You need to list every archive created in the hidden staging folder on NW-FS01 during the intrusion, including the account that created each file. Which advanced hunting table should you query?
+    * A. DeviceFileEvents
+          why: File creation and modification on an onboarded device, with FolderPath, FileName, and the initiating process account, is recorded in DeviceFileEvents. NW-FS01 is onboarded, so the staging writes are there.
+      B. CloudAppEvents
+          why: CloudAppEvents records activity in Microsoft 365 and connected SaaS apps. The staging folder is on an on-premises file server, not in a cloud app.
+      C. DeviceNetworkEvents
+          why: Network events show connections to and from NW-FS01 but not which files were written to a local folder.
+      D. IdentityDirectoryEvents
+          why: That table captures domain controller and directory changes seen by Defender for Identity, not file system activity on a member server.
+  TAKEAWAY: File activity on an onboarded device lives in DeviceFileEvents; cloud app file activity lives in CloudAppEvents. Match the table to where the file physically sits.
+
+==== END CASE STUDY ====
+
+[b002] type=mc domain=1 obj=1.1.6 (Configure security policies for Microsoft Defender for Endpoint, including attack surface reduction (ASR) rules)
+Q: You manage Defender for Endpoint for Fabrikam. The ASR configuration applied to all workstations is shown in the exhibit. A signed line-of-business installer that runs from a PsExec deployment job is being blocked. You must allow only that installer without reducing protection for anything else. What should you do?
+EXHIBIT:
+    Rule GUID                               Rule name                                                   Mode
+    d4f940ab-401b-4efc-aadc-ad5f3c50688a    Block all Office applications from creating child processes  Block
+    9e6c4e1f-7d60-472f-ba1a-a39ef669e4b2    Block credential stealing from LSASS                         Block
+    d1e49aac-8f56-4280-b9ba-993a6d77406c    Block process creations originating from PSExec and WMI      Block
+    c1db55ab-c21a-4637-bb3f-a12568109d35    Use advanced protection against ransomware                   Audit
+    01443614-cd74-433a-b99e-2ecdc07bfc25    Block executable files unless prevalence/age/trusted list    Warn
+  * A. Add a per-rule exclusion for the installer path on rule d1e49aac-8f56-4280-b9ba-993a6d77406c
+        why: The PsExec/WMI child process rule is the one in Block mode that matches the symptom. A per-rule exclusion for the installer keeps that rule blocking every other PsExec-spawned process and leaves the other rules untouched.
+    B. Change rule d1e49aac-8f56-4280-b9ba-993a6d77406c to Warn mode
+        why: Warn would let users bypass the block for any PsExec or WMI child process, which lowers protection beyond the single installer.
+    C. Add a per-rule exclusion for the installer on rule 01443614-cd74-433a-b99e-2ecdc07bfc25
+        why: That rule is in Warn mode and targets untrusted executables; a signed installer blocked at launch from a PsExec job is hitting the PsExec/WMI rule, so the exclusion would be on the wrong rule.
+    D. Create an Allow file indicator for the installer's certificate
+        why: An Allow certificate indicator does override the ASR block, but it allows every file signed with that certificate, which is broader than 'only that installer'; the per-rule exclusion is the narrowest fix.
+TAKEAWAY: Read the ASR table: find the Block mode rule that matches the symptom, then use a per-rule exclusion. The PsExec/WMI rule is d1e49aac-8f56-4280-b9ba-993a6d77406c.
+
+[b003] type=mc domain=2 obj=2.2.2 (Perform actions on the device, including live response and collecting investigation packages)
+Q: You open a live response session on a Woodgrove laptop and see the transcript in the exhibit. You need to run the collection script successfully. What should you do?
+EXHIBIT:
+    C:\> processes
+    PID   Name            Path
+    4120  rundll32.exe    C:\Users\jlee\AppData\Local\Temp\upd.dll
+    
+    C:\> run collect-artifacts.ps1
+    Error: The file 'collect-artifacts.ps1' was not found in the library.
+    
+    C:\> library
+    File name              Description
+    (no files)
+  * A. Upload collect-artifacts.ps1 to the live response library, then run it
+        why: The run command only executes scripts already stored in the tenant's live response library. The library listing is empty, so the script must be uploaded first; uploading needs the Manage security settings permission.
+    B. Use putfile to copy the script to the device, then run it from the local path
+        why: putfile also reads from the library, which is empty. Even after copying, run executes library scripts rather than arbitrary local paths.
+    C. Turn on Allow unsigned script execution in live response
+        why: That setting addresses a signature check failure. The error here is that the script does not exist in the library at all.
+    D. Collect an investigation package instead of running the script
+        why: An investigation package gathers a fixed set of artifacts; it does not execute a custom script, which is what the analyst is trying to do.
+TAKEAWAY: Live response 'run' and 'putfile' both read from the library. 'File not found in the library' means upload first; a signature error means the unsigned script toggle.
+
+[b004] type=mc domain=3 obj=3.1.1 (Identify the appropriate table to use in a KQL query)
+Q: You investigate an OAuth consent phishing incident at Tailspin Toys. The rows in the exhibit were returned by an advanced hunting query. Which table did the query read, and what should you pivot on to find every user who granted consent to the same app?
+EXHIBIT:
+    Timestamp             ActionType                 Application     AccountDisplayName  OAuthAppId                            IPAddress
+    2026-09-28 09:14:02   Consent to application.    Office 365      Priya Desai         3f1c2a7e-...-91ab                     203.0.113.44
+    2026-09-28 09:22:51   Consent to application.    Office 365      Marcus Webb         3f1c2a7e-...-91ab                     203.0.113.44
+  * A. CloudAppEvents; pivot on OAuthAppId
+        why: Consent grants are Microsoft 365 audit activity surfaced through Defender for Cloud Apps into CloudAppEvents, which carries the OAuthAppId column. Filtering on that value returns every consenting account.
+    B. IdentityLogonEvents; pivot on Application
+        why: IdentityLogonEvents holds authentication events, not consent grants, and 'Office 365' as an application value would match far more than this one app.
+    C. AADSignInEventsBeta; pivot on IPAddress
+        why: Sign-in tables do not record consent operations, and pivoting on one IP misses consents granted from other locations.
+    D. EmailEvents; pivot on AccountDisplayName
+        why: EmailEvents covers mail flow, not app consent, and the display name identifies the victims already found rather than the app.
+TAKEAWAY: OAuth consent grants live in CloudAppEvents with an OAuthAppId column. Sign-in and email tables never record consent.
+
+[b005] type=mc domain=1 obj=1.1.2 (Configure alert notifications in Microsoft Defender XDR, including tuning, suppression, and correlation)
+Q: Litware's SOC receives the alert shown in the exhibit several times a day from a backup agent on the Backup-Servers device group. You need to stop these alerts from creating incidents while keeping the raw alert data available in advanced hunting and leaving identical behavior on other device groups visible. What should you do?
+EXHIBIT:
+    AlertInfo
+    AlertId    Title                                        Severity  ServiceSource                    DetectionSource
+    da1…9c     Suspicious access to LSASS memory            Medium    Microsoft Defender for Endpoint  EDR
+    
+    AlertEvidence (same AlertId)
+    EntityType  FileName         FolderPath                      SHA256
+    Process     bkagent.exe      C:\Program Files\LitBackup\     7c3e…f10
+  * A. Create an alert tuning rule on the title and process, scoped to Backup-Servers, with the Hide alert action
+        why: Alert tuning rules accept evidence conditions such as file name and path, can be scoped to a device group, and Hide alert prevents incidents while the records stay in AlertInfo and AlertEvidence.
+    B. Add an Allow file indicator for the bkagent.exe hash
+        why: An allow indicator applies tenant-wide, which would silence the same LSASS behavior on every device group, not just the backup servers.
+    C. Set the alert classification to false positive each time it fires
+        why: Classifying each occurrence is manual and does not stop future incidents from being created.
+    D. Set the Backup-Servers device group to No automated response
+        why: Automation level only changes remediation behavior; alerts and incidents would still be created.
+TAKEAWAY: Alert tuning: evidence-based conditions, device group scope, and Hide or Resolve actions. Hidden alerts remain queryable in AlertInfo and AlertEvidence; indicators are tenant-wide allow or block decisions.
+
+[b006] type=mc domain=2 obj=2.1.6 (Investigate and remediate security alerts from Microsoft Defender for Identity)
+Q: Defender for Identity raises the alert summarized in the exhibit for Northwind. Which attack technique does the alert indicate?
+EXHIBIT:
+    Alert: Suspected DCSync attack (replication of directory services)
+    Severity: High
+    Source computer: NW-WKS-214 (workstation)
+    Source account: NORTHWIND\svc-backup
+    Target: NW-DC02
+    Details: Replication request for directory partition DC=northwind,DC=local
+  * A. Credential dumping by requesting directory replication from a non-domain-controller
+        why: DCSync abuses the replication rights a DC normally uses to pull password hashes. A replication request from a workstation using a service account is exactly the pattern the alert describes.
+    B. Kerberoasting of the svc-backup service account
+        why: Kerberoasting requests service tickets to crack offline and triggers the 'Suspected Kerberos SPN exposure' alert, not a replication alert.
+    C. Pass-the-ticket reuse of a stolen Kerberos ticket on NW-DC02
+        why: Pass-the-ticket produces the 'Suspected identity theft (pass-the-ticket)' alert based on the same ticket seen from two devices; this alert is about directory replication.
+    D. DCShadow registration of a rogue domain controller
+        why: DCShadow pushes changes by pretending to be a DC and has its own alert names about domain controller promotion or replication requests from a rogue DC; here the attacker is pulling data, not pushing.
+TAKEAWAY: Learn the Defender for Identity alert names: DCSync = replication request from a non-DC; SPN exposure = Kerberoasting; identity theft (pass-the-ticket/hash) = reused secrets; DCShadow = rogue DC pushing changes.
+
+[b007] type=ms domain=1 obj=1.1.9 (Configure and manage device groups, permissions, and automation levels in Microsoft Defender for Endpoint)
+Q: Fabrikam has device groups named Laptops and File-Servers. Tier 1 analysts must be able to isolate laptops and collect investigation packages from them but must have read-only access to file servers. You use unified RBAC. Which two actions should you perform? Each correct answer presents part of the solution.
+(choose 2)
+  * A. Create a role with Security data basics, Alerts (manage), and Response (manage), assigned to Laptops only
+        why: Response (manage) covers isolation and Alerts (manage) covers investigation package collection; limiting the assignment to Laptops keeps those rights off the file servers.
+  * B. Create a second role with only Security data basics (read), assigned to the File-Servers device group
+        why: A read-only assignment on File-Servers gives Tier 1 visibility there without any response permission, satisfying the read-only requirement.
+    C. Create one role with Response (manage) assigned to all device groups and tag file servers as read-only
+        why: Tags do not restrict permissions; a tenant-wide Response (manage) assignment would let Tier 1 isolate the file servers.
+    D. Grant Tier 1 the Advanced live response permission on both groups
+        why: Advanced live response allows uploading files and running scripts; it is more than the requirement asks for and would apply to file servers too.
+    E. Set the File-Servers group remediation level to No automated response
+        why: Automation levels govern automatic actions, not what analysts may do by hand.
+TAKEAWAY: Unified RBAC = permissions in a role + assignment scoped to device groups. Different rights on different groups means separate assignments or roles, not tags or automation levels.
+
+[b008] type=mc domain=2 obj=2.2.2 (Perform actions on the device, including live response and collecting investigation packages)
+Q: A Woodgrove engineering workstation is running an unknown signed binary that may be a remote access tool. The device must keep its network connection so engineers can finish a production job, but no further non-Microsoft executables may launch on it until the investigation ends. Which response action should you take?
+  * A. Restrict app execution
+        why: Restrict app execution applies a code integrity policy that lets only Microsoft-signed files run while the device stays on the network, which matches both constraints.
+    B. Isolate device with full isolation
+        why: Full isolation cuts all network traffic except the Defender service, which stops the production job the scenario must preserve.
+    C. Contain device
+        why: Contain is for unmanaged or non-onboarded devices and makes other onboarded devices block it; it does not stop local execution on an onboarded workstation.
+    D. Run a quick antivirus scan
+        why: A scan may or may not detect the binary; it does not prevent additional unknown executables from launching during the investigation.
+TAKEAWAY: Isolate = cut the network, keep Defender. Restrict app execution = keep the network, allow only Microsoft-signed code. Contain = block an unmanaged device from the rest of the fleet.
+
+[b009] type=mc domain=3 obj=3.1.2 (Identify threats by using Kusto Query Language (KQL))
+Q: You run the query in the exhibit while investigating lateral movement at Northwind. What do the results most likely indicate?
+EXHIBIT:
+    DeviceLogonEvents
+    | where Timestamp > ago(2d)
+    | where DeviceName =~ 'nw-fs01.northwind.local'
+    | where LogonType in ('Network','RemoteInteractive')
+    | project Timestamp, AccountName, LogonType, RemoteDeviceName, RemoteIP, ActionType
+    
+    Timestamp             AccountName   LogonType           RemoteDeviceName  RemoteIP        ActionType
+    2026-09-28 10:41:17   priya.desai   RemoteInteractive   nw-wks-214        10.20.4.57      LogonSuccess
+    2026-09-28 10:41:52   priya.desai   Network             nw-wks-214        10.20.4.57      LogonSuccess
+    2026-09-28 10:55:03   priya.desai   Network             nw-wks-214        10.20.4.57      LogonSuccess
+  * A. priya.desai opened a Remote Desktop session to the file server from nw-wks-214, then accessed shares from it
+        why: RemoteInteractive is the logon type produced by Remote Desktop; the following Network logons from the same remote device are consistent with SMB or share access during that session.
+    B. nw-fs01 was used to attack nw-wks-214 over SMB
+        why: DeviceName is the device where the logon occurred (nw-fs01) and RemoteDeviceName is where it came from, so the direction is workstation to file server, not the reverse.
+    C. The account authenticated locally at the file server console
+        why: A console sign-in would show the Interactive logon type and no remote device; these rows carry a RemoteDeviceName and RemoteIP.
+    D. The logons failed and should be ignored
+        why: ActionType is LogonSuccess for every row, so the sessions were established.
+TAKEAWAY: In DeviceLogonEvents, DeviceName is the target and RemoteDeviceName/RemoteIP is the source. RemoteInteractive = RDP, Network = share or service access, Interactive = console.
+
+[b010] type=mc domain=1 obj=1.1.1 (Configure email notifications in Microsoft Defender XDR, including incidents, actions, and threat analytics)
+Q: Litware's SOC lead must be emailed when a remediation action is waiting for approval in the Action center, but must not be emailed about new incidents. What should you create?
+  * A. An Actions notification rule in Settings, Microsoft Defender XDR, Email notifications
+        why: The Actions tab of Email notifications sends mail about response actions, including those pending approval, independently of incident mail.
+    B. An Incidents notification rule filtered to High severity
+        why: Incident rules fire on incident creation and updates, which the SOC lead explicitly does not want.
+    C. A Threat analytics notification rule
+        why: Threat analytics mail is about new or updated Microsoft threat reports, not tenant actions awaiting approval.
+    D. A Microsoft Sentinel automation rule with an email playbook triggered on incident creation
+        why: That fires on incidents, not on pending Action center approvals, and would require Sentinel playbook plumbing for a feature XDR already provides.
+TAKEAWAY: Email notification tabs: Incidents, Actions, Threat analytics. 'Pending approval' and other response-action mail belongs under Actions.
+
+[b011] type=ms domain=2 obj=2.1.5 (Investigate and remediate compromised identities that are identified by Microsoft Entra ID)
+Q: Entra ID Protection flags a Tailspin user with the 'Anomalous token' detection and a user risk level of High. The user completed MFA ten minutes ago but the risk remains. You need to remediate the risk and remove the attacker's access. Which two actions should you perform? Each correct answer presents part of the solution.
+(choose 2)
+  * A. Require a secure password change for the user through the user risk policy or an admin password reset
+        why: Token-theft style detections such as Anomalous token are not cleared by MFA alone; a secure password change with reauthentication is what moves the user from At risk to Remediated.
+  * B. Revoke the user's sessions so refresh tokens and session cookies are invalidated
+        why: The attacker holds a stolen token. Revoking sessions forces all clients to reauthenticate, which removes access the password change alone would leave valid until expiry.
+    C. Dismiss the user risk
+        why: Dismiss sets the state to Dismissed without a password change and does not bring the identity to a safe state; the attacker's token would keep working.
+    D. Ask the user to complete MFA again from a known device
+        why: MFA already succeeded and the risk persisted, because this detection requires a password change rather than an MFA pass.
+    E. Confirm the sign-in as safe
+        why: Confirming safe tells the service the sign-in was legitimate, which trains the model the wrong way and leaves the stolen token active.
+TAKEAWAY: Anomalous token, attacker-in-the-middle, and similar detections need secure password change plus session revocation. MFA passing no longer self-remediates those; Dismiss is not a remediation.
+
+[b012] type=order domain=1 obj=1.4.1 (Create custom detection rules by using Advanced Hunting in Microsoft Defender XDR)
+Q: You need to turn an advanced hunting query that finds LSASS access from unsigned processes into a custom detection rule that isolates the device. Which four steps should you perform in sequence?
+POOL:
+  [0] Make the query return Timestamp, ReportId, and DeviceId
+  [1] Select Create detection rule from the query results and set the frequency and alert details
+  [2] Choose the impacted entities so alerts map to the device
+  [3] Select Isolate device under Actions and save the rule scoped to the required device groups
+KEY (full order): [0] -> [1] -> [2] -> [3]
+why: The wizard will not accept a query that lacks Timestamp, ReportId, and an entity identifier, so the query is fixed first. Only then can Create detection rule open the frequency and alert details page, after which impacted entities are mapped and finally the response action and device group scope are chosen before saving.
+TAKEAWAY: Custom detection flow: fix the required columns, create the rule with frequency and alert details, map impacted entities, then pick actions and scope.
+
+[b013] type=mc domain=2 obj=2.1.1 (Investigate and remediate threats by using Microsoft Defender for Office 365, including automatic attack disruption)
+Q: The EmailEvents rows in the exhibit show a phishing message delivered to three Fabrikam mailboxes before it was later moved by zero-hour auto purge. In Threat Explorer, which filter confirms that the move was performed by ZAP rather than by an administrator?
+EXHIBIT:
+    NetworkMessageId   RecipientEmailAddress     Subject                      DeliveryAction  DeliveryLocation  LatestDeliveryLocation  ThreatTypes
+    8f1a…c2            a.ruiz@fabrikam.com       Updated vendor banking form  Delivered       Inbox/folder      Quarantine              Phish
+    8f1a…c2            k.ito@fabrikam.com        Updated vendor banking form  Delivered       Inbox/folder      Quarantine              Phish
+    8f1a…c2            d.oyelaran@fabrikam.com   Updated vendor banking form  Delivered       Inbox/folder      Quarantine              Phish
+  * A. Additional action equals ZAP
+        why: The Additional action property records post-delivery actions on a message, and ZAP is one of its values. It distinguishes an automatic purge from a manual remediation on the same message.
+    B. Original delivery location equals Quarantine
+        why: Original delivery location would show Inbox/folder for these rows; it tells you where the message first landed, not who moved it.
+    C. Latest delivery location equals Quarantine
+        why: Latest delivery location proves the message is now in quarantine but not whether ZAP or an admin put it there.
+    D. Detection technology equals URL detonation
+        why: Detection technology explains why the message was judged phish, not what post-delivery action moved it.
+TAKEAWAY: Threat Explorer: Original and Latest delivery location show where; Additional action (ZAP, Manual remediation) shows what moved it. In hunting, the same story is in EmailPostDeliveryEvents.
+
+[b014] type=mc domain=3 obj=3.1.4 (Interpret threat analytics in Microsoft Defender XDR)
+Q: Threat analytics publishes a new ransomware report that exploits two recently patched vulnerabilities. Northwind's SOC lead asks which company devices are still vulnerable to the exploits described in the report. Where should you look?
+  * A. The Endpoints exposure tab of the report
+        why: Endpoints exposure rates the organization's exposure from the vulnerability severity and the count of devices still missing the related security updates, which is exactly the unpatched-device question.
+    B. The Related incidents tab of the report
+        why: Related incidents lists incidents already raised for the threat; a device can be unpatched without any incident yet.
+    C. The Impacted assets tab of the report
+        why: Impacted assets shows devices and users with active alerts for the threat, not devices that are merely exposed.
+    D. The Analyst report tab of the report
+        why: The analyst report is the narrative with attack chain and hunting guidance; it is not tenant-specific device data.
+TAKEAWAY: Threat analytics tabs: Overview, Analyst report (narrative), Related incidents (already fired), Impacted assets (active alerts), Endpoints exposure (unpatched devices), Recommended actions (mitigation status), Indicators (IOCs, preview).
+
+[b015] type=mc domain=1 obj=1.4.1 (Create custom detection rules by using Advanced Hunting in Microsoft Defender XDR)
+Q: You try to save the advanced hunting query in the exhibit as a custom detection rule for Woodgrove, but the wizard reports that required columns are missing. What should you change?
+EXHIBIT:
+    DeviceProcessEvents
+    | where FileName =~ 'rundll32.exe'
+    | where ProcessCommandLine has 'comsvcs.dll' and ProcessCommandLine has 'MiniDump'
+    | summarize Hits = count() by DeviceName, AccountName
+  * A. Keep Timestamp and ReportId in the output, for example with arg_max(Timestamp, ReportId) inside the summarize
+        why: The summarize dropped Timestamp and ReportId, which every custom detection on Defender tables must return. DeviceName already satisfies the entity identifier requirement.
+    B. Replace DeviceName with DeviceId
+        why: Either DeviceName or DeviceId is an acceptable device identifier; the missing pieces are the time and report columns.
+    C. Add a join to the AlertInfo table
+        why: A join is not required for a detection and would make the rule ineligible for the Continuous (NRT) frequency.
+    D. Remove the summarize operator and add take 100
+        why: Removing the aggregation would return the raw rows, which happen to carry the columns, but that changes the detection logic; the fix is to keep the required columns in the aggregate.
+TAKEAWAY: Custom detections on Defender tables need Timestamp, ReportId, and one entity column. Summarize kills the first two unless you carry them with arg_max.
+
+[b016] type=ms domain=2 obj=2.2.2 (Perform actions on the device, including live response and collecting investigation packages)
+Q: You collect an investigation package from a Windows laptop at Litware. Which two artifacts are included in the package? Each correct answer presents a complete solution.
+(choose 2)
+  * A. Autoruns output listing registry auto-start entry points
+        why: The Windows package includes an Autoruns folder so persistence through auto-start entries can be reviewed offline.
+  * B. Prefetch files for recently executed programs
+        why: Prefetch files are part of the package and show which programs ran and when.
+    C. A full memory dump of the device
+        why: The package collects configuration, process, network, and log artifacts, not a RAM image.
+    D. A copy of every file in the user's Documents folder
+        why: Only temp directories are captured, not user document libraries; use getfile in live response for specific files.
+    E. The complete Application event log
+        why: Only the Security event log is included, alongside system information and service lists.
+TAKEAWAY: Investigation package (Windows): Autoruns, installed programs, network connections, prefetch, processes, scheduled tasks, Security event log, services, SMB sessions, system info, temp dirs, users and groups, WdSupportLogs, summary report.
+
+[b017] type=mc domain=3 obj=3.1.5 (Create hunting graphs, including blast radius)
+Q: During a Northwind incident, a workstation is confirmed compromised. The SOC lead wants to see which critical assets the attacker could reach next from that workstation, directly from the incident. What should you do?
+  * A. On the incident graph in the Attack story tab, open the workstation node's menu and select View blast radius
+        why: Blast radius extends the incident graph with the top-rated possible attack paths from a compromised node to critical targets, which answers the 'what could they reach next' question in place.
+    B. Open the device page and review the Timeline tab for future events
+        why: The timeline shows what has already happened on the device, not possible paths forward.
+    C. Run the Related alerts query from Go hunt on the workstation
+        why: Go hunt returns existing alert and activity records; it does not compute reachable targets.
+    D. Open Threat analytics and review Impacted assets
+        why: Threat analytics is organized around Microsoft-tracked threats, not around paths from a specific node in this incident.
+TAKEAWAY: Blast radius lives on the incident graph node menu and shows possible lateral paths to critical assets; the hunting graph answers the same kind of question from the advanced hunting page with predefined scenarios.
+
+[b018] type=ms domain=1 obj=1.1.8 (Configure automatic attack disruption in Microsoft Defender XDR)
+Q: Fabrikam wants automatic attack disruption to disable compromised on-premises Active Directory accounts and contain compromised devices. Which two prerequisites must be in place? Each correct answer presents part of the solution.
+(choose 2)
+  * A. Defender for Identity sensors on DCs whose action account (default LocalSystem or a gMSA) can write userAccountControl
+        why: Disabling an on-premises user is executed by a sensor on a domain controller using the action account; without both, the identity action cannot run.
+  * B. Device groups whose remediation level is not set to No automated response
+        why: Contain device and other automated responses skip devices in groups set to No automated response, so those groups must be at Full or a Semi level.
+    C. Microsoft Sentinel automation rules that approve attack disruption actions
+        why: Attack disruption runs inside Defender XDR without any Sentinel approval workflow.
+    D. Live response enabled for servers in Advanced features
+        why: Live response is an analyst session feature and is not used by attack disruption.
+    E. A custom detection rule with the Disable user action for each monitored account
+        why: Attack disruption uses Microsoft's own high-confidence correlation, not customer-authored detection rules.
+TAKEAWAY: Attack disruption prerequisites: Defender for Endpoint (contain device/user), Defender for Identity sensors plus action account (on-prem disable user), Defender for Cloud Apps M365 connector (cloud disable user), device groups not at No automated response.
+
+[b019] type=mc domain=2 obj=2.1.1 (Investigate and remediate threats by using Microsoft Defender for Office 365, including automatic attack disruption)
+Q: A Tailspin user reports a credential-harvesting email that all protection layers delivered to the Inbox. The message is still being delivered to other recipients. You need to have Microsoft re-evaluate the message and immediately stop further delivery from that sender. Which submission should you make?
+  * A. Submit it as 'I've confirmed it's a threat', category Phish, and block the sender in the Tenant Allow/Block List
+        why: A false-negative submission sends the message for analysis and the accompanying block entry stops the sender for up to 30 days by default, which covers the immediate delivery problem.
+    B. Submit the email as 'I've confirmed it's clean' to update filters
+        why: That is a false-positive submission that tells Microsoft the message is safe, the opposite of the situation.
+    C. Add the sender to the user's Safe Senders list and report it from Outlook
+        why: Safe Senders would let more mail through, and a user report alone creates no tenant block.
+    D. Create an alert tuning rule for the sender domain
+        why: Alert tuning hides or resolves alerts; it does not change mail delivery.
+TAKEAWAY: Admin submission: 'threat' = false negative with optional block entry; 'clean' = false positive with optional allow entry. Block entries default to 30 days; allow entries default to 45 days after last use.
+
+[b020] type=mc domain=1 obj=1.4.2 (Manage custom detection rules in Microsoft Defender XDR)
+Q: A Woodgrove custom detection rule that joins DeviceNetworkEvents to DeviceProcessEvents must raise alerts as quickly as possible. When you edit the rule, the Continuous (NRT) frequency is unavailable. What should you do?
+  * A. Rewrite the query against a single table without the join, then select Continuous (NRT)
+        why: Continuous evaluation supports one table and no join, union, or externaldata. DeviceNetworkEvents already carries initiating process columns, so the join can usually be removed.
+    B. Select Every hour, which is the lowest latency option for joined queries
+        why: Hourly is the fastest scheduled option, but the question asks for the quickest alerts and NRT is available once the query is single-table.
+    C. Move the rule to Microsoft Sentinel as a scheduled analytics rule
+        why: A Sentinel scheduled rule runs on a schedule as well and would need the XDR tables streamed to the workspace; it does not deliver near-real-time alerting for this query.
+    D. Add ReportId to the query output
+        why: ReportId is required for every custom detection regardless of frequency; it does not unlock NRT.
+TAKEAWAY: Custom detection frequencies: every 24 h, 12 h, 3 h, hour, or Continuous (NRT). NRT needs a single supported table with no join or union.
+
+[b021] type=mc domain=2 obj=2.3.1 (Investigate threats by using Microsoft Purview Audit)
+Q: The Purview audit record in the exhibit was found while investigating a Litware finance mailbox. What does the record indicate?
+EXHIBIT:
+    {
+      "CreationTime": "2026-09-28T09:31:44",
+      "Operation": "New-InboxRule",
+      "RecordType": 1,
+      "Workload": "Exchange",
+      "UserId": "m.alvarez@litware.com",
+      "ClientIP": "198.51.100.23",
+      "ResultStatus": "True",
+      "Parameters": [ {"Name":"Name","Value":"."},
+                      {"Name":"ForwardTo","Value":"ap-review@example.net"},
+                      {"Name":"DeleteMessage","Value":"True"} ]
+    }
+  * A. Persistence through a hidden inbox rule that forwards mail externally and deletes the original
+        why: New-InboxRule with a single-character name, an external ForwardTo address, and DeleteMessage set is the classic business email compromise persistence pattern in Exchange audit data.
+    B. A failed attempt to create a rule that was blocked by policy
+        why: ResultStatus is True, so the operation succeeded.
+    C. An administrator granting another user full access to the mailbox
+        why: Delegation would appear as Add-MailboxPermission, not New-InboxRule.
+    D. A legitimate out-of-office rule created by the user
+        why: Out-of-office uses automatic replies, and a legitimate rule would not be named '.' with external forwarding plus deletion.
+TAKEAWAY: In Exchange audit records, New-InboxRule or Set-InboxRule with ForwardTo/RedirectTo outside the tenant and DeleteMessage is BEC persistence. Remove the rule and revoke sessions.
+
+[b022] type=hot domain=1 obj=1.1.3 (Configure Microsoft Defender for Endpoint advanced features)
+Q: On the Advanced features screen shown, which setting must be turned on before analysts can use Block file indicators to stop a known-bad executable on Fabrikam devices?
+SCREEN: The Settings, Endpoints, Advanced features page: a vertical list of toggles with a bold name and one-line description each. Visible rows include Allow or block file, Custom network indicators, Enable EDR in block mode, Download quarantined files, Enable tamper protection, and Enable live response.
+  * Allow or block file
+    Custom network indicators
+    Enable EDR in block mode
+    Download quarantined files
+    Enable tamper protection
+    Enable live response
+why: File hash allow and block indicators are enforced only when Allow or block file is enabled. Custom network indicators is the equivalent toggle for IP, URL, and domain indicators, EDR in block mode protects when antivirus is passive, and the quarantine, tamper protection, and live response toggles do not affect indicator enforcement.
+TAKEAWAY: Two toggles unlock indicators: Allow or block file for hashes and certificates, Custom network indicators for IPs, URLs, and domains.
+
+[b023] type=order domain=2 obj=2.2.2 (Perform actions on the device, including live response and collecting investigation packages)
+Q: A Northwind workstation is running a suspicious rundll32.exe process loaded from a Temp folder. You must preserve a copy of the loaded DLL for analysis and then stop the process, using live response only. Which four actions should you perform in sequence?
+POOL:
+  [0] Initiate a live response session on the device
+  [1] Run processes to confirm the process ID and the DLL path
+  [2] Run getfile against the DLL path to download it to the portal
+  [3] Run remediate on the process to stop it and delete its image file
+KEY (full order): [0] -> [1] -> [2] -> [3]
+why: The session must exist before any command runs. Enumerating processes confirms the exact PID and file path, which getfile then uses to preserve the evidence. Only after the copy is secured is remediate run, because that command stops the process and removes the file, which would otherwise destroy the artifact.
+TAKEAWAY: Live response order of operations: connect, enumerate, collect, then remediate. Never remediate before the evidence is downloaded.
+
+[b024] type=ms domain=3 obj=3.1.1 (Identify the appropriate table to use in a KQL query)
+Q: You hunt for data staging at Tailspin: archives were written to a hidden folder on an onboarded file server and then transferred to an external IP over port 443. Which two advanced hunting tables should you query? Each correct answer presents part of the solution.
+(choose 2)
+  * A. DeviceFileEvents
+        why: Archive creation and modification in the hidden folder on the onboarded server are file events with FolderPath, FileName, and initiating process details.
+  * B. DeviceNetworkEvents
+        why: The outbound connection to the external IP on port 443, along with the initiating process, is recorded in DeviceNetworkEvents.
+    C. EmailAttachmentInfo
+        why: That table describes attachments on email messages and has nothing to do with files on a file server or outbound network connections.
+    D. DeviceTvmSoftwareVulnerabilities
+        why: Vulnerability inventory tells you what is unpatched, not what files were written or where traffic went.
+    E. IdentityQueryEvents
+        why: Identity queries cover LDAP and SAMR lookups seen by Defender for Identity, which does not capture file staging or exfiltration traffic.
+TAKEAWAY: Staging = DeviceFileEvents; exfiltration = DeviceNetworkEvents. Both carry InitiatingProcess columns so you can link the archiver to the upload.
+
+[b025] type=build domain=1 obj=1.1.6 (Configure security policies for Microsoft Defender for Endpoint, including attack surface reduction (ASR) rules)
+Q: Woodgrove plans to enforce the 'Block credential stealing from LSASS' ASR rule on 3,000 workstations without breaking line-of-business software. Which four steps should you perform, and in what order? Build the list from the pool.
+POOL:
+  [0] Deploy the rule in Audit mode to a pilot ring
+  [1] Review the ASR rules report and DeviceEvents rows where ActionType starts with Asr to identify legitimate triggers
+  [2] Add per-rule exclusions for the legitimate processes identified
+  [3] Switch the rule to Block mode and expand to all workstations in rings
+  [4] Deploy the rule in Warn mode so users can bypass it
+  [5] Disable Microsoft Defender Antivirus real-time protection during rollout
+  [6] Add the LSASS process to antivirus exclusions
+KEY (ordered subset): [0] -> [1] -> [2] -> [3]
+why: The recommended rollout is audit first, then study what the rule would have blocked using the ASR report and advanced hunting, add exclusions for the benign hits, and only then move to Block in rings. Warn mode is not supported for the LSASS rule, disabling real-time protection removes protection the rule depends on, and excluding LSASS from antivirus does nothing for ASR.
+TAKEAWAY: ASR rollout: Audit, review (report and DeviceEvents ActionType startswith 'Asr'), exclude, Block. The LSASS credential-theft and Office code-injection rules do not support Warn.
+
+[b026] type=mc domain=2 obj=2.2.4 (Investigate and remediate incidents identified by automatic attack disruption)
+Q: The Action center entries in the exhibit were created by automatic attack disruption during a Fabrikam incident. The SOC confirms that the activity on the account was a scheduled migration script, not an attack. You need to restore the account's access while keeping the incident open for documentation. What should you do?
+EXHIBIT:
+    Action center > History
+    Action type       Entity                              Status      Initiated by          Time
+    Contain user      FABRIKAM\svc-migrate                Completed   Attack disruption     2026-09-29 02:14
+    Contain device    FAB-APP07 (10.30.2.18)              Completed   Attack disruption     2026-09-29 02:14
+    Disable user      svc-migrate@fabrikam.com            Completed   Attack disruption     2026-09-29 02:15
+  * A. In the History tab, select the Contain user and Disable user actions and choose Undo
+        why: Attack disruption actions appear in Action center History and can be reversed with Undo, which restores the account without touching the incident record.
+    B. Close the incident as a false positive so the actions are reverted automatically
+        why: Resolving an incident does not roll back response actions; the account would stay contained and disabled, and the SOC wants the incident kept open anyway.
+    C. Add svc-migrate to the attack disruption identity exclusions
+        why: An exclusion prevents future automated actions on the account but does not undo the containment already applied.
+    D. Re-enable the account in Active Directory Users and Computers
+        why: Enabling in AD addresses only the Disable user action; the Contain user policy enforced by Defender for Endpoint would still block the account on onboarded devices.
+TAKEAWAY: Undo attack disruption from Action center History, then consider an identity exclusion so the same service account is not contained again. Closing the incident reverts nothing.
+
+[b027] type=mc domain=3 obj=3.1.2 (Identify threats by using Kusto Query Language (KQL))
+Q: You need an advanced hunting filter that matches any Litware process whose command line contains any of the whole terms 'sekurlsa', 'lsadump', or 'procdump' while scanning the fewest rows possible. Which where clause should you use?
+  * A. | where ProcessCommandLine has_any ('sekurlsa','lsadump','procdump')
+        why: has_any performs an indexed term match for several values at once, which is both the most efficient and the most readable way to express 'any of these words'.
+    B. | where ProcessCommandLine contains 'sekurlsa' or ProcessCommandLine contains 'lsadump'
+        why: contains performs unindexed substring scans over every row, and this version silently drops the procdump term, so it is both slower and incomplete compared with one has_any clause.
+    C. | where ProcessCommandLine matches regex 'sekurlsa|lsadump|procdump'
+        why: A regex is evaluated on every row and is the slowest of the options; it is only needed when term matching cannot express the pattern.
+    D. | where ProcessCommandLine == 'sekurlsa' or ProcessCommandLine == 'lsadump'
+        why: Equality requires the whole command line to equal the word, so real command lines that merely include the term would never match, and procdump was dropped.
+TAKEAWAY: has = indexed whole-term match; has_any = several terms at once; contains = substring; matches regex = slowest. Prefer has/has_any for hunting at scale.
+
+[b028] type=build domain=2 obj=2.1.1 (Investigate and remediate threats by using Microsoft Defender for Office 365, including automatic attack disruption)
+Q: A phishing campaign reached 140 Tailspin mailboxes and most messages are still in Inboxes. You must remove them so users can recover them if needed. Which four actions should you perform, and in what order? Build the list from the pool.
+POOL:
+  [0] Confirm your account holds the Search and Purge role
+  [1] In Threat Explorer, open the All email view and filter on the campaign
+  [2] Select the messages and choose Take action, then Soft delete
+  [3] Track the remediation to completion in the Action center
+  [4] Choose Hard delete so the messages cannot be restored
+  [5] Create a mail flow rule that deletes messages with the campaign subject
+  [6] Submit the campaign as 'I've confirmed it's clean'
+KEY (ordered subset): [0] -> [1] -> [2] -> [3]
+why: Deleting messages from Threat Explorer requires the Search and Purge role, so verify it first. The All email view with a campaign filter isolates the delivered copies, Soft delete moves them to Recoverable Items so they remain restorable, and the submitted remediation is tracked to completion in the Action center. Hard delete breaks the recovery requirement, a mail flow rule only affects future mail, and a 'clean' submission would tell Microsoft the campaign is safe.
+TAKEAWAY: Threat Explorer remediation: Search and Purge role, find the messages, Take action (Soft delete keeps them recoverable, Hard delete does not), track it in the Action center.
+
+[b029] type=mc domain=1 obj=1.1.8 (Configure automatic attack disruption in Microsoft Defender XDR)
+Q: Litware's break-glass administrator account must never be disabled or contained by automatic attack disruption, while all other identities remain eligible. What should you do?
+  * A. Add the account under Settings, Microsoft Defender XDR, Automated response, Identities as a user exclusion
+        why: The Identities exclusion list is the per-account opt-out for attack disruption's disable and contain user actions, which is exactly a break-glass scenario.
+    B. Open a support case to opt the tenant out of attack disruption
+        why: A full opt-out turns the capability off for every identity, not just the emergency account.
+    C. Set every device group to No automated response
+        why: Device group automation level governs device actions; it does not stop a user from being disabled or contained, and it would remove device containment for everyone.
+    D. Exclude the administrator's workstation IP under Policy application
+        why: IP exclusions affect contain device policy enforcement, not identity actions on a specific account.
+TAKEAWAY: Attack disruption exclusions have three scopes: user accounts (Automated response, Identities), device groups (automation level), and IP addresses (Policy application). Pick the one matching the asset.
+
+[b030] type=build domain=3 obj=3.1.3 (Create Advanced Hunting queries)
+Q: You need an advanced hunting query that returns, for the last 7 days, every PowerShell process started by Word or Excel on Northwind devices whose command line includes an encoded command, showing device, account, and command line. Which five lines should you use, and in what order? Build the query from the pool.
+POOL:
+  [0] DeviceProcessEvents
+  [1] | where Timestamp > ago(7d)
+  [2] | where InitiatingProcessFileName in~ ('winword.exe','excel.exe')
+  [3] | where FileName =~ 'powershell.exe' and ProcessCommandLine has_any ('-enc','-encodedcommand')
+  [4] | project Timestamp, DeviceName, AccountName, ProcessCommandLine
+  [5] EmailAttachmentInfo
+  [6] | join kind=inner DeviceNetworkEvents on DeviceId
+  [7] | summarize count() by FileName
+KEY (ordered subset): [0] -> [1] -> [2] -> [3] -> [4]
+why: Process launches, including the parent process, are in DeviceProcessEvents, so that is the source table. The time filter comes first for efficiency, then the parent filter on Word or Excel, then the child filter on powershell.exe with an encoded flag, and finally project selects the requested columns. The email table, the network join, and a count summarize do not produce the per-process rows the question asks for.
+TAKEAWAY: Office spawning encoded PowerShell = DeviceProcessEvents filtered on InitiatingProcessFileName and ProcessCommandLine. Put the time filter early and project last.
+
+[b031] type=mc domain=2 obj=2.1.4 (Investigate and remediate security risks identified by Microsoft Defender for Cloud Apps)
+Q: App governance in Defender for Cloud Apps alerts that a newly registered OAuth application with Mail.Read and Files.Read.All permissions has been consented to by 60 Woodgrove users in two hours. You need to stop the application from using those permissions immediately. What should you do?
+  * A. Select Disable app on the alert in app governance
+        why: Disabling the app in app governance blocks it from acquiring tokens with the consented permissions across the tenant, which is the fastest tenant-wide stop.
+    B. Require each of the 60 users to sign in again
+        why: Revoking user sessions does not revoke the application's own consent or tokens; the app keeps its delegated access once users sign back in.
+    C. Create a session policy that blocks downloads from the application
+        why: Session policies control browser sessions through Conditional Access App Control; they do not stop API access by an OAuth app.
+    D. Mark the application as unsanctioned in Cloud Discovery
+        why: Unsanctioning tags the app for discovery reporting and firewall block scripts; it does not remove an OAuth grant in Entra ID.
+TAKEAWAY: Risky OAuth app = Disable app (app governance) or revoke the grant. Session policies and sanction tags address browser use and shadow IT, not API tokens.
+
+[b032] type=mc domain=1 obj=1.3.1 (Select data connectors based on data source requirements, including Windows logs and security events)
+Q: Fabrikam connects the Microsoft Defender XDR data connector in Microsoft Sentinel with incident integration. Analysts worry that the existing Microsoft security analytics rule for Defender for Endpoint alerts will now create duplicate incidents. What happens?
+  * A. The Microsoft incident creation rules for the Defender XDR-integrated products are turned off automatically
+        why: Enabling the XDR connector disables Microsoft incident creation rules for the covered products and disconnects their individual alert connectors so each alert produces one incident.
+    B. Both incidents are created and must be merged manually
+        why: The connector is designed to avoid duplicates; no manual merge is required.
+    C. The Defender for Endpoint alerts stop flowing to Sentinel entirely
+        why: Alerts continue to arrive, now as part of XDR incidents that are synchronized bidirectionally.
+    D. Sentinel incidents are no longer synced back to Defender XDR
+        why: Synchronization is two-way for status, severity, classification, assignment, and other fields.
+TAKEAWAY: Defender XDR connector: one bidirectional incident stream; the product-specific alert connectors and their Microsoft incident creation rules are disabled to prevent duplicates.
+
+[b033] type=mc domain=2 obj=2.3.2 (Investigate threats by using Content search in Microsoft Purview eDiscovery)
+Q: Legal asks Litware's SOC for a copy of every message in any mailbox that carries the subject 'Updated vendor banking form', including items users already deleted, exported as a PST. No hold is required. Which tool should you use?
+  * A. A search in the Content search case in Microsoft Purview eDiscovery
+        why: Content search queries mailbox content, including recoverable deleted items, by subject and other conditions, and exports the results. It is the lightest-weight eDiscovery tier for exactly this request.
+    B. Audit log search in Microsoft Purview
+        why: Audit search returns activity records such as who sent or accessed mail; it does not return message bodies for export.
+    C. Threat Explorer in Defender for Office 365
+        why: Threat Explorer shows mail flow and threat metadata for 30 days and can remediate, but it is not a mailbox content export tool.
+    D. Microsoft Graph activity logs
+        why: Graph activity logs record API requests, not message content.
+TAKEAWAY: Audit = who did what; Content search = find and export the content itself; eDiscovery Standard adds holds; Premium adds custodians and review sets.
+
+[b034] type=order domain=3 obj=3.1.1 (Identify the appropriate table to use in a KQL query)
+Q: You reconstruct a Northwind intrusion in advanced hunting: a phishing email arrived, the user clicked its link, consented to a malicious OAuth app, and the attacker then signed in interactively with a stolen token. Which four tables should you query, in the order the events occurred?
+POOL:
+  [0] EmailEvents
+  [1] UrlClickEvents
+  [2] CloudAppEvents
+  [3] AADSignInEventsBeta
+KEY (full order): [0] -> [1] -> [2] -> [3]
+why: Delivery of the message is in EmailEvents, the Safe Links click is in UrlClickEvents, the consent grant is recorded as Microsoft 365 activity in CloudAppEvents, and the attacker's subsequent interactive sign-in with the stolen token appears in the Entra sign-in table. Following that order mirrors the kill chain and lets each table's identifiers feed the next.
+TAKEAWAY: Phish chain tables in order: EmailEvents (delivery), UrlClickEvents (click), CloudAppEvents (consent and app activity), AADSignInEventsBeta or EntraIdSignInEvents (sign-in).
+
+[b035] type=mc domain=2 obj=2.3.3 (Investigate threats by using Microsoft Graph activity logs)
+Q: The rows in the exhibit come from the MicrosoftGraphActivityLogs table in Fabrikam's Log Analytics workspace. What do they indicate, and how should you confirm which sign-in produced the token?
+EXHIBIT:
+    TimeGenerated         RequestMethod  RequestUri                                           ResponseStatusCode  AppId        UserId       IPAddress        SignInActivityId
+    2026-09-28 10:02:11   GET            https://graph.microsoft.com/v1.0/users?$top=999      200                 3f1c…91ab    7e02…c4d1    203.0.113.44     a9b1…77e0
+    2026-09-28 10:02:14   GET            https://graph.microsoft.com/v1.0/users?$skiptoken=…  200                 3f1c…91ab    7e02…c4d1    203.0.113.44     a9b1…77e0
+    2026-09-28 10:02:40   GET            https://graph.microsoft.com/v1.0/me/messages          200                 3f1c…91ab    7e02…c4d1    203.0.113.44     a9b1…77e0
+  * A. Directory enumeration and mailbox reads by an app on behalf of a user; join SignInActivityId to UniqueTokenIdentifier
+        why: Paging through /users and reading /me/messages from one app, user, and IP is reconnaissance plus data access. SignInActivityId correlates to UniqueTokenIdentifier in the sign-in tables to find the originating authentication.
+    B. Routine Outlook synchronization; no further action
+        why: Outlook does not page the entire directory with $top=999; that pattern is enumeration, and the external IP matches the phishing infrastructure.
+    C. A failed attack, because the requests were throttled
+        why: Status 200 means every request succeeded; throttling would show 429.
+    D. Service principal activity; join AppId to AuditLogs
+        why: A populated UserId with ClientAuthMethod on behalf of a user indicates delegated access, and AuditLogs records directory changes rather than token issuance.
+TAKEAWAY: MicrosoftGraphActivityLogs (via Entra diagnostic settings) shows every Graph request with AppId, UserId, URI, status, and SignInActivityId; join that id to UniqueTokenIdentifier in sign-in logs to find the token's origin.
+
+[b036] type=mc domain=1 obj=1.1.7 (Manage automated investigation and response capabilities in Microsoft Defender XDR)
+Q: Woodgrove's Finance-PCs device group uses Semi - require approval for all folders. A custom detection rule that quarantines files on those devices queued several response actions for approval. Analysts report that the actions they intended to approve are no longer listed in the Action center's Pending tab eight days after the rule fired. What happened, and what should you change so this does not recur?
+  * A. Pending actions expire after 7 days; set the group to Full - remediate threats automatically or approve sooner
+        why: Semi automation leaves the rule's response actions pending for 7 days and then they time out. Full automation removes the approval step, and tighter approval SLAs are the alternative if approval must stay.
+    B. The actions were undone by another analyst; audit the History tab
+        why: An undo would appear in History as a completed action followed by an undo, and the symptom is actions vanishing on a schedule, which matches expiry.
+    C. The device group rank was changed and the devices moved to Ungrouped devices
+        why: A rank change would alter which automation level applies to new actions but would not remove items already pending.
+    D. Alert tuning hid the alerts, which cancels their response actions
+        why: Hiding an alert prevents future incidents; it does not remove actions already queued for approval.
+TAKEAWAY: Semi automation: pending actions time out after 7 days; if approvals are missed, move to Full or approve sooner. AIR on Defender for Endpoint is retired as a separate experience from Sept 1, 2026; approval timeouts still apply to pending actions.
+
+[b037] type=ms domain=2 obj=2.1.8 (Investigate incidents by using agentic AI, including embedded Microsoft Security Copilot)
+Q: Tailspin has provisioned Microsoft Security Copilot and enabled the Defender plugin. An analyst opens an incident and uses the guided response cards in the Copilot pane. Which two statements describe what the analyst can do from those cards? Each correct answer presents a complete solution.
+(choose 2)
+  * A. Classify the incident as true positive, false positive, or informational from the Triage card
+        why: Triage is the first guided response category and includes a classification recommendation that can be applied in place.
+  * B. Apply a recommended containment action, such as containing a device, directly from the card
+        why: Containment and Remediation cards carry the entity and a button that executes the recommended action without leaving the incident.
+    C. Change the device group automation level for the affected device
+        why: Automation levels are tenant settings under Endpoints, Device groups; guided response does not edit configuration.
+    D. Create a Microsoft Sentinel analytics rule from the incident evidence
+        why: Copilot can generate KQL in advanced hunting, but rule creation is not a guided response action.
+    E. Grant the analyst additional unified RBAC permissions when an action is blocked
+        why: Copilot runs with the analyst's existing permissions and never elevates them.
+TAKEAWAY: Guided response cards come in four categories: Triage (classification), Containment, Investigation, Remediation. Actions run with the analyst's own permissions.
+
+[b038] type=mc domain=3 obj=3.1.5 (Create hunting graphs, including blast radius)
+Q: Litware's tenant is onboarded to the Microsoft Sentinel data lake. Before an incident occurs, the SOC wants to find every path by which a Kerberoastable service account could lead to the Domain Admins group, visualized as a graph. What should you do?
+  * A. In advanced hunting, create a Hunting graph and run the Kerberoast paths to critical assets scenario
+        why: The hunting graph offers predefined scenarios, including Kerberoast paths to critical assets and Paths to domain admins, that render possible escalation routes without an incident.
+    B. Open any incident and select View blast radius on a service account node
+        why: Blast radius starts from a node in an existing incident graph; the SOC wants a proactive, incident-independent view.
+    C. Query IdentityDirectoryEvents for service principal name changes
+        why: A table query lists events; it does not compute or draw multi-hop paths to Domain Admins.
+    D. Review the Lateral movement paths report in Defender for Identity
+        why: That report lists observed paths to sensitive accounts from session and admin data; the Kerberoast-specific escalation scenario is a hunting graph capability.
+TAKEAWAY: Hunting graph = proactive predefined scenarios (Kerberoast paths, DCSync paths, paths to domain admins) from the advanced hunting page; blast radius = reactive, from an incident graph node.
+
+[b039] type=mc domain=2 obj=2.1.10 (Manage security incidents by using case management)
+Q: Northwind's SOC is tracking the multi-stage intrusion across three related incidents. The SOC lead wants one place in the Defender portal to assign dated tasks to analysts, attach the forensic report, and keep comments, while the incidents themselves stay separate. What should you do?
+  * A. Create a case, link the three incidents to it, and add tasks and attachments to the case
+        why: Case management in the Defender portal holds linked incidents, tasks with owners and due dates, attachments, and comments without merging the underlying incidents.
+    B. Merge the three incidents into one and use the incident comments
+        why: Merging combines the incidents, which the SOC lead explicitly does not want, and incidents have no task or attachment features.
+    C. Add the same tag to all three incidents
+        why: Tags help filtering but provide no tasks, attachments, or shared comment thread.
+    D. Create a Microsoft Sentinel workbook that lists the three incidents
+        why: A workbook is a read-only visualization; it cannot hold assignments, due dates, or uploaded files.
+TAKEAWAY: Cases: link incidents, assign tasks with due dates, attach files, comment, all without merging incidents. Creating a case needs Alerts (manage) or Sentinel Responder.
+
+==== SOLUTION SERIES b040 (domain 1, obj 1.1.9) ====
+Litware uses Microsoft Defender for Endpoint Plan 2 with unified RBAC. Three device groups exist, ranked in this order: Production-Servers (rank 1, matches LW-PRD*), Workstations (rank 2, all other Windows devices), and Ungrouped devices (default). Every group is currently set to Full - remediate threats automatically. You need to ensure that automated remediation and automatic attack disruption containment never run on devices in the Production-Servers group, while all other devices continue to receive full automation. Each of the following solutions is evaluated independently. Does the solution meet the goal?
+
+  *YES 1. Solution: In Settings, Endpoints, Device groups, you edit the Production-Servers group and set its remediation level to No automated response, leaving the other groups unchanged.
+        why: Automation level is applied per device group and the servers match the rank 1 group first. No automated response stops both automated remediation and attack disruption's device actions for that group only, while Workstations and Ungrouped stay at Full.
+  *YES 2. Solution: In Settings, Microsoft Defender XDR, Automated responses, Devices, on the Device groups tab you select Production-Servers and set its automation level to No automated response.
+        why: This tab edits the same per-group automation level from the attack disruption exclusions page, so the effect is identical: the servers are excluded from automated responses and the other groups keep full automation.
+   NO  3. Solution: On the Policy application tab under Automated responses, Devices, you add the IP range used by the production servers as an IP exclusion.
+        why: IP exclusions only stop attack disruption contain policies from being applied to those addresses. Automated remediation on the servers themselves would still run, so the goal is only partially met.
+   NO  4. Solution: You set the Ungrouped devices (default) group to No automated response and leave Production-Servers and Workstations at Full.
+        why: The production servers match the rank 1 group, so changing the default group does not affect them; it only removes automation from devices that match no other group, which is the opposite of the requirement.
+TAKEAWAY: Automation level is a per-device-group setting and the highest-ranked matching group wins. The device-group tab under Automated responses edits that same level; IP exclusions and the default group do not touch a ranked group's servers.
+==== END SERIES ====

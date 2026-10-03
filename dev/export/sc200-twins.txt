@@ -1,0 +1,533 @@
+# SC-200 confusable twins
+# Each statement is tagged with the side it is true of. Flag any statement that is true of the other side, or of both.
+
+[1] A = Scheduled analytics rule   |   B = NRT analytics rule   (obj 1.4.3)
+CONTRAST: A scheduled rule runs its KQL on an interval you choose, from every five minutes to every 14 days, over a lookback window of the same range, and runs about five minutes behind the clock to allow for ingestion. An NRT rule is a stripped-down scheduled rule that runs once a minute over the previous minute of ingested data, with a cap of 50 per workspace.
+  (A) Run interval and lookback are configurable from 5 minutes to 14 days
+  (A) Executes on a 5-minute delay to allow data to arrive
+  (A) Supports up to 150 single-event alerts per execution
+  (B) Runs once every minute with a one-minute lookback
+  (B) Limited to 50 rules per workspace
+  (B) Queries on ingestion time rather than TimeGenerated
+
+[2] A = Hunting query   |   B = Analytics rule   (obj 3.2.1)
+CONTRAST: A hunting query is saved KQL with tactic and entity metadata that runs only when an analyst runs it and leaves no trace except bookmarks. An analytics rule runs automatically on a schedule and converts results into alerts and incidents. The hunting page offers Create analytics rule to promote a proven query.
+  (A) Executes only when an analyst runs it
+  (A) Results are not stored unless bookmarked
+  (A) Listed on the Hunting page with a Results delta column
+  (B) Runs automatically on a schedule or in near real time
+  (B) Generates alerts that can become incidents
+  (B) Configured through the Analytics wizard
+
+[3] A = Workbook   |   B = Notebook   (obj 3.2.4)
+CONTRAST: A workbook is a no-code dashboard of KQL charts and grids rendered inside the Sentinel or Defender portal. A notebook is a Jupyter document with Python cells that runs on Azure Machine Learning compute (or Spark for the data lake) and can apply machine learning, external data and custom visualisations.
+  (A) Built from parameterised KQL visualisations without code
+  (A) Viewed and shared inside the portal; needs only workspace read
+  (A) Templates ship with content hub solutions
+  (B) Runs Python cells on Azure Machine Learning compute
+  (B) Uses MSTICPy for enrichment and process-tree visuals
+  (B) Suited to custom machine learning over security data
+
+[4] A = Microsoft Defender for Endpoint   |   B = Microsoft Defender for Identity   (obj 2.1.6)
+CONTRAST: Defender for Endpoint is the EDR sensor on workstations and servers, producing the Device* advanced hunting tables and device response actions. Defender for Identity is a sensor on domain controllers, AD FS, AD CS and Entra Connect servers that watches directory traffic, producing the Identity* tables and identity-focused alerts such as DCSync and Kerberoasting.
+  (A) Sensor installed on workstations and servers
+  (A) Populates DeviceProcessEvents and DeviceNetworkEvents
+  (A) Provides isolate device and live response actions
+  (B) Sensor installed on domain controllers and AD FS servers
+  (B) Populates IdentityLogonEvents and IdentityDirectoryEvents
+  (B) Raises reconnaissance and lateral-movement alerts based on AD traffic
+
+[5] A = Microsoft Defender for Identity   |   B = Microsoft Defender for Cloud Apps   (obj 2.1.4)
+CONTRAST: Defender for Identity monitors on-premises Active Directory through domain controller sensors. Defender for Cloud Apps is a cloud access security broker that discovers shadow IT, connects to SaaS apps through APIs and controls sessions through Conditional Access App Control, producing the CloudAppEvents table.
+  (A) Monitors on-premises Active Directory traffic
+  (A) Detects DCSync, pass-the-ticket and account enumeration
+  (B) Discovers shadow IT from firewall and proxy logs
+  (B) Applies session policies through Conditional Access App Control
+  (B) Populates CloudAppEvents for connected SaaS apps
+  (A) Requires sensors on domain controllers
+
+[6] A = Microsoft Defender for Endpoint   |   B = Microsoft Defender for Cloud Apps   (obj 2.1.4)
+CONTRAST: Defender for Endpoint protects devices with EDR, vulnerability management and attack surface reduction. Defender for Cloud Apps protects the use of cloud applications, including OAuth app governance, file governance and real-time session control; the two integrate so that endpoint network signals feed cloud discovery.
+  (A) Enforces attack surface reduction rules on devices
+  (A) Offers device isolation and investigation packages
+  (A) Sends device network signals into cloud discovery
+  (B) Governs OAuth app permissions and unsanctioned apps
+  (B) Blocks downloads in a browser session via reverse proxy
+  (B) Scans files at rest in connected SaaS apps
+
+[7] A = Incident   |   B = Alert   (obj 2.1.7)
+CONTRAST: An alert is a single detection raised by a product or an analytics rule about one piece of suspicious activity. An incident is the case object that groups related alerts and their entities, carries status, severity, owner and classification, and is what analysts assign and close.
+  (B) Single detection from one product or rule
+  (B) Many of them can be correlated into one case
+  (B) Stored in SecurityAlert and AlertInfo
+  (A) Has an owner, status and classification
+  (A) Groups related alerts and entities into one case
+  (A) Automation rules trigger on its creation or update
+
+[8] A = Automation rule   |   B = Playbook   (obj 1.1.10)
+CONTRAST: An automation rule is a Sentinel-native object that reacts to incident or alert triggers with conditions and ordered actions such as assigning, tagging, changing severity or running a playbook. A playbook is an Azure Logic App that performs the actual integration work, such as posting to Teams, enriching with TI or blocking an IP.
+  (A) Defined inside Sentinel with conditions and ordered actions
+  (A) Can change severity, status, owner and tags directly
+  (A) Has an order number and optional expiration date
+  (B) Is an Azure Logic App workflow
+  (B) Can call external APIs such as Teams or a firewall
+  (B) Needs a Microsoft Sentinel trigger (incident, alert or entity) to be run from Sentinel
+
+[9] A = Sentinel hunting queries   |   B = Defender XDR advanced hunting   (obj 3.1.3)
+CONTRAST: Sentinel hunting queries are catalogued, metadata-rich KQL saved on the Hunting page, run in bulk and tracked with results deltas, bookmarks and hunts. Advanced hunting is the interactive KQL editor in the Defender portal that queries native XDR tables with 30-day retention and, once a workspace is onboarded, Sentinel and data lake tables too.
+  (A) Catalogued with MITRE tactics and a Run all queries button
+  (A) Supports hunts with hypothesis state and bookmarks
+  (A) Installed from content hub solutions
+  (B) Interactive editor with Timestamp-based XDR tables
+  (B) Native data limited to 30 days unless extended through Sentinel
+  (B) Offers Take action on result rows and Go hunt from incidents
+
+[10] A = Logic App trigger: Microsoft Sentinel incident   |   B = Logic App trigger: Microsoft Sentinel alert   (obj 1.1.11)
+CONTRAST: The incident trigger fires on incident creation or update, passes the whole incident with its alerts and entities, and is the only one automation rules can invoke. The alert trigger fires on a single alert, is run manually or from the analytics rule's alert automation, and cannot be called by automation rules.
+  (A) Can be attached to an automation rule
+  (A) Passes incident properties plus arrays of alerts and entities
+  (A) Recommended by Microsoft for most scenarios
+  (B) Fires on one alert rather than a case
+  (B) Cannot be invoked by automation rules
+  (B) Not usable with alerts from Microsoft security analytics rules
+
+[11] A = Logic App trigger: Microsoft Sentinel entity   |   B = Logic App trigger: Microsoft Sentinel incident   (obj 1.1.11)
+CONTRAST: The entity trigger runs a playbook on demand against a single entity such as an account, host or IP from an entity page or the incident's entities list, and cannot be automated. The incident trigger runs on the whole incident and is what automation rules call.
+  (A) Run manually against one account, host, IP or URL
+  (A) Available from entity pages during investigation
+  (A) Cannot be called by automation rules
+  (B) Fires when an incident is created or updated
+  (B) Receives alerts and entities as arrays
+  (B) Used by automation rules to run playbooks
+
+[12] A = Data collection rule (DCR)   |   B = Data connector   (obj 1.3.2)
+CONTRAST: A data connector is the Sentinel content object that represents a data source, documents prerequisites and shows connection status. A data collection rule is the Azure Monitor object that tells the Azure Monitor Agent exactly which events to collect, with XPath filters, and which workspace table receives them.
+  (A) Azure Monitor object associated with the Azure Monitor Agent
+  (A) Uses XPath queries to filter Windows event IDs
+  (A) Specifies the destination workspace
+  (B) Content object listed in the Sentinel Data connectors page
+  (B) Shows connection status and last data received
+  (B) Installed from a content hub solution
+
+[13] A = Windows Security Events via AMA   |   B = Windows Event Forwarding (WEF)   (obj 1.3.3)
+CONTRAST: Windows Security Events via AMA installs the Azure Monitor Agent on each Windows machine and uses a DCR to collect Security log events straight into SecurityEvent. WEF has Windows machines forward events natively to a collector server, where a single agent picks them up; the connector that reads a WEF collector writes to WindowsEvent.
+  (A) Agent on every source machine
+  (A) Collection scope defined by a data collection rule
+  (A) Writes into the SecurityEvent table
+  (B) Machines forward to a Windows Event Collector with no agent of their own
+  (B) Uses subscriptions configured by Group Policy
+  (B) Collected events land in the WindowsEvent table
+
+[14] A = Syslog via AMA   |   B = Common Event Format (CEF) via AMA   (obj 1.3.4)
+CONTRAST: Both connectors use the Azure Monitor Agent on a Linux log forwarder with a DCR that selects facilities and severities. Syslog via AMA stores raw syslog messages in the Syslog table, while CEF via AMA parses CEF-formatted messages into the typed columns of CommonSecurityLog; using the same facility in both duplicates data.
+  (A) Destination table is Syslog
+  (A) Message text stays in SyslogMessage for parse or extract
+  (A) Appropriate for Linux auth and daemon logs
+  (B) Destination table is CommonSecurityLog
+  (B) Fields such as DeviceVendor and DeviceAction are parsed automatically
+  (B) Used for firewalls and proxies that emit CEF
+
+[15] A = Analytics tier   |   B = Data lake tier   (obj 1.2.2)
+CONTRAST: The analytics tier is the hot store used by analytics rules, hunting, workbooks and incidents, with interactive retention up to two years. The data lake tier is low-cost long-term storage, up to twelve years, reached through data lake exploration KQL, KQL jobs and notebooks rather than by analytics rules.
+  (A) Queried by analytics rules and interactive hunting
+  (A) Interactive retention configurable up to 2 years
+  (A) Higher per-GB cost
+  (B) Retention configurable up to 12 years
+  (B) Queried through KQL jobs, lake KQL queries and notebooks
+  (B) Not used by analytics rules for alerting
+
+[16] A = Interactive (analytics) retention   |   B = Total (long-term) retention   (obj 1.2.2)
+CONTRAST: Interactive retention is how long a table stays in the analytics tier for rules and hunting; Sentinel's default is 90 days and the maximum is two years. Total retention is the full life of the data including the mirrored copy in the data lake, up to twelve years, and is what you set for compliance.
+  (A) Sentinel security tables get 90 days at no charge; workspace default is otherwise 30 days
+  (A) Maximum of 2 years
+  (A) Data available to analytics rules during this period
+  (B) Can be set up to 12 years
+  (B) Covers the data lake copy after the analytics period ends
+  (B) Chosen for compliance and forensic lookback
+
+[17] A = Custom detection rule (Defender XDR)   |   B = Analytics rule (Microsoft Sentinel)   (obj 1.4.1)
+CONTRAST: A custom detection rule is written in advanced hunting, must return Timestamp and ReportId, runs at fixed frequencies (24h, 12h, 3h, 1h or continuous) and can take device, user, file and email actions automatically. An analytics rule is a Sentinel object with flexible scheduling, entity mapping, incident grouping and automation rules.
+  (A) Query must return Timestamp and ReportId
+  (A) Frequency choices are 24h, 12h, 3h, 1h or Continuous (NRT)
+  (A) Can isolate a device or quarantine a file as a built-in response
+  (B) Scheduling from 5 minutes to 14 days
+  (B) Uses entity mapping and alert-to-incident grouping settings
+  (B) Triggers Sentinel automation rules
+
+[18] A = Threat intelligence analytics rule   |   B = Scheduled analytics rule   (obj 1.4.3)
+CONTRAST: Threat intelligence rules are templates that match imported indicators against log sources such as CEF, syslog and DNS without you writing the matching logic. A scheduled rule runs any KQL you supply on your own interval and lookback.
+  (A) Matches ThreatIntelIndicators against incoming logs automatically
+  (A) Logic is provided by the template rather than authored
+  (A) Depends on indicators imported through a TI connector
+  (B) Runs arbitrary KQL you write
+  (B) Lets you set the run interval and lookback
+  (B) Supports event grouping and alert threshold settings
+
+[19] A = Anomaly rule   |   B = Fusion (advanced multistage attack detection)   (obj 1.4.5)
+CONTRAST: Anomaly rules are customizable machine-learning detections that score behaviours against a baseline and write results to the Anomalies table instead of raising alerts. Fusion is a single, non-customizable ML rule that correlates low-fidelity signals across products into high-fidelity multistage incidents.
+  (A) Writes results to the Anomalies table rather than alerts
+  (A) Threshold and parameters can be tuned per anomaly
+  (A) Can be run in flighting mode before production
+  (B) One rule instance per workspace, enabled by default
+  (B) Correlates alerts from multiple products into one incident
+  (B) Internal logic is hidden and cannot be edited
+
+[20] A = Fusion   |   B = Scheduled correlation rule   (obj 1.4.3)
+CONTRAST: Fusion correlates low-fidelity alerts and anomalies from many products into a multistage incident using Microsoft's ML, with nothing to author. A scheduled correlation rule is KQL you write that joins or sequences events yourself and then alerts on the combined result.
+  (A) Machine learning correlation maintained by Microsoft
+  (A) Combines alerts across products into a single high-severity incident
+  (A) Enabled by default and not customizable
+  (B) Correlation logic is written in KQL by the analyst
+  (B) Can join SecurityAlert with raw tables on your own keys
+  (B) Interval and lookback are set in the rule wizard
+
+[21] A = Live response   |   B = Investigation package   (obj 2.2.2)
+CONTRAST: Live response opens an interactive remote shell on a device for commands such as processes, getfile, run and remediate, with a 30-minute idle timeout. Collecting an investigation package is a one-shot action that gathers autoruns, prefetch, event logs, network state and more into a downloadable archive.
+  (A) Interactive shell session with commands like getfile and run
+  (A) Must be enabled under Advanced features first
+  (A) Session times out after 30 minutes of inactivity
+  (B) One-click action that produces a downloadable archive
+  (B) Includes autoruns, prefetch files, scheduled tasks and the Security event log
+  (B) Can be initiated from Take action in advanced hunting results
+
+[22] A = Isolate device   |   B = Restrict app execution   (obj 2.2.2)
+CONTRAST: Isolate device cuts a device off from the network while keeping its connection to the Defender service, with full or selective isolation that can still allow Outlook and Teams. Restrict app execution applies a code integrity policy so only Microsoft-signed executables can run, leaving the network untouched.
+  (A) Cuts network connectivity except to the Defender service
+  (A) Selective mode can keep Outlook and Teams working
+  (A) Automatically lifted after 7 days
+  (B) Applies a code integrity policy
+  (B) Allows only executables signed by Microsoft
+  (B) Reversed with Remove app restrictions
+
+[23] A = AIR automation level: Full   |   B = AIR automation level: Semi   (obj 1.1.7)
+CONTRAST: Full - remediate threats automatically lets automated investigation carry out remediation on malicious entities without waiting, with everything visible and reversible in the Action center. The Semi levels pause remediation for approval, either for all folders, core folders only, or non-temp folders only, and pending actions expire after seven days.
+  (A) Remediation happens without approval
+  (A) Default for tenants created after August 16, 2020
+  (A) Microsoft's recommended setting
+  (B) Pending actions wait in the Action center for approval
+  (B) Has variants for all, core, or non-temp folders
+  (B) Unapproved actions expire after 7 days
+
+[24] A = Automatic attack disruption   |   B = Automated investigation and response (AIR)   (obj 1.1.8)
+CONTRAST: Attack disruption acts at the incident level on high-confidence XDR correlations and contains assets (contain device, contain user, disable user, contain IP) to stop an in-progress attack such as ransomware or BEC. AIR investigates individual alerts, determines verdicts for entities and remediates them according to the device group's automation level.
+  (A) Triggered by incident-level correlation with very high confidence
+  (A) Actions are containment such as contain user and contain device
+  (A) Marks incidents with an Attack Disruption tag and banner
+  (B) Starts from an alert and builds an investigation graph
+  (B) Verdicts are malicious, suspicious or no threats found
+  (B) Behaviour is set per device group through automation levels
+
+[25] A = Alert suppression rule (legacy Defender for Endpoint)   |   B = Alert tuning (Defender XDR)   (obj 1.1.2)
+CONTRAST: Legacy suppression rules were created from a Defender for Endpoint alert to hide future alerts matching a file or process on a device or device group. Alert tuning in Settings > Microsoft Defender XDR spans multiple service sources and evidence types, and can hide an alert, resolve it, or convert it to a behaviour.
+  (A) Scoped to Defender for Endpoint alerts only
+  (A) Created from an individual endpoint alert
+  (B) Spans multiple service sources with evidence-based conditions
+  (B) Offers Hide alert, Resolve alert, or Set as behavior
+  (B) Managed under Settings > Microsoft Defender XDR > Alert tuning
+  (A) Conditions limited to a single endpoint alert's evidence (file, folder, hash, IP, URL, command line)
+
+[26] A = ASR rule in Audit mode   |   B = ASR rule in Block mode   (obj 1.1.6)
+CONTRAST: Audit mode (value 2) logs what the rule would have stopped, producing AsrXxxAudited events in DeviceEvents and Event ID 1122, without affecting users. Block mode (value 1) enforces the rule and produces AsrXxxBlocked events; Warn mode (6) is a middle ground that lets users bypass.
+  (A) Configuration value 2
+  (A) Records AsrXxxAudited action types without stopping anything
+  (A) Recommended first step to assess business impact
+  (B) Configuration value 1
+  (B) Records AsrXxxBlocked action types
+  (B) Prevents the behaviour on the device
+
+[27] A = Device group   |   B = Device tag   (obj 1.1.9)
+CONTRAST: A device group is an RBAC and automation construct: membership rules place devices into a group that has an automation level and is scoped to Entra groups for access. A device tag is a label applied manually, by rule or by registry key, that appears in DeviceInfo and is commonly used as the membership criterion for a group.
+  (A) Carries an automation level for AIR
+  (A) Controls which Entra user groups can see the devices
+  (A) Shown as MachineGroup in DeviceInfo
+  (B) Free-form label applied manually, by API or by rule
+  (B) Appears in DeviceManualTags and DeviceDynamicTags columns
+  (B) Often used as a condition for group membership
+
+[28] A = Microsoft Sentinel Reader   |   B = Microsoft Sentinel Responder   (obj 1.2.1)
+CONTRAST: Reader can view data, incidents, workbooks and other resources but change nothing. Responder adds the ability to manage incidents: assign, change status and severity, add comments and classify. Neither can create analytics rules.
+  (A) View-only access to incidents and workbooks
+  (A) Cannot assign or close an incident
+  (B) Can assign, classify and close incidents
+  (B) Includes everything Reader can do
+  (A) Lowest-privilege built-in Sentinel role
+  (B) Appropriate for tier-1 analysts who triage
+
+[29] A = Microsoft Sentinel Responder   |   B = Microsoft Sentinel Contributor   (obj 1.2.1)
+CONTRAST: Responder manages incidents but cannot change detection content. Contributor adds creation and editing of analytics rules, workbooks, hunting content and solutions from the content hub, which also makes it the role required for hunts and summary rules.
+  (A) Manages incidents only
+  (A) Cannot create or edit analytics rules
+  (B) Can install solutions from the content hub
+  (B) Can create analytics rules, workbooks and summary rules
+  (B) Required to create and manage hunts
+  (A) Appropriate for analysts who should not alter detections
+
+[30] A = Microsoft Sentinel Contributor   |   B = Microsoft Sentinel Automation Contributor   (obj 1.2.1)
+CONTRAST: Contributor is a user role for building and managing Sentinel content. Automation Contributor is a service role assigned to the Microsoft Sentinel application on the playbook resource group so Sentinel can attach playbooks to automation rules; it is not meant for people.
+  (A) Assigned to analysts and engineers
+  (A) Creates analytics rules and workbooks
+  (B) Assigned to the Microsoft Sentinel service identity
+  (B) Lets automation rules run playbooks in a resource group
+  (B) Not intended for user accounts
+  (A) Includes incident management rights
+
+[31] A = Microsoft Sentinel Playbook Operator   |   B = Microsoft Sentinel Automation Contributor   (obj 1.2.1)
+CONTRAST: Playbook Operator lets a person list, view and manually run playbooks, nothing more. Automation Contributor is granted to the Sentinel service so automation rules can invoke playbooks on your behalf; editing playbooks themselves needs Logic App Contributor.
+  (A) Granted to users who run playbooks by hand from an incident
+  (A) Cannot edit a playbook
+  (A) Has no incident or data access of its own
+  (B) Granted to the Microsoft Sentinel service principal
+  (B) Enables automation rules to run playbooks
+  (B) Not assigned to people
+
+[32] A = Microsoft Purview Audit   |   B = Content search (Purview eDiscovery)   (obj 2.3.1)
+CONTRAST: Purview Audit searches the unified audit log of who did what across Microsoft 365: operations, record types, users, dates, with 180-day or one-year retention by licence. Content search finds the content itself in mailboxes, sites, OneDrive and Teams using keyword queries and exports it.
+  (A) Searches activity records such as FileAccessed or New-InboxRule
+  (A) Filtered by activities, record types and users
+  (A) Retention is 180 days or 1 year depending on licence
+  (B) Searches message and document content with KQL keywords
+  (B) Returns statistics, previews and exports of items
+  (B) Requires eDiscovery Manager membership
+
+[33] A = Content search   |   B = eDiscovery (Premium) case   (obj 2.3.2)
+CONTRAST: Content search is the lightweight search-and-export capability inside eDiscovery, now housed in a system-generated default case, for quickly finding and exporting items. An eDiscovery (Premium) case adds custodians, holds with advanced indexing, review sets in Azure storage, analytics, OCR and conversation threading for a formal investigation.
+  (A) Quick keyword search with export, no review set
+  (A) Lives in a system-generated default case
+  (A) Available with eDiscovery (Standard) licensing
+  (B) Adds review sets stored in Azure Storage
+  (B) Supports custodians, advanced indexing and OCR
+  (B) Requires E5 or an equivalent add-on
+
+[34] A = Microsoft Graph activity logs   |   B = Microsoft Purview Audit   (obj 2.3.3)
+CONTRAST: Graph activity logs record every HTTP request to the Microsoft Graph API, with method, URI, status code, app and user, and are sent via Entra diagnostic settings to the MicrosoftGraphActivityLogs table. Purview Audit records service-level user and admin operations across Microsoft 365 workloads in the unified audit log.
+  (A) One record per Graph API request with RequestUri and ResponseStatusCode
+  (A) Enabled through Entra ID diagnostic settings
+  (A) Requires Microsoft Entra ID P1 or P2
+  (B) Records workload operations such as mailbox or SharePoint activity
+  (B) Searched from the Purview portal Audit page or Search-UnifiedAuditLog
+  (B) Lands in OfficeActivity when connected to Sentinel
+
+[35] A = Threat analytics   |   B = Threat intelligence (Intel explorer / MDTI)   (obj 3.1.4)
+CONTRAST: Threat analytics reports are Microsoft research write-ups about specific threats combined with your tenant's related incidents, impacted assets and endpoint exposure. Threat intelligence content in Intel explorer is reference intelligence about actors, tools, campaigns and internet infrastructure that is not computed against your environment.
+  (A) Shows related incidents and impacted assets in your tenant
+  (A) Includes Endpoints exposure and Recommended actions tabs
+  (A) Filtered by tags such as ransomware and activity group
+  (B) Searchable profiles of threat actors, tools and vulnerabilities
+  (B) Provides reputation and infrastructure data for IPs and domains
+  (B) Surfaces as a Threat Intelligence Insights tab on entity pages
+
+[36] A = SecurityAlert table   |   B = SecurityIncident table   (obj 3.1.1)
+CONTRAST: SecurityAlert holds one row per alert (and per update) from every connected product, with entities packed as JSON and the SystemAlertId key. SecurityIncident holds one row per incident state change, with IncidentNumber, status, owner, classification and an AlertIds array that links back to the alerts.
+  (A) One row per alert from any product
+  (A) Entities stored as a JSON string column
+  (A) Keyed by SystemAlertId
+  (B) One row per incident update, collapsed with arg_max by IncidentNumber
+  (B) Carries Owner, Status and ClassificationReason
+  (B) AlertIds column lists the alerts in the case
+
+[37] A = DeviceProcessEvents   |   B = DeviceEvents   (obj 3.1.1)
+CONTRAST: DeviceProcessEvents is dedicated to process creation with command line, hashes and parent process columns. DeviceEvents is the catch-all for everything else the sensor and security controls report, distinguished by ActionType, such as antivirus detections, ASR blocks, PowerShell commands and USB mounts.
+  (A) Every row is a process being created
+  (A) ProcessCommandLine and ProcessTokenElevation columns
+  (A) First stop for living-off-the-land binary hunts
+  (B) Rows are distinguished by many ActionType values
+  (B) Contains AntivirusDetection and AsrLsassCredentialTheftBlocked events
+  (B) Event-specific data packed into AdditionalFields
+
+[38] A = DeviceNetworkEvents   |   B = DeviceLogonEvents   (obj 3.1.1)
+CONTRAST: DeviceNetworkEvents records network connections made or accepted by a device, with remote IP, port and URL and the initiating process. DeviceLogonEvents records authentication sessions on the device, with logon type, success or failure, remote source and whether the account is a local admin.
+  (A) RemoteIP, RemotePort and RemoteUrl columns
+  (A) ActionType values such as ConnectionSuccess and InboundConnectionAccepted
+  (A) Used to find C2 beaconing and rare destination ports
+  (B) LogonType values such as RemoteInteractive and Network
+  (B) IsLocalAdmin and FailureReason columns
+  (B) Used to find RDP brute force against a host
+
+[39] A = EmailEvents   |   B = EmailUrlInfo   (obj 3.1.1)
+CONTRAST: EmailEvents has one row per message and recipient with the sender, subject, verdict and delivery action. EmailUrlInfo has one row per URL found in a message with its domain, and must be joined to EmailEvents on NetworkMessageId to learn who received it.
+  (A) Contains SenderFromAddress, Subject and DeliveryAction
+  (A) Shows ThreatTypes and DetectionMethods verdicts
+  (A) Starting point of most mail hunts
+  (B) One row per URL in a message
+  (B) Columns Url and UrlDomain
+  (B) Needs a join on NetworkMessageId to see the recipient
+
+[40] A = summarize   |   B = project   (obj 3.1.2)
+CONTRAST: summarize collapses many rows into one per group and computes aggregates such as count, dcount and arg_max. project keeps every row and simply selects, renames or computes the columns to return.
+  (A) Reduces the number of rows to one per group
+  (A) Uses aggregation functions such as count() and dcount()
+  (A) Needed for threshold detections such as more than 10 failures
+  (B) Keeps the row count unchanged
+  (B) Chooses which columns appear in the output
+  (B) Can rename a column inline
+
+[41] A = join   |   B = union   (obj 3.1.2)
+CONTRAST: join matches rows from two tables horizontally on a key, with flavors such as innerunique (the default), inner, leftouter and leftanti. union stacks rows from several tables vertically, regardless of schema, and can tag each row with its source table.
+  (A) Requires a key column (or $left/$right expression)
+  (A) Default flavor is innerunique
+  (A) leftanti variant finds rows with no match
+  (B) Appends rows from multiple tables
+  (B) Accepts wildcards such as Device*
+  (B) withsource adds a column naming the origin table
+
+[42] A = has   |   B = contains   (obj 3.1.2)
+CONTRAST: has matches a whole indexed term of three or more characters and is the faster, recommended operator. contains matches any substring, so it finds fragments inside longer words but scans more data. Both are case-insensitive; the _cs variants are case-sensitive.
+  (A) Matches complete terms only
+  (A) Uses the term index for speed
+  (A) Would not find Explorer inside KustoExplorerQueryRun
+  (B) Matches any substring
+  (B) Slower on large tables
+  (B) Would find Explorer inside KustoExplorerQueryRun
+
+[43] A = let   |   B = extend   (obj 3.1.2)
+CONTRAST: let is a statement that binds a name to a scalar, a dynamic list or a whole tabular expression before the query runs, ending with a semicolon. extend is an operator inside the pipeline that adds computed columns to each row.
+  (A) Statement that precedes the pipeline and ends with a semicolon
+  (A) Can hold a dynamic list for use with in or has_any
+  (A) Can wrap a sub-query in materialize()
+  (B) Pipeline operator that appends columns
+  (B) Evaluated per row
+  (B) Often used with tostring() on JSON fields
+
+[44] A = Summary rules   |   B = KQL jobs   (obj 3.2.3)
+CONTRAST: Summary rules aggregate high-volume logs on fixed bins of 20 minutes to 24 hours into an Analytics custom table ending in _CL, including from Basic and Auxiliary tiers. KQL jobs run one-time or scheduled queries over the data lake with lookback up to twelve years and write to a _KQL or _KQL_CL table.
+  (A) Bin sizes from 20 to 1440 minutes
+  (A) Query must not contain its own time filter
+  (A) Limited to 100 active rules per workspace
+  (B) Can look back up to 12 years in the lake
+  (B) Output table suffix is _KQL or _KQL_CL
+  (B) Limited to 5 concurrent executions per tenant
+
+[45] A = KQL job   |   B = Hunting query   (obj 3.2.2)
+CONTRAST: A KQL job runs against the data lake tier on a schedule or once, persisting its output to a table for later use. A hunting query runs interactively on the analytics tier when an analyst chooses, and its output disappears unless bookmarked.
+  (A) Runs against data lake tier tables
+  (A) Writes results to a destination table
+  (A) Created under Data lake exploration > Jobs
+  (B) Runs interactively on demand
+  (B) Listed on the Hunting page with tactics and techniques
+  (B) Results are preserved only through bookmarks
+
+[46] A = Hunting bookmark   |   B = Incident   (obj 3.2.1)
+CONTRAST: A bookmark preserves selected query rows with notes, tags and mapped entities in the HuntingBookmark table for collaboration. An incident is the case object with status, owner and severity; bookmarks can create a new incident or be added to an existing one through Incident actions.
+  (A) Saved rows from a hunting or Logs query
+  (A) Stored in the HuntingBookmark table
+  (A) Needs a mapped entity to appear in the investigation graph
+  (B) Has status, severity and owner
+  (B) Created from bookmarks via Incident actions > Create new incident
+  (B) Triggers automation rules
+
+[47] A = SOC optimization   |   B = Workbook   (obj 1.2.4)
+CONTRAST: SOC optimization is a recommendations engine in Sentinel that refreshes every 24 hours with data value suggestions (unused tables, better plans) and coverage suggestions (threat-based, risk-based and MITRE ATT&CK gaps), each tracked as Active, Completed or Dismissed. A workbook is a visual report you build or import to display data.
+  (A) Produces coverage and data value recommendations
+  (A) Recommendations recalculated every 24 hours
+  (A) Items are marked Active, Completed or Dismissed
+  (B) Interactive report built from KQL visualisations
+  (B) Templates installed from the content hub
+  (B) Shows whatever data you query, with no recommendations engine
+
+[48] A = Entity page   |   B = Incident page   (obj 2.1.9)
+CONTRAST: An entity page is the profile of one user, device, IP or other entity: its timeline of alerts and activities, UEBA insights and related incidents, reached from any place the entity appears. The incident page is the case view for one incident: attack story graph, alerts, assets, evidence and response actions.
+  (A) Profile of a single user, device or IP
+  (A) Shows a timeline of that entity across incidents
+  (A) Surfaces UEBA behavioural insights
+  (B) Case view with the attack story graph
+  (B) Lists all alerts and impacted assets for one case
+  (B) Where you assign, classify and resolve
+
+[49] A = Risky user (user risk)   |   B = Risky sign-in (sign-in risk)   (obj 2.1.5)
+CONTRAST: User risk is the probability that an account is compromised, driven by detections such as leaked credentials and anomalous user activity, and is remediated by password reset or confirming compromise. Sign-in risk is the probability that a particular authentication was not performed by the owner, driven by detections such as atypical travel and anonymous IP, and is remediated by MFA or confirming the sign-in safe.
+  (A) Account-level risk that persists across sessions
+  (A) Leaked credentials is an example detection
+  (A) Remediated by password reset or Confirm user compromised
+  (B) Risk of one specific authentication attempt
+  (B) Atypical travel and anonymous IP address are examples
+  (B) Remediated by MFA or Confirm sign-in safe
+
+[50] A = Defender for Cloud Apps file policy   |   B = Defender for Cloud Apps session policy   (obj 2.1.4)
+CONTRAST: A file policy scans files at rest in API-connected apps and applies governance such as removing external sharing or quarantine; Microsoft is retiring it in January 2027 in favour of Purview DLP. A session policy controls a user's browser session in real time through Conditional Access App Control, blocking downloads, uploads or printing.
+  (A) Scans stored files through app API connectors
+  (A) Governance actions include remove external sharing and quarantine
+  (A) Scheduled for retirement in favour of Purview DLP
+  (B) Enforced in real time via the reverse proxy
+  (B) Requires Conditional Access App Control
+  (B) Can block download or monitor activity during a session
+
+[51] A = Defender for Cloud security alert   |   B = Defender for Cloud recommendation   (obj 2.1.3)
+CONTRAST: A security alert is a detection of a threat against a protected workload, with severity, MITRE tactic and affected resource, and it flows into Defender XDR and Sentinel incidents. A recommendation is a posture finding that a resource is misconfigured or missing a control, contributing to secure score and resolved by fixing the configuration.
+  (A) Indicates active or attempted attack on a resource
+  (A) Has a severity and MITRE ATT&CK tactic
+  (A) Appears as an incident in the Defender portal and Sentinel
+  (B) Describes a misconfiguration or missing control
+  (B) Affects secure score
+  (B) Resolved by remediating the resource, not by investigating an attacker
+
+[52] A = Security Copilot embedded in Defender   |   B = Security Copilot standalone portal   (obj 2.1.8)
+CONTRAST: Embedded Copilot appears as a Copilot button and panes inside the Defender portal, offering incident summaries, guided response, script and file analysis and natural-language KQL in context of the page you are on. The standalone experience is its own portal where you chat across products with promptbooks and plugins.
+  (A) Opened with the Copilot button in the Defender portal
+  (A) Generates KQL inside advanced hunting from natural language
+  (A) Aware of the incident or device page you are viewing
+  (B) Separate portal rather than a pane in Defender
+  (B) Uses promptbooks for repeatable multi-step prompts
+  (B) Draws on plugins across multiple Microsoft and partner products
+
+[53] A = Microsoft Sentinel graph   |   B = Hunting graph   (obj 3.1.6)
+CONTRAST: Sentinel graph is the underlying graph analytics engine over the data lake that powers several experiences: incident graph with blast radius, hunting graph, Purview data risk graphs and attack path analysis. The hunting graph is one of those experiences, a tab in advanced hunting where you run predefined scenarios and explore nodes and edges.
+  (A) Engine that models lake data as nodes and edges
+  (A) Also powers Purview data risk graphs and attack paths
+  (A) Auto-provisioned when the data lake is onboarded
+  (B) Opened from Create new > Hunting graph in advanced hunting
+  (B) Runs scenarios such as Attack paths to critical asset
+  (B) Filters on edge type and shortest paths
+
+[54] A = MITRE ATT&CK tactic   |   B = MITRE ATT&CK technique   (obj 1.4.4)
+CONTRAST: A tactic is the adversary's goal at a stage of the attack, such as Initial Access or Lateral Movement, shown as the columns of the ATT&CK matrix. A technique is a specific method used to achieve that goal, such as T1566 Phishing, shown as cells under a column, and may have sub-techniques.
+  (A) Describes the why: the goal at a phase of the attack
+  (A) Appears as a column heading in the matrix
+  (A) Examples include Persistence and Exfiltration
+  (B) Describes the how: a specific method
+  (B) Identified by an ID such as T1566
+  (B) Can be broken into sub-techniques
+
+[55] A = ThreatIntelIndicators table   |   B = ThreatIntelObjects table   (obj 1.3.6)
+CONTRAST: Both replaced the legacy ThreatIntelligenceIndicator table. ThreatIntelIndicators holds observables such as IPs, domains, URLs, hashes and certificates with validity and confidence, used for matching. ThreatIntelObjects holds the other STIX objects, such as threat actors, attack patterns, identities and relationships, that give indicators context.
+  (A) Stores IPs, domains, URLs and file hashes
+  (A) Matched against logs with ObservableValue
+  (A) Has IsActive and ValidUntil fields
+  (B) Stores threat actors and attack patterns
+  (B) Holds STIX relationship objects
+  (B) Provides context rather than values to match
+
+[56] A = IdentityLogonEvents   |   B = DeviceLogonEvents   (obj 3.1.1)
+CONTRAST: IdentityLogonEvents records authentication seen by Defender for Identity on domain controllers and by Defender for Cloud Apps for online services, with protocol and failure reason. DeviceLogonEvents records logon sessions on a specific endpoint as seen by the Defender for Endpoint sensor, with logon type and local admin status.
+  (A) Sourced from Defender for Identity and Defender for Cloud Apps
+  (A) Protocol column with Kerberos, NTLM or LDAP
+  (A) Right table for password spray against Active Directory
+  (B) Sourced from the Defender for Endpoint sensor on the device
+  (B) IsLocalAdmin column
+  (B) LogonType values such as RemoteInteractive and CachedInteractive
+
+[57] A = top   |   B = take (limit)   (obj 3.1.2)
+CONTRAST: top N by column sorts and then returns the N highest or lowest rows, so it is the operator for ranking questions. take and limit are the same operator and return N arbitrary rows without sorting, useful only for sampling.
+  (A) Sorts by an expression before returning rows
+  (A) Answers questions like the ten noisiest senders
+  (B) Returns rows in no guaranteed order
+  (B) Interchangeable with limit
+  (B) Suitable for previewing a table
+  (A) Requires a by clause
+
+[58] A = Blast radius   |   B = Attack path   (obj 3.1.5)
+CONTRAST: Blast radius is generated from a node on the incident graph and shows potential propagation paths from that compromised asset to critical targets, up to eight on the canvas. An attack path is a pre-breach finding in Exposure management showing a route from an entry point to a critical asset, with choke points to fix.
+  (A) Started from a node on an incident's attack story
+  (A) Shows up to eight top-rated paths with the rest in a panel
+  (A) Mixes post-breach evidence with potential future impact
+  (B) Listed under Exposure management > Attack surface > Attack paths
+  (B) Begins at an entry point rather than a compromised node
+  (B) Highlights choke points where many paths converge
+
+[59] A = Go hunt (entity)   |   B = Hunt for related events (timeline)   (obj 3.1.3)
+CONTRAST: Go hunt on an entity in the incident summary or Evidence tab opens advanced hunting with a query scoped to that entity's earliest activity in the incident, within the 30-day window. Hunt for related events on a device timeline row builds a union across schema tables for 30 minutes either side of the selected event.
+  (A) Launched from a user, device, file or mailbox entity
+  (A) Scoped around the entity's earliest activity in the incident
+  (B) Launched from an event row on the device timeline
+  (B) Searches ±30 minutes across relevant tables
+  (B) Labels results as earlier, selected or later events
+  (A) Available on the incident Evidence tab

@@ -1,0 +1,811 @@
+# AZ-900 flashcards
+# Export for second-model review: FRONT / BACK / explanation. Flag any back or explanation that is factually wrong for the current product, citing Microsoft Learn.
+
+[1] cat=cloud obj=1.1.1 (Define cloud computing)
+FRONT: Cloud computing — the definition
+BACK: #Computing services delivered over the internet | Compute, storage, networking, databases, AI — rented, not owned
+WHY: Cloud computing means consuming compute power, storage and other IT capabilities over the internet from a provider's datacenters instead of buying and running the hardware yourself. The provider owns and maintains the physical infrastructure; you consume what you need and pay for that usage. AZ-900 opens with this definition, then builds every later topic (models, pricing, service types) on top of it.
+HOOK: Somebody else's datacenter, your workloads, metered.
+
+[2] cat=cloud obj=1.1.1 (Define cloud computing)
+FRONT: Compute and storage — the two basic cloud building blocks
+BACK: #Compute = processing power, storage = data at rest | Everything else (networking, databases, AI) layers on these
+WHY: The study material frames cloud services as starting from two primitives: compute (virtual machines, containers, functions that run code) and storage (disks, blobs, files that hold data). Networking connects them, and higher-level services such as managed databases and AI are built from the same primitives. When an exam stem describes 'processing' it means compute; 'retaining data' means storage.
+
+[3] cat=cloud obj=1.1.1 (Define cloud computing)
+FRONT: Why the cloud provider, not you, runs the hardware
+BACK: #Provider owns power, cooling, racks and physical network | You focus on the workload instead of the facility
+WHY: A core promise of cloud computing is that the provider handles the undifferentiated work of running a datacenter: electricity, cooling, hardware refresh, physical security and the underlying network. That frees your team to concentrate on the application and data rather than the building. Exam stems that mention 'reduce the need to maintain physical infrastructure' are pointing at this benefit.
+
+[4] cat=cloud obj=1.1.2 (Describe the shared responsibility model)
+FRONT: Shared responsibility model — the idea
+BACK: #Security duties split between provider and customer | The split depends on IaaS, PaaS or SaaS
+WHY: The shared responsibility model divides security and operational duties between the cloud provider and the customer. The provider always secures the physical layer; the customer always owns their data and identities; everything in between shifts depending on the service type. AZ-900 asks you to place a given duty (patching an OS, protecting a database's data) on the correct side for a given service model.
+HOOK: Provider = the building. You = your data. The middle moves.
+
+[5] cat=cloud obj=1.1.2 (Describe the shared responsibility model)
+FRONT: Shared responsibility — what the customer always keeps
+BACK: #Data, devices and accounts/identities | These never move to the provider, even in SaaS
+WHY: Regardless of service type, the customer retains responsibility for the information stored in the cloud, the devices allowed to connect, and the accounts and identities of people and services. Even with a fully managed SaaS application the customer decides who gets access and what data is uploaded. Exam distractors often try to hand data protection to the provider; it never goes there.
+
+[6] cat=cloud obj=1.1.2 (Describe the shared responsibility model)
+FRONT: Shared responsibility — what the provider always keeps
+BACK: #Physical datacenter, physical network, physical hosts | The customer never touches these
+WHY: The provider is always responsible for the physical datacenter, the physical network and the physical hosts the services run on. No service model hands these to the customer, because the customer cannot enter the building. When a stem asks who is responsible for the hardware a VM runs on, the answer is the cloud provider in every model.
+HOOK: If it has a power cord, it belongs to Microsoft.
+
+[7] cat=cloud obj=1.1.2 (Describe the shared responsibility model)
+FRONT: Shared responsibility — the items that vary by service type
+BACK: #OS, network controls, applications, identity infrastructure | IaaS: mostly customer. PaaS: shared. SaaS: mostly provider
+WHY: Operating systems, network controls, applications and identity and directory infrastructure are the responsibilities that change hands. In IaaS the customer manages the OS and above; in PaaS the provider manages the OS and runtime while network and identity are shared; in SaaS the provider manages nearly everything except data, devices and accounts. A stem like 'who patches the guest OS of an Azure VM' resolves to the customer because a VM is IaaS.
+
+[8] cat=cloud obj=1.1.3 (Define cloud models, including public, private, and hybrid)
+FRONT: Public cloud — the model
+BACK: #Provider-owned infrastructure shared by many customers | Accessed over the internet; no capital spend
+WHY: In the public cloud model a third party such as Microsoft owns and operates the infrastructure and makes it available to any paying customer over the internet. Resources are multi-tenant at the physical layer, there is no up-front hardware purchase, and capacity is effectively unlimited from the customer's view. Azure itself is a public cloud. Exam signal: 'no capital expenditure', 'provider-owned', 'available to everyone'.
+
+[9] cat=cloud obj=1.1.3 (Define cloud models, including public, private, and hybrid)
+FRONT: Private cloud — the model
+BACK: #Cloud used by a single organization | On-premises or hosted by a third party, but dedicated
+WHY: A private cloud delivers cloud-style self-service and elasticity but the environment is used exclusively by one organization. It may live in that organization's own datacenter or be hosted and even managed by a third party, as long as the hardware is not shared with other tenants. The trade-off is higher cost and the organization still owns hardware lifecycle and capacity planning. Exam signal: 'complete control over the hardware', 'strict data residency'.
+
+[10] cat=cloud obj=1.1.3 (Define cloud models, including public, private, and hybrid)
+FRONT: Hybrid cloud — the model
+BACK: #Public and private clouds connected and used together | Workloads and data can move between them
+WHY: A hybrid cloud links a private environment (on-premises or dedicated) with a public cloud so that applications and data can span both. Typical reasons are keeping a regulated system on-premises while bursting or extending to Azure, or migrating gradually. Microsoft also describes multi-cloud (using two public providers) as a related option. Exam signal: 'extend the on-premises datacenter', 'keep some workloads local'.
+
+[11] cat=cloud obj=1.1.4 (Identify appropriate use cases for each cloud model)
+FRONT: Use case that points to a private cloud
+BACK: #Strict regulatory or legacy constraints on where data lives | Organization must control the physical hardware
+WHY: Choose a private cloud when regulation, contractual rules or legacy dependencies require that data never leave hardware the organization controls, or when the business wants cloud-style provisioning but cannot share infrastructure. Cost is higher and the organization still buys and maintains equipment. On AZ-900, the phrase 'must control the underlying hardware' is the tell for private.
+
+[12] cat=cloud obj=1.1.4 (Identify appropriate use cases for each cloud model)
+FRONT: Use case that points to a public cloud
+BACK: #Avoid capital spend, scale quickly, pay only for use | No need to own or maintain hardware
+WHY: A public cloud fits when the organization wants to stop buying servers, needs to scale up or down quickly, and is comfortable with the provider owning the physical layer. Startups, variable-demand web applications and anything where speed of provisioning matters are typical examples. Exam signal: 'minimize up-front costs', 'rapidly provision', 'no datacenter'.
+
+[13] cat=cloud obj=1.1.4 (Identify appropriate use cases for each cloud model)
+FRONT: Use case that points to a hybrid cloud
+BACK: #Keep a regulated or legacy system on-premises, use Azure for the rest | Or migrate in phases
+WHY: Hybrid is the answer when part of the estate must remain on-premises (a system tied to specialized hardware, a dataset with residency rules) but the organization still wants public-cloud elasticity for other workloads, or when it is migrating gradually and the two environments must talk to each other. Azure Arc and VPN Gateway or ExpressRoute are the tools that make the link. Exam signal: 'continue to use existing on-premises investment' plus 'take advantage of Azure'.
+
+[14] cat=cloud obj=1.1.5 (Describe the consumption-based model)
+FRONT: Consumption-based model — the idea
+BACK: #Pay only for the resources you actually use | No up-front purchase, stop paying when you stop using
+WHY: Under a consumption-based model the customer is billed for the resources it consumes (compute hours, gigabytes stored, transactions) rather than for capacity bought in advance. There is no minimum purchase and no wasted idle hardware, and spending ends when the resource is deleted. AZ-900 contrasts this with the traditional datacenter approach of estimating demand years ahead and buying for the peak.
+HOOK: Like a utility meter: used it, pay for it; off, pay nothing.
+
+[15] cat=cloud obj=1.1.5 (Describe the consumption-based model)
+FRONT: CapEx versus OpEx
+BACK: #CapEx = up-front spend on assets; OpEx = ongoing spend on services | Cloud shifts spending to OpEx
+WHY: Capital expenditure is money spent up front on physical assets such as servers, network gear and datacenter space, which then depreciate. Operational expenditure is money spent over time on services as they are used. Cloud computing moves most IT spending from CapEx to OpEx because you rent capacity instead of buying it. Exam signal: 'reduce capital expenditure' or 'convert to operational expense' points to adopting a consumption-based cloud model.
+
+[16] cat=cloud obj=1.1.5 (Describe the consumption-based model)
+FRONT: Capacity planning in the cloud versus on-premises
+BACK: #On-premises: guess demand, buy for peak, waste idle capacity | Cloud: match resources to real demand
+WHY: A traditional datacenter forces you to estimate needs in advance; overestimating leaves hardware idle and underestimating causes slow performance and emergency purchases. In the cloud you add resources when demand rises and release them when it falls, paying only for the period they exist. This is why the consumption-based model and elasticity are presented together on the exam.
+
+[17] cat=cloud obj=1.1.6 (Compare cloud pricing models)
+FRONT: Pay-as-you-go pricing
+BACK: #Billed on actual usage at list rates, no commitment | Most flexible, highest unit price
+WHY: Pay-as-you-go is the baseline cloud pricing model: resources are metered and billed at standard rates with no long-term commitment, and you can stop at any time. It offers maximum flexibility at the highest per-unit cost. The pricing calculator defaults to this option, and reservations and savings plans are offered as discounts against it for predictable workloads.
+
+[18] cat=cloud obj=1.1.6 (Compare cloud pricing models)
+FRONT: Reservations and savings plans — the pricing idea
+BACK: #Commit to one or three years for a discount | Reservation = specific resource; savings plan = hourly spend
+WHY: Azure offers discounted rates when you commit in advance. A reservation commits to a specific resource configuration (for example a VM size in a region) for one or three years; a savings plan commits to an hourly spend on eligible compute and applies the discount flexibly. Both trade flexibility for lower cost on steady workloads. Exam signal: 'workload runs continuously for the next three years' plus 'reduce cost' points to a reservation or savings plan.
+
+[19] cat=cloud obj=1.1.6 (Compare cloud pricing models)
+FRONT: Spot pricing — the pricing idea
+BACK: #Deep discount on spare capacity that Azure can reclaim | For interruptible batch work
+WHY: Spot virtual machines use Azure's unused capacity at a large discount, with the condition that Azure can evict them when it needs the capacity back. They suit batch processing, rendering, test environments and other jobs that tolerate interruption. They are never the right answer for a workload that must stay available. Exam signal: 'interruptible', 'lowest possible cost', 'can be restarted later'.
+
+[20] cat=cloud obj=1.1.7 (Describe serverless)
+FRONT: Serverless computing — the idea
+BACK: #Run code without provisioning or managing servers | Provider scales automatically; billed per execution/resources used
+WHY: Serverless does not mean there are no servers; it means the provider fully abstracts them. You deploy code or a container, the platform runs it in response to events, scales it up and down (including to zero) and bills on what executes. Azure Functions and Azure Container Apps are the AZ-900 examples. Exam signal: 'event-driven', 'no infrastructure management', 'pay only while code runs'.
+HOOK: Serverless = somebody else's servers you never see.
+
+[21] cat=cloud obj=1.1.7 (Describe serverless)
+FRONT: Serverless — the billing and scaling characteristics
+BACK: #Scales automatically, including to zero when idle | Charged for executions and resources consumed, not idle time
+WHY: The two properties that distinguish serverless from PaaS on the exam are automatic scaling to zero and execution-based billing. A function that receives no events costs nothing for compute, whereas a web app on a dedicated App Service plan is billed for the plan whether or not requests arrive. When a stem emphasizes sporadic workloads and minimizing cost during idle periods, serverless is the fit.
+
+[22] cat=cloud obj=1.2.1 (Describe the benefits of high availability and scalability in the cloud)
+FRONT: High availability — the benefit
+BACK: #Service stays reachable despite component failures | Expressed as an uptime SLA percentage
+WHY: High availability means a service continues to operate when individual components fail, typically by running redundant instances across fault domains, availability zones or regions. Azure expresses the guarantee as a service-level agreement (SLA) percentage such as 99.9 or 99.99 percent uptime. Exam signal: 'ensure the application remains accessible if a datacenter fails' points to deploying across availability zones.
+HOOK: HA = more nines; each nine cuts allowed downtime tenfold.
+
+[23] cat=cloud obj=1.2.1 (Describe the benefits of high availability and scalability in the cloud)
+FRONT: Scalability — vertical versus horizontal
+BACK: #Scale up/down = bigger or smaller instance | Scale out/in = more or fewer instances
+WHY: Scalability is the ability to add or remove resources to match demand. Vertical scaling (scaling up or down) changes the size of an existing resource, such as moving a VM to a larger SKU. Horizontal scaling (scaling out or in) adds or removes instances, which is how scale sets and App Service handle traffic spikes. Exam signal: 'add more virtual machines' is scaling out; 'increase CPU and memory of the VM' is scaling up.
+
+[24] cat=cloud obj=1.2.1 (Describe the benefits of high availability and scalability in the cloud)
+FRONT: Elasticity — the benefit
+BACK: #Automatic scaling in response to demand | Scale out at peak, scale in when quiet
+WHY: Elasticity is scalability done automatically and in both directions: the platform adds capacity as load rises and removes it as load falls, so you neither over-provision nor pay for idle resources. Autoscale rules on scale sets and App Service plans are the implementation. On AZ-900, 'automatically' plus 'as demand changes' signals elasticity rather than plain scalability.
+
+[25] cat=cloud obj=1.2.2 (Describe the benefits of reliability and predictability in the cloud)
+FRONT: Reliability — the benefit
+BACK: #System recovers from failures and keeps functioning | Decentralized global infrastructure makes this possible
+WHY: Reliability is the ability of a system to recover from failures and keep working. The cloud supports this with a globally distributed infrastructure: if one region or zone fails, resources in another can take over. Microsoft lists reliability as one of the pillars of the Azure Well-Architected Framework. Exam signal: 'continue to function during a regional outage' maps to deploying in multiple regions.
+
+[26] cat=cloud obj=1.2.2 (Describe the benefits of reliability and predictability in the cloud)
+FRONT: Predictability — performance and cost
+BACK: #Performance: autoscale and load balancing keep response consistent | Cost: forecast spend with Cost Management
+WHY: AZ-900 splits predictability in two. Performance predictability means users get a consistent experience because autoscaling, load balancing and high availability absorb demand changes. Cost predictability means you can forecast and track spending using tools such as the pricing calculator and Cost Management. A stem that pairs 'predict' with 'budget' is talking about cost predictability.
+
+[27] cat=cloud obj=1.2.3 (Describe the benefits of security and governance in the cloud)
+FRONT: Security as a cloud benefit
+BACK: #Provider handles physical security; you choose the control level | IaaS gives most control, PaaS/SaaS more built-in
+WHY: The cloud improves security by having the provider protect the physical layer and by offering built-in capabilities such as DDoS protection, patching for managed services and threat detection. The customer picks how much control to keep: IaaS gives full control over the OS and software, while PaaS and SaaS hand more of the security work to the platform. Exam signal: 'protects against distributed denial-of-service attacks' is a built-in cloud security benefit.
+
+[28] cat=cloud obj=1.2.3 (Describe the benefits of security and governance in the cloud)
+FRONT: Governance as a cloud benefit
+BACK: #Templates and policies enforce standards across every deployment | Compliance auditing and updates built in
+WHY: Cloud governance means deployed resources follow corporate and regulatory standards, and the cloud makes this easier because templates define resources the same way every time and policy can audit or block non-compliant configurations. Azure Policy, management groups and ARM templates are the implementation. Exam signal: 'ensure all resources meet corporate standards' is a governance benefit.
+
+[29] cat=cloud obj=1.2.4 (Describe the benefits of manageability in the cloud)
+FRONT: Manageability of the cloud
+BACK: #Autoscale, automatic monitoring and health, template deployment | Automatic replacement of failed resources
+WHY: Management of the cloud refers to how you manage the resources themselves: automatic scaling on demand, deploying from preconfigured templates, monitoring health and replacing failed resources automatically, and receiving alerts based on metrics. These are platform features rather than tools. Exam signal: 'automatically replace a failed VM' or 'deploy identical environments repeatedly' point here.
+
+[30] cat=cloud obj=1.2.4 (Describe the benefits of manageability in the cloud)
+FRONT: Manageability in the cloud
+BACK: #Portal, CLI, PowerShell, APIs and templates | Choose the tool that fits the task
+WHY: Management in the cloud is about the ways you interact with Azure: the web-based portal, the Azure CLI, Azure PowerShell, REST APIs and SDKs, and declarative templates. All of them go through Azure Resource Manager, so the result is the same regardless of tool. AZ-900 treats the two senses of manageability (of the cloud versus in the cloud) as a pair; this card is the 'in'.
+
+[31] cat=cloud obj=1.3.1 (Describe infrastructure as a service (IaaS))
+FRONT: Infrastructure as a service (IaaS) — the service type
+BACK: #Rent VMs, storage and networking; you manage OS and up | Most flexibility, most responsibility
+WHY: IaaS provides the fundamental building blocks (virtual machines, disks, virtual networks) while leaving the operating system, middleware, runtime and applications to you. It is the closest to running your own datacenter and gives the most control, which also means the most patching and configuration work. Azure Virtual Machines are the canonical example. Exam signal: 'full control over the operating system', 'lift and shift without changing code'.
+HOOK: IaaS = you get the hardware, you do everything else.
+
+[32] cat=cloud obj=1.3.1 (Describe infrastructure as a service (IaaS))
+FRONT: IaaS — who patches the guest operating system
+BACK: #The customer | Provider patches hypervisor and hardware only
+WHY: Because IaaS stops at the virtualization layer, operating system updates, antivirus, middleware and application patches are the customer's job. Microsoft patches the physical hosts and the hypervisor underneath. This is the most common shared-responsibility question on AZ-900: a kernel vulnerability on an Azure VM is the customer's to fix.
+
+[33] cat=cloud obj=1.3.2 (Describe platform as a service (PaaS))
+FRONT: Platform as a service (PaaS) — the service type
+BACK: #Managed runtime; you bring code and data | Provider patches OS, runtime and infrastructure
+WHY: PaaS adds a managed operating system, runtime and middleware on top of the infrastructure so developers can deploy applications without maintaining servers. The provider handles patching, scaling of the platform and availability; the customer manages the application and its data. Azure App Service and Azure SQL Database are the usual examples. Exam signal: 'developers should focus on code, not infrastructure'.
+HOOK: PaaS = you get the stage, you bring the show.
+
+[34] cat=cloud obj=1.3.2 (Describe platform as a service (PaaS))
+FRONT: PaaS — the trade-off versus IaaS
+BACK: #Less control over the OS and runtime versions | Far less operational work
+WHY: Moving from IaaS to PaaS removes the ability to install arbitrary software on the host or tune the operating system, because the platform owns those layers. In exchange you stop patching, get built-in scaling and often pay less for the same workload. A stem that lists 'requires a custom kernel module' is steering you away from PaaS; one that stresses 'minimize administrative effort' is steering you toward it.
+
+[35] cat=cloud obj=1.3.3 (Describe software as a service (SaaS))
+FRONT: Software as a service (SaaS) — the service type
+BACK: #Complete application rented per user or subscription | You manage data and access only
+WHY: SaaS delivers a finished application that users access over the internet, typically on a subscription or per-seat basis. The provider runs everything from hardware to application code; the customer configures the product, manages users and owns the data. Microsoft 365 is the standard example. Exam signal: 'email service accessed from a browser', 'no software to install or maintain'.
+
+[36] cat=cloud obj=1.3.3 (Describe software as a service (SaaS))
+FRONT: SaaS — the customer's remaining duties
+BACK: #Data, user accounts and access decisions | Everything else belongs to the provider
+WHY: Even in SaaS the shared responsibility model leaves the customer accountable for the information it uploads, which users exist and what they can reach, and the devices allowed to connect. The provider cannot decide those for you. Exam distractors sometimes claim the SaaS provider is responsible for the customer's data classification or access reviews; that is wrong.
+
+[37] cat=cloud obj=1.3.4 (Identify appropriate use cases for each cloud service type (IaaS, PaaS, and SaaS))
+FRONT: Choosing IaaS, PaaS or SaaS — the decision rule
+BACK: #Need OS control → IaaS; need to ship code → PaaS; need a product → SaaS | More control means more responsibility
+WHY: AZ-900 use-case questions reduce to one question: how much of the stack must you control? If the workload needs a specific OS configuration, licensed software installed on the server or a lift-and-shift of existing VMs, choose IaaS. If the team writes code and wants to deploy without managing servers, choose PaaS. If the need is a ready-made application such as email or CRM, choose SaaS.
+
+[38] cat=cloud obj=1.3.4 (Identify appropriate use cases for each cloud service type (IaaS, PaaS, and SaaS))
+FRONT: Lift-and-shift migration — which service type
+BACK: #IaaS | Move existing VMs without redesigning the application
+WHY: Lift and shift (rehosting) means moving an existing workload to the cloud with no code changes, which maps to IaaS because the VMs, disks and networks are recreated as they were. Refactoring to PaaS or containers comes later if at all. Exam signal: 'migrate the existing servers as quickly as possible with minimal changes' points to Azure Virtual Machines, often with Azure Migrate doing the move.
+
+[39] cat=arch obj=2.1.1 (Describe Azure regions, region pairs, and sovereign regions)
+FRONT: Azure region — the definition
+BACK: #Geographic area with one or more datacenters, low-latency linked | You pick a region when you deploy most resources
+WHY: A region is a geographical area containing at least one, usually several, datacenters that are networked together with low latency. It is the unit you choose when creating most resources, and it determines where data lives, which services are available and what you pay. Some services are global (Microsoft Entra ID, Azure DNS) and do not take a region. Exam signal: 'deploy close to users', 'data residency' point to region choice.
+HOOK: Region = where your stuff physically is.
+
+[40] cat=arch obj=2.1.1 (Describe Azure regions, region pairs, and sovereign regions)
+FRONT: Region pair — what it gives you
+BACK: #Two regions in the same geography, updates staggered | One is prioritized for recovery in a wide outage
+WHY: Microsoft pairs many regions within a geography so that some services can geo-replicate between them. Planned platform updates are rolled out to one region of the pair at a time, and if a disaster affects multiple regions, one region of each pair is prioritized for recovery. Pairing does not make your app resilient on its own; you still deploy to both. Many newer regions have no pair and rely on availability zones instead. Exam signal: 'East US and West US', 'replicated to a paired region'.
+
+[41] cat=arch obj=2.1.1 (Describe Azure regions, region pairs, and sovereign regions)
+FRONT: Sovereign region — the definition
+BACK: #Physically isolated Azure instance for a specific government or jurisdiction | Azure Government (US); Azure operated by 21Vianet (China)
+WHY: A sovereign region is an instance of Azure that is physically and logically separate from global Azure to meet a government's compliance and personnel requirements. Azure Government serves US federal, state and local agencies and their partners, with screened US personnel and dedicated datacenters; Azure in China is operated by a local partner. Eligibility is validated. Exam signal: 'US government agency' plus 'isolated instance'.
+
+[42] cat=arch obj=2.1.2 (Describe availability zones)
+FRONT: Availability zone — the definition
+BACK: #Physically separate datacenter group inside a region | Own power, cooling and networking
+WHY: An availability zone is a set of one or more datacenters within a region that has independent power, cooling and network, located far enough from other zones that a local failure (fire, flood, power loss) hits only one of them. Regions that support zones have at least three. Zones protect against datacenter-level failures but not against the loss of the whole region. Exam signal: 'protect against a datacenter outage within a region'.
+HOOK: Zones survive a datacenter dying; regions survive a city dying.
+
+[43] cat=arch obj=2.1.2 (Describe availability zones)
+FRONT: Zonal versus zone-redundant services
+BACK: #Zonal: you pin a resource to one zone (VM, disk, IP) | Zone-redundant: platform spreads it across zones automatically
+WHY: Zonal services let you choose the specific zone for a resource, so you build resiliency by deploying copies in several zones yourself. Zone-redundant services replicate across zones automatically and fail over without your involvement; zone-redundant storage and many PaaS offerings work this way. A VM is zonal; ZRS is zone-redundant. Exam signal: 'automatically replicated across zones' points to a zone-redundant option.
+
+[44] cat=arch obj=2.1.2 (Describe availability zones)
+FRONT: Availability zones — what they do not protect against
+BACK: #A full regional outage | For that you need a second region
+WHY: Because all zones sit inside one region, a disaster or platform failure that takes down the region takes every zone with it. Zone deployment is the answer for datacenter-level resilience; multi-region deployment (often using a region pair) is the answer for regional resilience. AZ-900 likes to offer 'deploy to three availability zones' as a distractor when the stem says 'if the entire region becomes unavailable'.
+
+[45] cat=arch obj=2.1.3 (Describe Azure datacenters)
+FRONT: Azure datacenter — the physical layer
+BACK: #Facility with racks of servers, power, cooling and network | Grouped into zones and regions; customers never choose one
+WHY: Datacenters are the physical facilities that hold Azure's servers, with their own power, cooling, and networking. Customers cannot deploy to a specific datacenter; they choose a region or an availability zone and Azure places the resource. Microsoft owns and secures these buildings as part of its side of the shared responsibility model. Exam signal: 'physical security of the servers' is Microsoft's job.
+
+[46] cat=arch obj=2.1.3 (Describe Azure datacenters)
+FRONT: Datacenters, zones and regions — how they nest
+BACK: #Datacenters form an availability zone; zones form a region | Regions group into geographies
+WHY: The physical hierarchy on AZ-900 is datacenter, then availability zone (one or more datacenters), then region (one or more zones), then geography (a market such as United States or Europe that keeps data residency and compliance boundaries). The logical hierarchy of resources, groups, subscriptions and management groups is separate and should not be confused with this one.
+
+[47] cat=arch obj=2.1.4 (Describe Azure resources and resource groups)
+FRONT: Azure resource — the definition
+BACK: #Any manageable item in Azure: VM, disk, VNet, storage account | Every resource lives in exactly one resource group
+WHY: A resource is the basic unit Azure manages: a virtual machine, a disk, a virtual network, a storage account, a web app. Each resource has a type, a location and a resource ID, and must belong to exactly one resource group. Settings such as role assignments, policies and locks can target an individual resource or be inherited from its group. Exam signal: 'an instance of a service you create'.
+
+[48] cat=arch obj=2.1.4 (Describe Azure resources and resource groups)
+FRONT: Resource group — the definition
+BACK: #Container that groups related resources for lifecycle management | Delete the group, delete everything in it
+WHY: A resource group is a logical container that holds resources you want to manage together, usually those deployed, updated and deleted as a unit. Deleting a resource group deletes all of its resources, which is both a convenience and a hazard. Role assignments, policies and locks applied at the group are inherited by its members. Exam signal: 'manage as a single unit', 'remove all test resources at once'.
+HOOK: RG = the folder; delete the folder and everything inside goes.
+
+[49] cat=arch obj=2.1.4 (Describe Azure resources and resource groups)
+FRONT: Resource group — the location and region rules
+BACK: #Resources in a group can be in different regions | Group location only stores metadata; cannot nest groups
+WHY: A resource group itself has a region, used only to store metadata about the group; the resources inside it can be deployed to any region, although keeping them together is recommended. Groups cannot be nested, a resource cannot be in two groups at once, and most resources can be moved to another group. Exam signal: 'can a VM in West Europe be in a resource group located in East US' is yes.
+
+[50] cat=arch obj=2.1.4 (Describe Azure resources and resource groups)
+FRONT: Moving a resource between resource groups
+BACK: #Allowed for most resource types; subscription move also possible | Resource ID changes; some types have restrictions
+WHY: Resources can generally be moved to a different resource group or even a different subscription in the same tenant, and the source and destination groups are locked during the move. Some resource types or dependencies block a move, so Azure validates first. Tags and role assignments on the resource itself travel with it; inherited settings from the old group do not. Exam signal: 'reorganize resources without redeploying'.
+
+[51] cat=arch obj=2.1.5 (Describe subscriptions)
+FRONT: Azure subscription — the definition
+BACK: #Billing and access boundary that contains resource groups | Trusts exactly one Microsoft Entra tenant
+WHY: A subscription is a logical container for resource groups that also serves as a billing unit and an access-control boundary. Every subscription trusts one Microsoft Entra tenant for identity, while a tenant can hold many subscriptions. Organizations create multiple subscriptions to separate environments, isolate billing per department or stay under per-subscription limits. Exam signal: 'separate invoices for each department' points to multiple subscriptions.
+
+[52] cat=arch obj=2.1.5 (Describe subscriptions)
+FRONT: Reasons to create more than one subscription
+BACK: #Separate billing, separate environments, avoid quota limits | Each can have its own policies and roles
+WHY: Microsoft describes subscriptions as both a billing boundary and an access-control boundary. Teams add subscriptions to get separate invoices, to keep production isolated from development, to satisfy compliance by isolating data, or because a single subscription's resource limits would otherwise be hit. Management groups then apply shared governance across them. Exam signal: 'limit the impact of a quota' or 'separate billing report'.
+
+[53] cat=arch obj=2.1.6 (Describe management groups)
+FRONT: Management group — the definition
+BACK: #Container above subscriptions for policy and access at scale | Settings inherit down to every subscription in it
+WHY: A management group is a scope above subscriptions that lets you apply Azure Policy and role assignments once and have them inherited by every subscription beneath. All subscriptions and management groups in a tenant roll up into a single hierarchy under the root management group, which has the same ID as the tenant and cannot be moved or deleted. Exam signal: 'apply a policy to all subscriptions'.
+HOOK: Management group = policy once, applies everywhere below.
+
+[54] cat=arch obj=2.1.6 (Describe management groups)
+FRONT: Management group limits
+BACK: #Up to 10,000 groups per directory; hierarchy up to 6 levels deep | Depth excludes root and subscription; one parent each
+WHY: A directory can contain up to 10,000 management groups, nested up to six levels deep not counting the root level or the subscription level. Each management group and each subscription has exactly one parent, and a group can hold many children. These numbers show up as recall items on AZ-900, so the pair to memorize is 10,000 and six.
+
+[55] cat=arch obj=2.1.7 (Describe the hierarchy of resource groups, subscriptions, and management groups)
+FRONT: Azure scope hierarchy — the four levels
+BACK: #Management group > subscription > resource group > resource | Settings applied high flow down
+WHY: Azure organizes everything into four nested scopes: management groups contain subscriptions, subscriptions contain resource groups, and resource groups contain resources. Role assignments, policies and (except at management group level) locks applied at a higher scope are inherited by everything below. The exam tests both the order and which level a given tool applies to. Exam signal: 'which is the lowest scope at which ... can be applied'.
+
+[56] cat=arch obj=2.1.7 (Describe the hierarchy of resource groups, subscriptions, and management groups)
+FRONT: Inheritance down the hierarchy — how it works
+BACK: #A policy or role at a subscription applies to all its groups and resources | A lower scope cannot remove a higher assignment
+WHY: When you assign a role, a policy or a lock at a scope, every child scope receives it automatically, and a child cannot opt out (though Azure Policy supports exclusions and exemptions defined at the assignment). Role assignments are additive across scopes. This is why AZ-900 answers for 'apply to every resource in the company' go to the root or a management group, while 'only this one VM' goes to the resource itself.
+
+[57] cat=compute obj=2.2.1 (Compare compute types, including containers, virtual machines, and functions)
+FRONT: Virtual machines — the compute type
+BACK: #Emulated computer with its own OS that you manage | IaaS: full control, full patching responsibility
+WHY: An Azure virtual machine is a software emulation of a physical computer. You choose the image, size and disks, and from the operating system upward you own configuration and patching. VMs fit lift-and-shift migrations, software that needs a specific OS, and anything requiring full control. They are the slowest to provision and the heaviest to maintain of the three compute types. Exam signal: 'requires total control over the operating system'.
+
+[58] cat=compute obj=2.2.1 (Compare compute types, including containers, virtual machines, and functions)
+FRONT: Containers — the compute type
+BACK: #Lightweight package of app plus dependencies sharing the host OS | Start in seconds; portable; many per host
+WHY: A container bundles an application with its dependencies but shares the host operating system kernel, so it is much lighter and faster to start than a VM and you do not manage an OS inside it. Azure runs containers in Azure Container Instances (single containers, no orchestration), Azure Container Apps (serverless, scale to zero) and Azure Kubernetes Service (full orchestration you control). Exam signal: 'lightweight', 'portable', 'microservices'.
+HOOK: VM = whole house; container = furnished room in a shared house.
+
+[59] cat=compute obj=2.2.1 (Compare compute types, including containers, virtual machines, and functions)
+FRONT: Azure Functions — the compute type
+BACK: #Serverless, event-driven code with no servers to manage | Scales automatically; billed on execution
+WHY: Azure Functions runs small pieces of code in response to triggers such as an HTTP request, a timer, a new blob or a queue message, with bindings that connect to other services. The platform provisions and scales compute, including to zero, and the consumption-style plans bill per execution and resources used. Functions fit short, event-driven tasks rather than long-running services. Exam signal: 'run code when a file is uploaded', 'minimize cost for infrequent processing'.
+
+[60] cat=compute obj=2.2.1 (Compare compute types, including containers, virtual machines, and functions)
+FRONT: Choosing VM, container or function
+BACK: #OS control → VM; packaged microservice → container; event snippet → function | Less management as you move right
+WHY: The three compute types trade control for convenience. Pick a VM when you must manage the OS or run legacy software; pick containers when the app is packaged, needs portability and may run many instances; pick Azure Functions when the workload is a small piece of logic triggered by events and you want zero infrastructure. AZ-900 stems typically give one distinguishing clue ('existing Windows server', 'Docker image', 'runs for a few seconds when a message arrives').
+
+[61] cat=compute obj=2.2.2 (Describe virtual machine options, including Azure virtual machines, Azure Virtual Machine Scale Sets, availability sets, and Azure Virtual Desktop)
+FRONT: Virtual Machine Scale Sets — the option
+BACK: #Group of identical, load-balanced VMs that autoscale | Up to 1,000 instances; spread across zones or fault domains
+WHY: A scale set creates and manages a group of VMs from the same image and configuration and can add or remove instances automatically based on metrics or a schedule. Instances can be spread across availability zones or fault domains for resilience and fronted by a load balancer or application gateway. Flexible orchestration mode is the recommended default. There is no charge for the scale set itself, only the VMs and related resources. Exam signal: 'automatically increase the number of VMs when CPU is high'.
+
+[62] cat=compute obj=2.2.2 (Describe virtual machine options, including Azure virtual machines, Azure Virtual Machine Scale Sets, availability sets, and Azure Virtual Desktop)
+FRONT: Availability set — the option
+BACK: #Logical grouping that spreads VMs across fault and update domains | Use where availability zones are not available
+WHY: An availability set distributes VMs across fault domains (separate power and network switch) and update domains (groups rebooted one at a time during planned maintenance) within a single datacenter, so a hardware failure or a platform update does not take all instances down together. It is free, and Microsoft now recommends scale sets with flexible orchestration where possible. Exam signal: 'protect against a rack failure during planned maintenance'.
+
+[63] cat=compute obj=2.2.2 (Describe virtual machine options, including Azure virtual machines, Azure Virtual Machine Scale Sets, availability sets, and Azure Virtual Desktop)
+FRONT: Fault domains versus update domains
+BACK: #Fault domain: shared power and switch, up to 3 per set | Update domain: reboot group, default 5, up to 20
+WHY: A fault domain is a rack-like unit sharing a power source and network switch; an availability set can use up to three. An update domain is a group of VMs that Azure reboots together during planned maintenance; the default is five and the maximum is twenty, and only one update domain is restarted at a time. Fault and update domain counts cannot be changed after the set is created. Exam signal: 'which VMs are restarted together' is update domain.
+
+[64] cat=compute obj=2.2.2 (Describe virtual machine options, including Azure virtual machines, Azure Virtual Machine Scale Sets, availability sets, and Azure Virtual Desktop)
+FRONT: Azure Virtual Desktop — the option
+BACK: #Desktop and app virtualization service hosted in Azure | Multi-session Windows 11/10 Enterprise; access from any device
+WHY: Azure Virtual Desktop delivers full Windows desktops or individual applications (RemoteApp) to users from VMs that run in Azure. It supports multi-session Windows 11 and 10 Enterprise so several users share one VM, can autoscale session hosts by time or demand, and users connect from Windows, macOS, mobile or a browser. Microsoft 365 apps are optimized for it. Exam signal: 'provide a Windows desktop to remote workers without shipping laptops'.
+
+[65] cat=compute obj=2.2.3 (Describe the resources required for virtual machines)
+FRONT: Resources created with an Azure VM
+BACK: #Disks, a virtual network, a network interface, usually a public IP and NSG | Each is a separate resource in the group
+WHY: Creating a VM in the portal silently creates several other resources: an OS disk (and optional data disks), a virtual network and subnet if none exists, a network interface that attaches the VM to the subnet, often a public IP address, and a network security group that filters traffic. Each has its own lifecycle and cost. AZ-900 asks which of these are required and which are optional, and why deleting a VM may leave disks and NICs behind.
+
+[66] cat=compute obj=2.2.3 (Describe the resources required for virtual machines)
+FRONT: VM size — what it determines
+BACK: #vCPU count, memory, and allowed disk and network throughput | Resizing is scaling up or down
+WHY: The VM size (SKU) sets how many virtual CPUs and how much memory the machine has, plus limits on attached disks, IOPS and network bandwidth. Azure groups sizes into families optimized for general purpose, compute, memory, storage, GPU or high-performance work. Changing size later is vertical scaling and usually requires a restart. Exam signal: 'the application needs more memory' means pick a larger or memory-optimized size.
+
+[67] cat=compute obj=2.2.3 (Describe the resources required for virtual machines)
+FRONT: VM disks — OS disk, data disk, temporary disk
+BACK: #OS disk holds the system; data disks hold application data | Temporary disk is local and can be lost on redeploy
+WHY: Every VM has an OS disk stored as a managed disk, can attach additional managed data disks for application data, and most sizes include a temporary disk on the physical host that is wiped if the VM is redeployed or resized. Managed disks are page blobs that Azure handles for you. Exam signal: 'data was lost after the VM was moved to another host' means it was on the temporary disk.
+
+[68] cat=compute obj=2.2.4 (Describe application hosting options, including web apps, containers, and virtual machines)
+FRONT: Azure App Service — the hosting option
+BACK: #PaaS for web apps, REST APIs and mobile back ends | Windows or Linux, many languages, built-in autoscale and slots
+WHY: App Service hosts HTTP-based applications without any server management. It supports .NET, Java, Node.js, Python, PHP and custom containers on Windows or Linux, offers built-in autoscaling, deployment slots for staged releases, continuous deployment from GitHub or Azure Pipelines, and managed certificates. You pay for the App Service plan that provides the compute. Exam signal: 'host a website with no infrastructure to manage'.
+
+[69] cat=compute obj=2.2.4 (Describe application hosting options, including web apps, containers, and virtual machines)
+FRONT: Containers as a hosting option
+BACK: #Container Instances (single, fast), Container Apps (serverless), AKS (full Kubernetes) | Pick by how much orchestration you need
+WHY: Azure gives three main ways to host containers. Azure Container Instances runs single containers or small groups quickly with no orchestration. Azure Container Apps is a serverless platform built on Kubernetes that scales to zero and handles microservices patterns without exposing the cluster. Azure Kubernetes Service gives you a managed cluster with direct Kubernetes API access for complex orchestration. Exam signal: 'need full Kubernetes control' means AKS; 'avoid managing a cluster' means Container Apps.
+
+[70] cat=compute obj=2.2.4 (Describe application hosting options, including web apps, containers, and virtual machines)
+FRONT: Virtual machines as a hosting option — when they win
+BACK: #Legacy or licensed software, custom OS configuration, lift and shift | Maximum control at maximum maintenance
+WHY: Hosting an application on VMs is the right answer when the application depends on the operating system in ways PaaS forbids (kernel drivers, custom agents, unsupported runtimes), when it is being migrated unchanged, or when licensing ties it to a particular server configuration. The cost is that you patch, back up and scale the servers yourself. AZ-900 contrasts this with App Service for standard web apps and containers for packaged services.
+
+[71] cat=compute obj=2.2.5 (Describe virtual networking, including the purpose of Azure virtual networks, subnets, peering, Azure DNS, Azure VPN Gateway, and ExpressRoute)
+FRONT: Azure virtual network and subnets
+BACK: #Private network in Azure; subnets split its address space | Resources in a VNet can communicate privately
+WHY: A virtual network (VNet) is an isolated private network in Azure with an address range you define. You divide it into subnets and place resources such as VM network interfaces into those subnets; resources in the same VNet can talk to each other by default. VNets are the scope for network security groups, routing and connectivity to on-premises. Exam signal: 'isolate resources on a private network', 'segment into tiers'.
+
+[72] cat=compute obj=2.2.5 (Describe virtual networking, including the purpose of Azure virtual networks, subnets, peering, Azure DNS, Azure VPN Gateway, and ExpressRoute)
+FRONT: Virtual network peering — regional and global
+BACK: #Connects two VNets over the Microsoft backbone, no internet | Same region = peering; different regions = global peering; not transitive
+WHY: Peering joins two virtual networks so resources communicate as if on one network, with traffic staying on Microsoft's private backbone and no gateway or encryption required. Regional peering connects VNets in the same region; global peering connects VNets in different regions. Address spaces must not overlap and peering is not transitive: A peered to B and B to C does not let A reach C. Exam signal: 'connect VNets in two regions privately'.
+HOOK: Peering is a two-party handshake, never a chain.
+
+[73] cat=compute obj=2.2.5 (Describe virtual networking, including the purpose of Azure virtual networks, subnets, peering, Azure DNS, Azure VPN Gateway, and ExpressRoute)
+FRONT: Azure DNS — the service
+BACK: #Hosts public DNS zones and private zones for VNets on Azure | Does not sell domain names
+WHY: Azure DNS hosts DNS zones and answers queries using Azure's anycast network. Public zones serve internet-facing names you registered elsewhere; private DNS zones provide name resolution inside and across virtual networks without you running DNS servers. It is managed with the same RBAC, locks and logs as other resources. Azure DNS cannot purchase a domain name; use a registrar for that. Exam signal: 'resolve names between VMs in a VNet' means a private DNS zone.
+
+[74] cat=compute obj=2.2.5 (Describe virtual networking, including the purpose of Azure virtual networks, subnets, peering, Azure DNS, Azure VPN Gateway, and ExpressRoute)
+FRONT: Azure VPN Gateway — the service
+BACK: #Encrypted tunnel over the public internet to a VNet | Site-to-site, point-to-site, VNet-to-VNet; needs a GatewaySubnet
+WHY: A VPN gateway sends encrypted traffic between a virtual network and an on-premises site (site-to-site), an individual client (point-to-site) or another VNet (VNet-to-VNet) across the public internet using IPsec/IKE or, for clients, OpenVPN, IKEv2 or SSTP. It requires a subnet named GatewaySubnet and can run active-active for resilience. It is cheaper than ExpressRoute but shares the internet's variability. Exam signal: 'connect the branch office to Azure securely over the internet'.
+
+[75] cat=compute obj=2.2.5 (Describe virtual networking, including the purpose of Azure virtual networks, subnets, peering, Azure DNS, Azure VPN Gateway, and ExpressRoute)
+FRONT: ExpressRoute — the service
+BACK: #Private dedicated connection to Microsoft, not over the internet | Higher reliability, consistent latency, higher cost
+WHY: ExpressRoute extends your network into Microsoft's through a private connection provided by a connectivity partner, so traffic never crosses the public internet. It offers more consistent throughput and latency and higher reliability than a VPN, at higher cost and with longer lead time. A VPN gateway can coexist as a failover path. Exam signal: 'must not traverse the public internet', 'predictable performance for large data transfers'.
+HOOK: VPN = encrypted over the internet; ExpressRoute = around the internet.
+
+[76] cat=compute obj=2.2.6 (Define public and private endpoints)
+FRONT: Public endpoint — the definition
+BACK: #Service reachable via a public IP and internet-resolvable name | Default for most PaaS services
+WHY: A public endpoint is the standard way an Azure PaaS service such as a storage account or SQL database is reached: it has a fully qualified name that resolves to a public IP address, and any client on the internet can attempt a connection subject to firewall rules and authentication. Many services let you restrict or disable the public endpoint once a private alternative is in place. Exam signal: 'accessible from anywhere' or 'exposed to the internet'.
+
+[77] cat=compute obj=2.2.6 (Define public and private endpoints)
+FRONT: Private endpoint — the definition
+BACK: #Network interface with a private IP from your VNet, via Private Link | Brings the PaaS service inside your network
+WHY: A private endpoint is a network interface that receives a private IP address from your subnet and connects to a specific Azure service through Azure Private Link. The service's name resolves to that private address inside the VNet, so traffic never leaves your private network and the public endpoint can be disabled. Peered VNets and on-premises networks connected by VPN or ExpressRoute can also use it. Exam signal: 'access the storage account only from the VNet using a private IP'.
+HOOK: Private endpoint = the service gets a seat inside your VNet.
+
+[78] cat=compute obj=2.2.6 (Define public and private endpoints)
+FRONT: Service endpoint versus private endpoint
+BACK: #Service endpoint: backbone path, service keeps its public IP | Private endpoint: service gets a private IP in your VNet
+WHY: A service endpoint extends a subnet's identity to a service so traffic takes the Azure backbone and the service firewall can allow that subnet, but the service still answers on its public IP. A private endpoint goes further by assigning the service a private IP in your VNet, removing public exposure entirely and working from on-premises. AZ-900 only expects you to tell public from private; the service-endpoint nuance is the usual distractor.
+
+[79] cat=storage obj=2.3.1 (Compare Azure Storage services)
+FRONT: Azure Blob Storage — the service
+BACK: #Object storage for unstructured data at massive scale | Accessed over HTTP(S) by URL; basis for Data Lake Storage
+WHY: Blob Storage holds unstructured data (documents, images, video, backups, logs) as objects in containers and serves them over HTTP or HTTPS by URL, REST, SDKs or tools. It is the usual target for streaming, backup, archive and analytics, and Data Lake Storage builds on it for big data. Access tiers and lifecycle policies apply only to blobs. Exam signal: 'store large amounts of unstructured data', 'serve images to a website'.
+
+[80] cat=storage obj=2.3.1 (Compare Azure Storage services)
+FRONT: Azure Files — the service
+BACK: #Managed file shares over SMB or NFS | Mount from Azure VMs or on-premises; replace file servers
+WHY: Azure Files provides fully managed network file shares that clients mount with SMB or NFS from Windows, Linux or macOS, in the cloud or on-premises. It suits lift-and-shift applications that expect a file share, replacing on-premises file servers, and shared configuration or tools. Azure File Sync can cache a share on a Windows Server. Exam signal: 'applications need a shared drive letter', 'SMB'.
+
+[81] cat=storage obj=2.3.1 (Compare Azure Storage services)
+FRONT: Queue Storage and Table Storage
+BACK: #Queue: messages up to 64 KB for decoupling components | Table: NoSQL key/attribute store for structured, schemaless data
+WHY: Queue Storage stores large numbers of small messages (up to 64 KB each) so application components can hand off work asynchronously. Table Storage is a NoSQL key/attribute store for structured data without a fixed schema, such as device metadata or address books; a premium version lives in Azure Cosmos DB. Both live inside a standard general-purpose storage account. Exam signal: 'decouple a web front end from a back-end processor' is a queue.
+
+[82] cat=storage obj=2.3.1 (Compare Azure Storage services)
+FRONT: Azure Disk Storage — the service
+BACK: #Managed virtual hard disks for VMs | Stored as page blobs; Azure handles the account
+WHY: Azure managed disks are the block-level virtual hard disks attached to virtual machines as OS and data disks. They are stored as page blobs behind the scenes, but Azure abstracts the storage account so you choose only size, performance tier (Standard HDD, Standard SSD, Premium SSD, Ultra) and redundancy. Snapshots and images build on them. Exam signal: 'persistent disk for a VM', 'IOPS requirement for a database on a VM'.
+
+[83] cat=storage obj=2.3.2 (Describe storage tiers)
+FRONT: Hot, cool and cold access tiers
+BACK: #Hot: frequent access, highest storage cost, lowest access cost | Cool (30-day minimum) and cold (90-day) cheaper to store, pricier to read
+WHY: The online access tiers trade storage price against access price. Hot is for data read often; cool is for data kept at least 30 days and read rarely; cold is for data kept at least 90 days and read very rarely but still needing immediate retrieval. Deleting or moving a blob before its minimum period incurs an early-deletion charge. Hot, cool or cold can be the account default; archive cannot. Exam signal: 'accessed once a quarter but must be available instantly' is cold.
+
+[84] cat=storage obj=2.3.2 (Describe storage tiers)
+FRONT: Archive access tier
+BACK: #Offline, cheapest storage, 180-day minimum | Must be rehydrated before it can be read
+WHY: The archive tier is the lowest-cost place to keep blobs you expect to keep for at least 180 days and read almost never. It is offline: a blob in archive cannot be read or modified until it is rehydrated to an online tier, which takes hours. Archive is available only on LRS, GRS and RA-GRS accounts and only for block blobs. Exam signal: 'long-term retention of compliance records, retrieval latency of hours is acceptable'.
+HOOK: Archive = cold storage locker; you wait to get things out.
+
+[85] cat=storage obj=2.3.2 (Describe storage tiers)
+FRONT: Rehydration from archive
+BACK: #Copy or change tier to hot/cool/cold to bring data online | Standard priority up to 15 hours; high priority faster, costs more
+WHY: To use an archived blob you either change its tier to an online tier or copy it to a new online blob. Standard-priority rehydration can take up to 15 hours; high priority completes sooner for smaller blobs at a higher price. Lifecycle management policies can move blobs into archive but cannot rehydrate them. Exam signal: 'the data is needed within an hour' rules out standard rehydration.
+
+[86] cat=storage obj=2.3.3 (Describe redundancy options)
+FRONT: Locally redundant storage (LRS)
+BACK: #Three synchronous copies in one datacenter | 11 nines durability; cheapest; no zone or region protection
+WHY: LRS writes three copies of your data synchronously within a single datacenter in the primary region. It is the least expensive option and protects against drive and rack failures, but a datacenter-level disaster can destroy all three copies. Durability is at least 99.999999999 percent over a year. Exam signal: 'lowest cost' plus 'data can be easily recreated'.
+
+[87] cat=storage obj=2.3.3 (Describe redundancy options)
+FRONT: Zone-redundant storage (ZRS)
+BACK: #Three synchronous copies across availability zones in one region | 12 nines; survives a zone outage, not a regional one
+WHY: ZRS replicates data synchronously across three availability zones in the primary region, so an entire datacenter can fail and reads and writes continue. Durability is at least 99.9999999999 percent. It does not protect against a regional disaster and is not supported for the archive tier. Microsoft recommends ZRS for high availability within a region. Exam signal: 'remain available if a datacenter in the region fails'.
+
+[88] cat=storage obj=2.3.3 (Describe redundancy options)
+FRONT: Geo-redundant storage (GRS and RA-GRS)
+BACK: #LRS in primary plus asynchronous LRS copy in secondary region | 16 nines; RA- adds read access to the secondary
+WHY: GRS keeps three LRS copies in the primary region and asynchronously replicates to three more LRS copies in the secondary region hundreds of miles away, giving at least 99.99999999999999 percent durability. With plain GRS the secondary is used only after a failover; RA-GRS additionally lets applications read from the secondary endpoint at any time. Because replication is asynchronous, recent writes can be lost in a regional failover. Exam signal: 'protect against a regional disaster'.
+
+[89] cat=storage obj=2.3.3 (Describe redundancy options)
+FRONT: Geo-zone-redundant storage (GZRS and RA-GZRS)
+BACK: #ZRS in primary plus asynchronous LRS in secondary | Zone and region protection; RA- adds read on secondary
+WHY: GZRS combines ZRS in the primary region with an asynchronous LRS copy in the secondary region, so data survives both a zone failure and a regional outage; RA-GZRS adds read access to the secondary. It is available only on standard general-purpose v2 accounts, and Azure Files does not support the read-access variants. Microsoft recommends it when you need the highest durability and availability. Exam signal: 'maximum resiliency'.
+HOOK: Stack the letters: Z = zones at home, G = another region, RA = read there too.
+
+[90] cat=storage obj=2.3.4 (Describe storage account options and storage types)
+FRONT: Standard general-purpose v2 storage account
+BACK: #Supports blobs, files, queues, tables and Data Lake | All redundancy options; recommended for most workloads
+WHY: A standard general-purpose v2 account is the recommended account type and the only one that supports every service (blob, file, queue, table, Data Lake Storage) and every redundancy option including GZRS and RA-GZRS. It runs on standard HDD-backed storage billed per GB and per transaction. AZ-900 answers to 'which account type should you create' default to this unless the stem demands premium performance.
+
+[91] cat=storage obj=2.3.4 (Describe storage account options and storage types)
+FRONT: Premium storage account types
+BACK: #Premium block blobs, premium file shares, premium page blobs | SSD-backed; LRS and ZRS only
+WHY: Three premium account types exist, each limited to one service: premium block blobs for high transaction rates and small objects needing low latency, premium file shares for high-performance SMB and NFS shares, and premium page blobs for specialized page-blob workloads. All use SSDs and support only LRS and ZRS. You cannot convert an account's type after creation. Exam signal: 'consistently low latency' or 'NFS file share'.
+
+[92] cat=storage obj=2.3.4 (Describe storage account options and storage types)
+FRONT: Block, append and page blobs
+BACK: #Block: files and media. Append: logs. Page: random-access VHDs | Access tiers apply to block blobs only
+WHY: Block blobs store text and binary data uploaded in blocks and are the type for documents, images and backups. Append blobs are optimized for adding data to the end, which fits logging. Page blobs support random read and write and back VM disks. Hot, cool, cold and archive tiers apply only to block blobs. Exam signal: 'application writes log entries continuously' is an append blob; 'virtual hard disk' is a page blob.
+
+[93] cat=storage obj=2.3.5 (Identify options for moving files, including AzCopy, Azure Storage Explorer, and Azure File Sync)
+FRONT: AzCopy — the tool
+BACK: #Command-line utility to copy or sync data to, from or between storage accounts | Scriptable; blobs and files; Windows, Linux, macOS
+WHY: AzCopy v10 is a cross-platform command-line tool that copies data from on-premises to Blob Storage or Azure Files, downloads it, moves it between accounts, and can synchronize a source and destination for ongoing replication. It authenticates with Microsoft Entra ID or SAS tokens and fits scripts and pipelines. Exam signal: 'automate uploading files every night' or 'copy between two storage accounts from a script'.
+
+[94] cat=storage obj=2.3.5 (Identify options for moving files, including AzCopy, Azure Storage Explorer, and Azure File Sync)
+FRONT: Azure Storage Explorer — the tool
+BACK: #Standalone graphical app for Windows, macOS and Linux | Browse and manage blobs, files, queues, tables, Data Lake
+WHY: Storage Explorer is a free desktop application that gives a point-and-click view of storage accounts: upload and download blobs, manage file shares, queues, tables and Data Lake Storage, generate SAS tokens, and connect by Azure sign-in, account key, SAS URL or emulator. It is the manual, visual counterpart to AzCopy's scripted transfers. Exam signal: 'an administrator wants to drag and drop files into a container'.
+
+[95] cat=storage obj=2.3.5 (Identify options for moving files, including AzCopy, Azure Storage Explorer, and Azure File Sync)
+FRONT: Azure File Sync — the tool
+BACK: #Caches an Azure file share on Windows Servers | Cloud tiering keeps hot files local; multi-site sync
+WHY: Azure File Sync installs an agent on Windows Server and links a server folder to an Azure file share in a sync group, so the share becomes the central copy while each server keeps a fast local cache. Cloud tiering moves rarely used files to Azure but leaves the namespace visible; several branch servers can sync through the same share without talking to each other. Exam signal: 'centralize file shares in Azure while keeping local performance at branch offices'.
+HOOK: File Sync = Azure Files as the hub, Windows Servers as caches.
+
+[96] cat=storage obj=2.3.6 (Describe migration options, including Azure Migrate and Azure Data Box)
+FRONT: Azure Migrate — the service
+BACK: #Unified hub to discover, assess and migrate servers, databases, web apps, VDI | Appliance-based agentless discovery; dependency analysis
+WHY: Azure Migrate is the central portal experience for migration projects. An appliance discovers VMware, Hyper-V and physical servers and collects performance data; assessments then recommend Azure sizes, estimate cost and visualize dependencies between servers so you move related systems together. Integrated tools migrate servers, SQL databases and web apps, and partner tools plug in. Discovery and assessment are free. Exam signal: 'evaluate on-premises servers for readiness'.
+
+[97] cat=storage obj=2.3.6 (Describe migration options, including Azure Migrate and Azure Data Box)
+FRONT: Azure Data Box — the service
+BACK: #Physical device shipped to you for offline bulk transfer | Data Box Disk (up to 5 × 8 TB, import only) and Data Box appliances
+WHY: Data Box moves very large datasets into (and for the appliance, out of) Azure when the network is too slow or unavailable. Data Box Disk ships up to five 8 TB SSDs connected by USB or SATA for import only; the Data Box appliance comes in larger capacities and supports both import and export. Microsoft suggests it for transfers above roughly 40 TB with limited bandwidth. Devices are encrypted and wiped after upload. Exam signal: 'migrate 100 TB from a site with a slow connection'.
+
+[98] cat=idsec obj=2.4.1 (Describe directory services in Azure, including Microsoft Entra ID and Microsoft Entra Domain Services)
+FRONT: Microsoft Entra ID — the service
+BACK: #Cloud-based identity and access management service | Authenticates users to Azure, Microsoft 365 and other apps
+WHY: Microsoft Entra ID is Microsoft's cloud identity service: it stores users, groups and application identities, authenticates sign-ins, issues tokens, and enforces policies such as MFA and Conditional Access. Every Azure subscription trusts a single Entra tenant. It is a modern identity provider using protocols like SAML and OpenID Connect, not a domain controller. Exam signal: 'manage user accounts for Azure and Microsoft 365'.
+
+[99] cat=idsec obj=2.4.1 (Describe directory services in Azure, including Microsoft Entra ID and Microsoft Entra Domain Services)
+FRONT: Microsoft Entra Domain Services — the service
+BACK: #Managed domain with domain join, Group Policy, LDAP, Kerberos/NTLM | No domain controllers for you to run; one-way sync from Entra ID
+WHY: Entra Domain Services provides a managed Active Directory-style domain in Azure that supports domain join, Group Policy, LDAP and Kerberos or NTLM authentication, so legacy applications that expect those protocols can be lifted to Azure without deploying domain controllers. Users and groups synchronize one way from Entra ID. Microsoft patches and monitors the domain. Exam signal: 'legacy app requires LDAP' or 'join Azure VMs to a domain without managing domain controllers'.
+HOOK: Entra ID = modern cloud identity; Domain Services = old-school AD, rented.
+
+[100] cat=idsec obj=2.4.1 (Describe directory services in Azure, including Microsoft Entra ID and Microsoft Entra Domain Services)
+FRONT: Entra ID versus on-premises Active Directory
+BACK: #Entra ID: flat, cloud, web protocols, no Group Policy | AD DS: forests and OUs, Kerberos, Group Policy, you run it
+WHY: On-premises Active Directory Domain Services organizes objects into forests, domains and OUs, authenticates with Kerberos and NTLM and applies Group Policy, all on servers you maintain. Entra ID is a cloud service with a flat structure that speaks SAML, OAuth and OpenID Connect and has no Group Policy. Entra Connect synchronizes identities between them for hybrid sign-in. Exam signal: 'synchronize on-premises users to the cloud' points to Entra Connect.
+
+[101] cat=idsec obj=2.4.2 (Describe authentication methods in Azure, including single sign-on (SSO), multifactor authentication (MFA), and passwordless)
+FRONT: Single sign-on (SSO)
+BACK: #Sign in once, access many applications | Entra ID is the identity provider; apps trust its tokens
+WHY: With single sign-on a user authenticates once with one set of credentials and then reaches every assigned application without signing in again, because each application trusts the identity provider's token instead of keeping its own password. Entra ID offers federation-based SSO through SAML or OpenID Connect, plus password-based and linked options for apps that cannot federate. Fewer credentials means fewer resets and less exposure. Exam signal: 'reduce the number of passwords users must remember'.
+
+[102] cat=idsec obj=2.4.2 (Describe authentication methods in Azure, including single sign-on (SSO), multifactor authentication (MFA), and passwordless)
+FRONT: Multifactor authentication (MFA)
+BACK: #Two or more of: something you know, have, are | Authenticator app, FIDO2 key, Windows Hello, SMS, voice
+WHY: MFA requires a user to present at least two different kinds of evidence: something they know (password), something they have (phone, security key) or something they are (fingerprint, face). Entra MFA supports Microsoft Authenticator push and codes, Windows Hello for Business, FIDO2 passkeys, OATH tokens, SMS and voice. It is enabled broadly through security defaults or precisely through Conditional Access. Exam signal: 'a stolen password alone should not grant access'.
+
+[103] cat=idsec obj=2.4.2 (Describe authentication methods in Azure, including single sign-on (SSO), multifactor authentication (MFA), and passwordless)
+FRONT: Passwordless authentication options
+BACK: #Windows Hello for Business, Microsoft Authenticator, FIDO2 passkeys | Replace the password entirely with device-bound keys plus biometric or PIN
+WHY: Passwordless methods remove the password rather than adding to it. Windows Hello for Business ties sign-in to a specific Windows device with a PIN or biometric; the Microsoft Authenticator app turns a phone into a credential; FIDO2 security keys and passkeys use origin-bound public-key cryptography that resists phishing. Each still counts as multifactor because it combines possession with a PIN or biometric. Exam signal: 'eliminate passwords', 'phishing-resistant'.
+HOOK: MFA adds a factor; passwordless removes the weak one.
+
+[104] cat=idsec obj=2.4.3 (Describe external identities in Azure)
+FRONT: B2B collaboration — external identities
+BACK: #Invite partners as guest users in your tenant | They sign in with their own credentials; you control access
+WHY: B2B collaboration lets you invite people from other organizations or with consumer accounts into your workforce tenant as guest users. They keep their own credentials (another Entra tenant, a Microsoft account or a social identity) and you assign access, apply Conditional Access and MFA, and review them like employees. It is the standard way to share Microsoft 365 and SaaS apps with suppliers and partners. Exam signal: 'allow a contractor from another company to access a SharePoint site'.
+
+[105] cat=idsec obj=2.4.3 (Describe external identities in Azure)
+FRONT: B2B direct connect and External ID for customers
+BACK: #Direct connect: tenant-to-tenant trust for Teams shared channels, no guest object | External ID (customers): separate tenant for consumer-facing apps
+WHY: B2B direct connect establishes a mutual trust between two Entra organizations so users collaborate in Teams Connect shared channels while authenticating in their home tenant, with no guest account created. Microsoft Entra External ID for customers is a separate external tenant for publishing consumer or business-customer apps with branded self-service sign-up and social or email sign-in. Exam signal: 'customers of a retail app' is External ID; 'shared channel with a partner' is direct connect.
+
+[106] cat=idsec obj=2.4.4 (Describe Microsoft Entra Conditional Access)
+FRONT: Conditional Access — signals and the if-then model
+BACK: #If a sign-in matches conditions, then require an action | Signals: user/group, location, device, application, real-time risk
+WHY: Conditional Access evaluates each sign-in against signals such as who the user is and which group they belong to, the IP location, the device platform and state, the application requested, and risk computed by Entra ID Protection, then applies a decision. It is expressed as if-then: if a user outside the corporate network opens Exchange, then require MFA. It requires Entra ID P1 (risk-based policies need P2). Exam signal: 'require MFA only when signing in from outside the office'.
+HOOK: Conditional Access = the bouncer who checks where you came from, not just your ID.
+
+[107] cat=idsec obj=2.4.4 (Describe Microsoft Entra Conditional Access)
+FRONT: Conditional Access — the decisions
+BACK: #Block access, or grant with controls | Controls: MFA, compliant device, hybrid-joined device, approved app
+WHY: The outcome of a Conditional Access policy is either block or grant, and a grant can be made conditional on one or more controls: multifactor authentication or an authentication strength, a device marked compliant by Intune, a Microsoft Entra hybrid joined device, an approved client app or app protection policy, a password change, or acceptance of terms of use. Exam signal: 'allow access only from managed devices' maps to the compliant-device control.
+
+[108] cat=idsec obj=2.4.5 (Describe Azure role-based access control (RBAC))
+FRONT: Azure role-based access control (RBAC) — the idea
+BACK: #Role assignment = security principal + role definition + scope | Authorizes actions on Azure resources
+WHY: Azure RBAC controls who can perform which operations on Azure resources. A role assignment binds a security principal (user, group, service principal or managed identity) to a role definition (a list of allowed actions) at a scope (management group, subscription, resource group or resource). Assignments are inherited downward and are additive. RBAC governs resource management; Entra roles govern the directory. Exam signal: 'grant a user permission to restart VMs in one resource group'.
+
+[109] cat=idsec obj=2.4.5 (Describe Azure role-based access control (RBAC))
+FRONT: Owner, Contributor, Reader, User Access Administrator
+BACK: #Owner: everything incl. assigning roles. Contributor: everything except roles | Reader: view only. UAA: manage access only
+WHY: Owner grants full control over resources plus the ability to assign roles to others. Contributor also grants full control over resources but cannot assign roles. Reader can view everything and change nothing. User Access Administrator manages role assignments but cannot otherwise manage resources. The classic trap is a stem asking for someone who can create resources but not grant access: that is Contributor, not Owner.
+HOOK: Contributor builds; Owner builds and hires.
+
+[110] cat=idsec obj=2.4.5 (Describe Azure role-based access control (RBAC))
+FRONT: RBAC scope and inheritance
+BACK: #Assign at management group, subscription, resource group or resource | Permissions flow down and add up; no subtraction
+WHY: A role assigned at a higher scope applies to every child scope, so Reader on a subscription means Reader on every resource group and resource beneath. When several assignments apply, the effective permissions are the union: Contributor on the subscription plus Reader on one resource group still leaves the user a Contributor there. Least privilege means assigning at the narrowest scope that works. Exam signal: 'what is the user's effective permission'.
+
+[111] cat=idsec obj=2.4.5 (Describe Azure role-based access control (RBAC))
+FRONT: Deny assignments
+BACK: #Block specific actions even if a role allows them | Evaluated before allow; created by Azure, not directly by users
+WHY: A deny assignment prevents a principal from performing specified actions even when a role assignment would grant them, and it is evaluated first. Deny assignments are created by Azure on behalf of managed services (for example deployment stacks) rather than authored freehand in the portal. AZ-900 expects only that you know they exist and take precedence over allows.
+
+[112] cat=idsec obj=2.4.6 (Describe the concept of Zero Trust)
+FRONT: Zero Trust — the three principles
+BACK: #Verify explicitly, use least privilege access, assume breach | Never trust by network location
+WHY: Zero Trust is a security model that treats every access request as untrusted regardless of where it comes from. Its guiding principles are to verify explicitly (authenticate and authorize using all available signals), to use least privilege access (just enough access, just in time) and to assume breach (segment, encrypt and monitor as if an attacker is already inside). Exam signal: any stem contrasting 'trusted internal network' with 'verify every request'.
+HOOK: Zero Trust = never trust, always verify, limit the blast radius.
+
+[113] cat=idsec obj=2.4.6 (Describe the concept of Zero Trust)
+FRONT: Zero Trust versus the perimeter model
+BACK: #Perimeter: inside the firewall is trusted | Zero Trust: location proves nothing; identity and device do
+WHY: Traditional security assumed anything behind the corporate firewall could be trusted, which fails once users work remotely and attackers move laterally after one breach. Zero Trust replaces network location with continuous verification of identity, device health and context on every request, and limits what each identity can reach. Conditional Access, MFA and RBAC are the Azure tools that express it. Exam signal: 'users work from anywhere on personal devices'.
+
+[114] cat=idsec obj=2.4.7 (Describe the purpose of the defense-in-depth model)
+FRONT: Defense in depth — the purpose
+BACK: #Multiple independent layers so one failure does not expose data | Slows an attack and gives time to detect it
+WHY: Defense in depth stacks security controls so that if one layer is bypassed, the next still stands between the attacker and the data. Each layer also generates signals that help detect an intrusion in progress. The goal is not a single impenetrable wall but a series of hurdles that reduce the chance an attack reaches the center. Exam signal: 'protect data even if the network perimeter is compromised'.
+
+[115] cat=idsec obj=2.4.7 (Describe the purpose of the defense-in-depth model)
+FRONT: Defense in depth — the seven layers
+BACK: #Physical, identity & access, perimeter, network, compute, application, data | Outer to inner; data is the center
+WHY: Microsoft draws defense in depth as rings with data at the center: physical security of the datacenter, identity and access (MFA, SSO, auditing), perimeter (DDoS protection, perimeter firewalls), network (segmentation, NSGs, limiting connectivity), compute (patched and protected VMs), application (secure development, secrets management) and data (encryption at rest and in transit, access controls). AZ-900 asks which layer a control such as 'DDoS protection' belongs to; that one is perimeter.
+HOOK: Outside in: Physical, Identity, Perimeter, Network, Compute, App, Data.
+
+[116] cat=idsec obj=2.4.8 (Describe the purpose of Microsoft Defender for Cloud)
+FRONT: Microsoft Defender for Cloud — the purpose
+BACK: #Cloud-native application protection platform (CNAPP) | Posture management plus workload protection across Azure, AWS, GCP, on-premises
+WHY: Defender for Cloud assesses the security configuration of your resources, recommends fixes, and detects threats against servers, containers, databases, storage and other workloads. It covers Azure natively, extends to AWS and GCP, and reaches on-premises machines through Azure Arc. The free foundational tier gives posture management; paid Defender plans add workload protection. Exam signal: 'identify misconfigurations and detect attacks across the environment'.
+
+[117] cat=idsec obj=2.4.8 (Describe the purpose of Microsoft Defender for Cloud)
+FRONT: Defender for Cloud — CSPM, CWP and secure score
+BACK: #CSPM: assess posture, recommendations, secure score | CWP: Defender plans that detect threats per workload type
+WHY: Cloud security posture management continuously compares resources against the Microsoft cloud security benchmark, lists recommendations and rolls them into a secure score that rises as you remediate. Cloud workload protection is delivered by Defender plans for servers, containers, databases, storage, App Service and more, which raise security alerts when an attack is detected. Foundational CSPM is free; Defender CSPM and the workload plans are paid. Exam signal: 'a single number that shows how secure the subscription is' is secure score.
+
+[118] cat=cost obj=3.1.1 (Describe factors that can affect costs in Azure)
+FRONT: Factors that affect Azure costs — the list
+BACK: #Resource type, consumption, maintenance, geography, network traffic | Plus subscription type and Azure Marketplace
+WHY: AZ-900 names seven cost factors: the resource type and its settings, how much you consume, how well you maintain the environment (deleting unused resources), the geography you deploy to, the network traffic you generate, the subscription type and its allowances, and third-party Marketplace purchases. A stem that describes a change in any of these and asks 'what will happen to the cost' is testing this list.
+
+[119] cat=cost obj=3.1.1 (Describe factors that can affect costs in Azure)
+FRONT: Geography and network traffic as cost factors
+BACK: #Prices differ by region (power, labor, taxes) | Inbound data is usually free; outbound is billed by zone
+WHY: The same VM size costs different amounts in different regions because power, labor, taxes and fees vary. Network traffic is billed by billing zone: data moving into Azure is generally free, while data leaving Azure or crossing regions is charged. Keeping chatty resources in the same region and zone avoids both surprises. Exam signal: 'why is the same deployment cheaper in one region' or 'reduce egress charges'.
+
+[120] cat=cost obj=3.1.1 (Describe factors that can affect costs in Azure)
+FRONT: Consumption and subscription type as cost factors
+BACK: #Pay-as-you-go meters usage; reservations and savings plans discount commitment | Free trial and other subscription types include credits or allowances
+WHY: Consumption-based billing means the meter runs only while a resource exists or executes; reservations, savings plans and Spot pricing lower the rate in exchange for commitment or interruptibility. The subscription type matters too: a free trial includes credits and allowances, and enterprise or developer offers carry different pricing. Exam signal: 'workload runs 24x7 for three years, minimize cost' points to a reservation.
+
+[121] cat=cost obj=3.1.1 (Describe factors that can affect costs in Azure)
+FRONT: Maintenance and Marketplace as cost factors
+BACK: #Orphaned disks, IPs and idle VMs keep billing | Marketplace items add vendor charges on top of Azure usage
+WHY: Deleting a VM does not delete its disks, public IP or NIC unless you choose to, and those leftovers keep costing money; routine cleanup is the 'maintenance' factor. Azure Marketplace products from third-party vendors are billed for the Azure resources they use plus whatever the vendor charges for its software or support. Exam signal: 'the bill did not drop after the VMs were deleted' points to orphaned resources.
+
+[122] cat=cost obj=3.1.2 (Explore the pricing calculator)
+FRONT: Azure pricing calculator — the purpose
+BACK: #Estimate the monthly cost of a planned Azure deployment | Pick services, region, size, tier, hours; save and share estimates
+WHY: The pricing calculator turns an anticipated set of Azure services into an estimated cost. You add products, choose region, size, tier, operating system and monthly quantities, and compare pricing options such as pay-as-you-go, reservations and savings plans; signed-in users can see negotiated rates. It estimates future spend; it does not read your actual usage. Exam signal: 'estimate the cost of the new solution before building it'.
+HOOK: Pricing calculator = what will Azure cost? Cost Management = what is Azure costing?
+
+[123] cat=cost obj=3.1.2 (Explore the pricing calculator)
+FRONT: Total cost of ownership (TCO) — the comparison
+BACK: #Compare running on-premises versus in Azure over several years | Includes hardware, software, labor, facilities, not just Azure rates
+WHY: A total cost of ownership comparison adds up everything an on-premises workload costs over a multi-year period (servers, storage, networking, software licenses, datacenter power and space, IT labor) and sets it against the projected Azure cost. Azure Migrate's business-case feature now produces this on-premises versus Azure comparison from discovered servers. Exam signal: 'estimate the savings from migrating the existing datacenter' is a TCO question, not a pricing-calculator question.
+
+[124] cat=cost obj=3.1.2 (Explore the pricing calculator)
+FRONT: Pricing calculator versus Cost Management
+BACK: #Calculator: forecast for resources you have not deployed | Cost Management: analyze and control spend on resources you have
+WHY: The two tools answer different questions. The pricing calculator builds an estimate from hypothetical choices and never touches your subscription. Cost Management reads real billing data for existing resources and lets you analyze, budget and alert on it. Stems that say 'planning' or 'proposal' want the calculator; stems that say 'current spending' or 'notify when we exceed' want Cost Management.
+
+[125] cat=cost obj=3.1.3 (Describe cost management capabilities in Azure)
+FRONT: Cost analysis in Cost Management
+BACK: #Explore actual and forecast spend by scope, service, region, tag | Charts and tables across subscriptions, resource groups, resources
+WHY: Cost analysis is the reporting view in Microsoft Cost Management. It shows accumulated and daily cost for a chosen scope (billing account, management group, subscription, resource group) and lets you group and filter by service, location, resource or tag to find what drives spend, with a forecast for the rest of the period. Exam signal: 'identify which department's resources cost the most' means cost analysis grouped by a tag.
+
+[126] cat=cost obj=3.1.3 (Describe cost management capabilities in Azure)
+FRONT: Budgets and cost alerts
+BACK: #Budget: spending threshold for a scope and period | Alert emails at chosen percentages; credit and department quota alerts for EA
+WHY: A budget sets an expected amount for a scope and period and triggers budget alerts when actual or forecast cost reaches the percentages you define; a budget notifies but does not stop resources unless you attach an action group to automate a response. Enterprise Agreement customers also receive credit alerts at 90 and 100 percent of prepayment and department spending quota alerts. Exam signal: 'notify the finance team when spending reaches 80 percent'.
+HOOK: A budget is an alarm clock, not a circuit breaker.
+
+[127] cat=cost obj=3.1.3 (Describe cost management capabilities in Azure)
+FRONT: Cost recommendations
+BACK: #Advisor cost recommendations surface in Cost Management | Right-size or shut down underused VMs, buy reservations, delete idle resources
+WHY: Cost Management integrates Azure Advisor's cost category to recommend concrete savings: resize or shut down VMs with low utilization, purchase reservations or savings plans for steady workloads, and remove unattached disks, idle gateways and unused public IPs. Each recommendation shows the estimated annual saving. Exam signal: 'identify virtual machines that are underutilized' points to Advisor cost recommendations.
+
+[128] cat=cost obj=3.1.4 (Describe the purpose of tags)
+FRONT: Tags — the purpose
+BACK: #Name-value metadata on resources, groups and subscriptions | Organize, filter cost reports, automate, prove ownership
+WHY: A tag is a name-value pair such as CostCenter = Finance or Environment = Prod attached to a resource, resource group or subscription. Tags appear in cost analysis and billing exports so you can charge spending back to teams, and they drive automation and filtering in the portal and scripts. Up to 50 tags per resource; names are case-insensitive, values are case-sensitive; management groups cannot be tagged. Exam signal: 'report costs per department'.
+
+[129] cat=cost obj=3.1.4 (Describe the purpose of tags)
+FRONT: Tags are not inherited
+BACK: #A tag on a resource group does not flow to its resources | Use Azure Policy to require or append tags
+WHY: Tagging a resource group or subscription does not automatically tag the resources inside; each resource carries only the tags set on it. To enforce consistency you assign an Azure Policy that requires a tag on creation, appends a default value or inherits the tag from the resource group. This is the single most common tag question on AZ-900. Exam signal: 'resources in the group do not show the CostCenter tag'.
+HOOK: Tags stay where you put them; Policy copies them down.
+
+[130] cat=govern obj=3.2.1 (Describe the purpose of Microsoft Purview in Azure)
+FRONT: Microsoft Purview — the purpose
+BACK: #Govern, protect and manage data wherever it lives | Microsoft 365, Azure, other clouds, on-premises
+WHY: Microsoft Purview is a family of solutions for data governance, data security and compliance across Microsoft 365, Azure, multicloud and on-premises sources. The governance side catalogs and classifies data; the security side protects it with sensitivity labels and data loss prevention; the compliance side handles audit, eDiscovery, records and retention. Exam signal: 'discover and classify sensitive data across the organization'.
+
+[131] cat=govern obj=3.2.1 (Describe the purpose of Microsoft Purview in Azure)
+FRONT: Purview Data Map and Unified Catalog
+BACK: #Data Map scans and catalogs data assets with classification and lineage | Unified Catalog lets users find and govern them
+WHY: The governance portion of Purview starts with the Data Map, which scans registered sources (Azure storage, databases, SaaS, on-premises) to build an inventory of data assets, apply classifications and sensitivity labels, and record lineage showing where data came from and where it flows. The Unified Catalog sits on top so data consumers can search, understand and request access. Exam signal: 'map where data flows between systems'.
+
+[132] cat=govern obj=3.2.2 (Describe the purpose of Azure Policy)
+FRONT: Azure Policy — the purpose
+BACK: #Enforce organizational standards and assess compliance at scale | Definition + assignment at a scope; inherited downward
+WHY: Azure Policy evaluates resources against business rules and reports or enforces compliance. A policy definition describes the condition and the effect (Audit, Deny, Modify, DeployIfNotExists and others); an assignment applies it at a management group, subscription or resource group, with optional exclusions, and child scopes inherit it. An initiative groups several definitions to be assigned together. Exam signal: 'prevent anyone from creating VMs outside West Europe'.
+HOOK: RBAC = who can act; Policy = what the result must look like.
+
+[133] cat=govern obj=3.2.2 (Describe the purpose of Azure Policy)
+FRONT: Azure Policy — initiatives, effects and remediation
+BACK: #Initiative: bundle of definitions assigned as one | Deny blocks; Audit reports; remediation tasks fix existing resources
+WHY: An initiative (policy set) groups related definitions so a goal like a regulatory benchmark is assigned once. Effects decide what happens: Deny rejects a non-compliant create or update, Audit and AuditIfNotExists only mark it non-compliant, Modify and Append change properties, DeployIfNotExists adds a missing related resource. Existing non-compliant resources are not changed until you run a remediation task. Evaluation also runs on a regular compliance cycle. Exam signal: 'apply all the rules of a compliance standard at once'.
+
+[134] cat=govern obj=3.2.3 (Describe the purpose of resource locks)
+FRONT: Resource locks — CanNotDelete and ReadOnly
+BACK: #CanNotDelete: can read and modify, cannot delete | ReadOnly: can only read; acts like Reader for everyone
+WHY: A lock protects a resource from accidental change regardless of RBAC. CanNotDelete (shown as Delete in the portal) allows reads and updates but blocks deletion; ReadOnly blocks deletion and modification, which can have surprising side effects such as preventing a VM from starting because that is a POST operation. Locks apply to control-plane operations only, so blob data inside a locked storage account can still be deleted. Exam signal: 'prevent an administrator from accidentally deleting the production database'.
+HOOK: Even an Owner has to remove the lock first.
+
+[135] cat=govern obj=3.2.3 (Describe the purpose of resource locks)
+FRONT: Resource locks — scope and inheritance
+BACK: #Set on subscription, resource group or resource; not management groups | Inherited by children; most restrictive wins
+WHY: Locks can be applied to a subscription, a resource group or an individual resource, but not to a management group. A lock at a higher scope is inherited by everything beneath it, and when several apply the most restrictive one takes effect. A delete lock on one resource also blocks deleting its resource group. Creating or removing locks needs Owner or User Access Administrator rights. Exam signal: 'which scope will prevent deletion of all resources in the group'.
+
+[136] cat=govern obj=3.3.1 (Describe the Azure portal)
+FRONT: Azure portal — the tool
+BACK: #Web-based graphical console for all Azure services | Build, manage and monitor from a browser; no install
+WHY: The Azure portal is the web console at portal.azure.com where you can create, configure and monitor every Azure resource with a graphical interface and guided wizards. It is the right choice for one-off tasks, exploration and visual monitoring, and it hosts Cloud Shell for command-line work in the same window. For repeatable deployments the exam steers you to scripts or templates instead. Exam signal: 'without installing any tools'.
+
+[137] cat=govern obj=3.3.1 (Describe the Azure portal)
+FRONT: Azure portal — dashboards and global reach
+BACK: #Customizable dashboards aggregate resource views | Same portal across regions; resilient to single datacenter failure
+WHY: The portal lets you build and share dashboards that pin metrics, resource lists and markdown tiles so teams see their environment at a glance, and the Azure mobile app provides a subset for phones. Microsoft runs the portal in every datacenter so it stays available during a local outage and is continuously updated without downtime. Exam signal: 'provide operators a single screen showing the health of key resources'.
+
+[138] cat=govern obj=3.3.2 (Describe Azure Cloud Shell, Azure CLI, and Azure PowerShell)
+FRONT: Azure Cloud Shell — the tool
+BACK: #Browser-based terminal with Bash or PowerShell | Azure CLI and Azure PowerShell preinstalled; optional Azure Files share for $HOME
+WHY: Cloud Shell is an interactive, authenticated shell that runs in the browser from the portal, shell.azure.com, the mobile app or VS Code. You pick Bash or PowerShell and get the Azure CLI, Azure PowerShell and common tools without installing anything. Files persist in a 5 GB Azure Files share mounted as your home directory, and sessions time out after 20 minutes idle. Exam signal: 'run Azure CLI commands from a locked-down laptop'.
+
+[139] cat=govern obj=3.3.2 (Describe Azure Cloud Shell, Azure CLI, and Azure PowerShell)
+FRONT: Azure CLI versus Azure PowerShell
+BACK: #CLI: az commands, cross-platform, Bash-friendly, JSON output | PowerShell: Az module, Verb-Noun cmdlets, object output
+WHY: Both tools manage the same resources through Azure Resource Manager and both run on Windows, macOS and Linux. The Azure CLI uses az commands with a shell-style syntax and returns JSON by default; Azure PowerShell is the Az module with New-AzVM-style cmdlets that return objects and fit PowerShell scripting. Pick by the team's existing skills and scripting environment. Exam signal: 'Verb-Noun' is PowerShell; 'az vm create' is CLI.
+
+[140] cat=govern obj=3.3.3 (Describe the purpose of Azure Arc)
+FRONT: Azure Arc — the purpose
+BACK: #Projects non-Azure resources into Azure Resource Manager | Manage on-premises and other-cloud servers, Kubernetes, data services
+WHY: Azure Arc extends Azure's management plane to resources running outside Azure. Servers, Kubernetes clusters, SQL Server instances, VMware vSphere and System Center VMM environments can be registered so they appear as Azure resources and accept Azure Policy, RBAC, tags, Azure Monitor, Defender for Cloud and update management. The Arc control plane itself is free; attached services are billed normally. Exam signal: 'apply Azure Policy to on-premises servers'.
+HOOK: Arc = Azure management for things that are not in Azure.
+
+[141] cat=govern obj=3.3.3 (Describe the purpose of Azure Arc)
+FRONT: Azure Arc — what it enables on Arc-enabled resources
+BACK: #Policy, RBAC, Resource Graph, Monitor, Defender, Update Manager, GitOps | Azure data services on Arc-enabled Kubernetes
+WHY: Once a machine or cluster is Arc-enabled you can organize it with management groups and tags, query it with Azure Resource Graph, enforce configuration with Azure Policy and GitOps, monitor it with Azure Monitor, protect it with Defender for Cloud and patch it with Update Manager. Arc-enabled data services let SQL Managed Instance run on any Kubernetes cluster. Exam signal: 'a single pane for Azure, on-premises and other clouds'.
+
+[142] cat=govern obj=3.3.4 (Describe infrastructure as code (IaC))
+FRONT: Infrastructure as code (IaC) — the idea
+BACK: #Define infrastructure in files, deploy from version control | Repeatable, reviewable, consistent environments
+WHY: Infrastructure as code treats resource definitions as source code: templates or scripts stored in version control, reviewed like application code and deployed through pipelines. The payoff is identical environments every time, an audit trail of changes and fast recovery by redeploying. ARM templates, Bicep and third-party tools like Terraform implement it on Azure. Exam signal: 'deploy the same environment to multiple regions consistently'.
+
+[143] cat=govern obj=3.3.4 (Describe infrastructure as code (IaC))
+FRONT: Declarative versus imperative IaC
+BACK: #Declarative: describe the end state, the platform works out the steps | Imperative: script each command in order
+WHY: A declarative template states what should exist (a VM of this size in this VNet) and Resource Manager figures out ordering and dependencies; running it again converges to the same state. An imperative script lists commands (create network, then create VM) and must handle what already exists. ARM templates and Bicep are declarative; CLI or PowerShell scripts are imperative. Exam signal: 'define the desired state' is declarative.
+
+[144] cat=govern obj=3.3.5 (Describe Azure Resource Manager (ARM) and ARM templates)
+FRONT: Azure Resource Manager (ARM) — the service
+BACK: #Deployment and management layer that every tool talks to | Authenticates, authorizes, routes requests to resource providers
+WHY: Azure Resource Manager is the control plane for Azure. Whether you use the portal, CLI, PowerShell, REST or an SDK, the request goes to Resource Manager, which checks identity and permissions, applies policy and locks, and forwards the call to the right resource provider. This is why every tool gives the same result and why RBAC, policy and tags work everywhere. Exam signal: 'a consistent management layer'.
+
+[145] cat=govern obj=3.3.5 (Describe Azure Resource Manager (ARM) and ARM templates)
+FRONT: ARM templates — JSON versus Bicep
+BACK: #Both declarative and idempotent; define resources and dependencies | Bicep is a simpler language that compiles to ARM JSON
+WHY: An ARM template is a JSON file describing the resources to deploy, their properties and dependencies; Resource Manager deploys them in the right order and redeploying the same template is idempotent. Bicep is a domain-specific language with cleaner syntax, modules and type checking that transpiles to the same JSON, supports new Azure features on day one and needs no state file. Exam signal: 'reduce the verbosity of ARM JSON' is Bicep.
+HOOK: Bicep is ARM JSON with the brackets filed off.
+
+[146] cat=monitor obj=3.4.1 (Describe the purpose of Azure Advisor)
+FRONT: Azure Advisor — the purpose
+BACK: #Personalized best-practice recommendations from your usage | Five categories: reliability, security, performance, cost, operational excellence
+WHY: Azure Advisor analyzes resource configuration and telemetry and produces actionable recommendations grouped into reliability, security, performance, cost and operational excellence. Each item explains the issue and offers an inline fix, and you can filter by subscription or resource type and set alerts for new recommendations. Advisor score summarizes how well you follow the guidance. Exam signal: 'improve the performance and reduce the cost of existing resources'.
+HOOK: Advisor = the consultant; Monitor = the instruments; Service Health = the weather report.
+
+[147] cat=monitor obj=3.4.1 (Describe the purpose of Azure Advisor)
+FRONT: Advisor — where its recommendations come from
+BACK: #Security items come from Defender for Cloud; cost items feed Cost Management | Advisor is the single dashboard that aggregates them
+WHY: Advisor does not generate every recommendation itself. Security recommendations are supplied by Defender for Cloud, cost recommendations also appear inside Cost Management, and reliability items draw on service configuration such as missing availability zones or backups. Advisor's role is to put them in one place with a score. Exam signal: 'a single view of recommendations for all subscriptions'.
+
+[148] cat=monitor obj=3.4.1 (Describe the purpose of Azure Advisor)
+FRONT: Advisor — reliability versus operational excellence
+BACK: #Reliability: keep critical apps running (redundancy, backups) | Operational excellence: process, deployment and manageability practices
+WHY: Two Advisor categories are easy to confuse. Reliability covers continuity of business-critical applications: add availability zones, enable backup, configure soft delete. Operational excellence covers how you run the platform: create service health alerts, repair invalid policy definitions, use managed disks. On the exam, 'ensure continuity' is reliability and 'improve deployment and workflow efficiency' is operational excellence.
+
+[149] cat=monitor obj=3.4.2 (Describe Azure Service Health)
+FRONT: Azure status, Service Health and Resource Health
+BACK: #Status page: global view of all services | Service Health: personalized to your services/regions. Resource Health: one resource
+WHY: Three layers report platform health. The public Azure status page shows incidents affecting any service in any region. Azure Service Health in the portal is personalized to the services and regions you use and lets you set alerts. Resource Health drills to a single resource such as one VM, reporting availability minute by minute and whether a problem is platform-caused or user-initiated. Exam signal: 'is my VM unavailable because of Azure' is Resource Health.
+
+[150] cat=monitor obj=3.4.2 (Describe Azure Service Health)
+FRONT: Service Health — the event types
+BACK: #Service issues, planned maintenance, health advisories, security advisories | Plus billing updates; history kept 90 days
+WHY: Service Health tracks service issues (problems affecting you now), planned maintenance (upcoming work that may affect availability), health advisories (changes that need your attention, such as feature retirements or required upgrades), security advisories (security events that may affect availability) and billing updates. Events stay in health history for 90 days after they become inactive. Exam signal: 'be notified before Azure performs maintenance that affects our VMs'.
+
+[151] cat=monitor obj=3.4.2 (Describe Azure Service Health)
+FRONT: Service Health alerts
+BACK: #Azure Monitor alert rule on service health events | Action group sends email, SMS, push, webhook, Logic App
+WHY: You can create an Azure Monitor alert rule scoped to Service Health events for chosen subscriptions, services, regions and event types; when a matching event is published, the attached action group notifies people or triggers automation. This is the operational-excellence item Advisor nags you to configure. Exam signal: 'automatically email the operations team when a service issue affects West Europe'.
+
+[152] cat=monitor obj=3.4.3 (Describe Azure Monitor, including Log Analytics, Azure Monitor alerts, and Azure Monitor Application Insights)
+FRONT: Azure Monitor — the purpose
+BACK: #Collects metrics, logs, traces and changes from Azure, on-premises, other clouds | Analyze, visualize, alert and respond
+WHY: Azure Monitor is the platform-wide observability service. It gathers numeric metrics, text logs, application traces and change records from Azure resources, the OS inside VMs, applications and, through Arc, machines elsewhere. The data flows into Metrics and Log Analytics workspaces where you query it, chart it in workbooks and dashboards, and act on it with alerts and autoscale. Exam signal: 'collect performance data from all virtual machines'.
+
+[153] cat=monitor obj=3.4.3 (Describe Azure Monitor, including Log Analytics, Azure Monitor alerts, and Azure Monitor Application Insights)
+FRONT: Log Analytics — the tool
+BACK: #Workspace that stores log data; query it with KQL | The place logs land and get searched
+WHY: A Log Analytics workspace is the store for log and trace data in Azure Monitor, and Log Analytics is the portal experience for writing Kusto Query Language queries against it. You use it to investigate incidents, build reports and define the conditions behind log-based alerts. Metrics live in a separate time-series store optimized for near-real-time charts. Exam signal: 'run a query across the logs of multiple VMs'.
+HOOK: Metrics = numbers over time; logs = records you query with KQL.
+
+[154] cat=monitor obj=3.4.3 (Describe Azure Monitor, including Log Analytics, Azure Monitor alerts, and Azure Monitor Application Insights)
+FRONT: Azure Monitor alerts and action groups
+BACK: #Alert rule: condition on metrics, logs or activity log | Action group: who to notify and what to run
+WHY: An alert rule watches a signal (a metric threshold, a log query result, an activity-log event or service health) and fires when the condition is met. The response is defined separately in an action group, which can email or text people, push to the mobile app, call a webhook, run a Logic App, Automation runbook or Azure Function. Reusable action groups let many rules share one notification list. Exam signal: 'notify the on-call engineer when CPU exceeds 90 percent for five minutes'.
+
+[155] cat=monitor obj=3.4.3 (Describe Azure Monitor, including Log Analytics, Azure Monitor alerts, and Azure Monitor Application Insights)
+FRONT: Application Insights — the tool
+BACK: #Application performance monitoring for live web apps | Requests, dependencies, exceptions, availability tests, user telemetry
+WHY: Application Insights is the application performance monitoring feature of Azure Monitor. Instrumented with an SDK or OpenTelemetry, an app reports request rates and response times, dependency calls, exceptions, page views and custom events; availability tests probe the app from outside. It answers 'is the application slow and why' rather than 'is the VM healthy'. Exam signal: 'identify which page in the web app has the slowest response time'.

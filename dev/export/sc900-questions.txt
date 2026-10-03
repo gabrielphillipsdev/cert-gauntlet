@@ -1,0 +1,651 @@
+# SC-900 practice questions
+# Export for second-model review. '*' marks the keyed answer. Report any item where you believe the key or an explanation is wrong, citing a Microsoft Learn page.
+
+[s001] type=mc domain=3 obj=3.1.1 (Describe Azure DDoS Protection)
+Q: Fabrikam hosts a single public-facing web application in Azure that uses one public IP address. The company wants DDoS mitigation tuned to its traffic, with attack telemetry, but does not want to purchase a protection plan that covers entire virtual networks. Which Azure service tier should Fabrikam use?
+  * A. Azure DDoS IP Protection
+        why: IP Protection is billed per protected public IP and needs no plan, while still giving adaptive tuning, metrics and alerting.
+    B. Azure DDoS Network Protection
+        why: Network Protection is purchased as a plan that covers all protected resources in enrolled virtual networks, which is more than Fabrikam wants.
+    C. Azure DDoS infrastructure protection
+        why: The free baseline is always on but offers no customer-specific tuning, telemetry or alerting.
+    D. Azure Web Application Firewall
+        why: WAF protects against HTTP-layer attacks such as injection; it is not a volumetric DDoS mitigation service.
+TAKEAWAY: DDoS Network Protection is a per-VNet plan; DDoS IP Protection is per public IP with no plan. Both mitigate L3/L4 floods; WAF handles L7.
+
+[s002] type=mc domain=2 obj=2.1.2 (Describe types of identities, including workload identities)
+Q: An Azure virtual machine at Northwind runs an application that must read a connection string from Azure Key Vault. The security team requires that no credential be stored in the application's configuration and that Azure rotates the identity's credentials automatically. Which type of identity should the application use?
+  * A. A managed identity
+        why: A managed identity is a service principal whose credentials Azure creates and rotates; the VM authenticates to Key Vault without storing anything.
+    B. A user account with a long password
+        why: A user account is a human identity and would require a stored password, violating the requirement.
+    C. A guest user from a partner tenant
+        why: B2B guests are external human identities for collaboration, not workload identities for an Azure resource.
+    D. A device identity for the virtual machine
+        why: A device identity supports device-based Conditional Access; it does not give an application a way to call Key Vault.
+TAKEAWAY: Workload identities in Entra: applications, service principals and managed identities. 'No stored credentials' plus 'Azure resource' points to a managed identity.
+
+[s003] type=mc domain=1 obj=1.1.1 (Describe the shared responsibility model)
+Q: Tailspin Toys moves its email from an on-premises Exchange server to Microsoft 365, a SaaS offering. Select the answer that correctly completes the sentence. After the move, Tailspin Toys remains responsible for ______.
+  * A. its data, user accounts and the devices that connect to the service
+        why: Data, identities, endpoints and access decisions always stay with the customer regardless of the service model.
+    B. patching the operating system of the servers that host the mailboxes
+        why: In SaaS the provider owns the operating system, runtime and application layers.
+    C. the physical security of the datacenter
+        why: Physical hosts, network and datacenter are the provider's responsibility in every cloud model.
+    D. nothing, because the provider assumes all security obligations in SaaS
+        why: Moving to the cloud never removes the customer's responsibility for data, identities and endpoints.
+TAKEAWAY: Shared responsibility: the customer always keeps data, identities, endpoints and access management; the provider always keeps the physical layers.
+
+[s004] type=mc domain=3 obj=3.1.5 (Describe network security groups (NSGs))
+Q: You review the inbound security rules of a network security group associated with a subnet at Woodgrove Bank, shown in the exhibit. A user on the internet at 203.0.113.25 attempts an RDP connection to a VM in the subnet. What happens to the connection?
+EXHIBIT:
+    Priority  Name              Source           Dest  Port   Protocol  Action
+    100       Deny-RDP-Internet Internet         Any   3389   TCP       Deny
+    200       Allow-RDP-Mgmt    10.10.5.0/24     Any   3389   TCP       Allow
+    300       Allow-HTTPS       Any              Any   443    TCP       Allow
+    65000     AllowVNetInBound  VirtualNetwork   VNet  Any    Any       Allow
+    65001     AllowAzureLBIn    AzureLoadBalancer Any  Any    Any       Allow
+    65500     DenyAllInbound    Any              Any   Any    Any       Deny
+  * A. It is denied by the rule at priority 100
+        why: Rules are evaluated lowest priority number first and processing stops at the first match. Internet-sourced RDP matches priority 100, which denies it.
+    B. It is allowed by the rule at priority 200
+        why: Priority 200 is never reached for this packet because priority 100 already matched, and the source is not 10.10.5.0/24 anyway.
+    C. It is allowed by the default AllowVNetInBound rule
+        why: The source is the internet, not the VirtualNetwork service tag, and default rules are only reached if no custom rule matches.
+    D. It is denied by the default DenyAllInbound rule
+        why: The packet never falls through to 65500 because a custom rule at priority 100 matched it first.
+TAKEAWAY: NSG evaluation: ascending priority, first match wins, custom rules 100–4096 run before defaults at 65000+.
+
+[s005] type=mc domain=4 obj=4.1.1 (Describe the Service Trust Portal offerings)
+Q: An auditor asks Litware to provide the independent SOC 2 audit report that covers Microsoft 365. Which Microsoft resource should a Litware compliance officer use to download the report?
+  * A. The Service Trust Portal
+        why: The Service Trust Portal publishes Microsoft's audit reports, certifications and compliance documents, including SOC and ISO reports, after NDA acceptance.
+    B. Microsoft Purview Compliance Manager
+        why: Compliance Manager assesses Litware's own compliance posture; it does not host Microsoft's third-party audit reports.
+    C. The Microsoft Defender portal
+        why: The Defender portal is for security operations such as incidents and hunting.
+    D. The Microsoft Entra admin center
+        why: The Entra admin center manages identities and access, not compliance documentation.
+TAKEAWAY: Service Trust Portal = evidence about Microsoft's compliance. Compliance Manager = tracking your own compliance.
+
+[s006] type=mc domain=2 obj=2.1.3 (Describe hybrid identity)
+Q: Northwind synchronizes its on-premises Active Directory to Microsoft Entra ID. Company policy states that user passwords, including hashed forms, must never be stored in the cloud, and the company does not want to deploy AD FS. Which sign-in method should Northwind configure in Microsoft Entra Connect?
+  * A. Pass-through authentication
+        why: PTA validates each sign-in against on-premises AD DS through a lightweight agent, so no password hash is stored in Entra ID and no federation servers are needed.
+    B. Password hash synchronization
+        why: PHS stores a hash of the password hash in Entra ID, which the policy forbids.
+    C. Federation with AD FS
+        why: Federation would satisfy the password requirement but requires the AD FS infrastructure the company wants to avoid.
+    D. Microsoft Entra Cloud Sync with password writeback
+        why: Cloud Sync is a synchronization tool, not a sign-in method, and password writeback concerns SSPR.
+TAKEAWAY: PHS: cloud validates a synced hash. PTA: on-premises agent validates live. Federation: AD FS or another IdP issues the token.
+
+[s007] type=mc domain=3 obj=3.1.2 (Describe Azure Firewall)
+Q: Fabrikam plans to deploy Azure Firewall in a hub virtual network. A requirement states that outbound HTTPS traffic from the spokes must be decrypted and inspected for malware signatures before leaving the environment. Which Azure Firewall SKU meets the requirement?
+  * A. Premium
+        why: Only the Premium SKU offers TLS inspection and a signature-based intrusion detection and prevention system.
+    B. Standard
+        why: Standard filters at layers 3 to 7 and uses threat intelligence, but it cannot terminate and inspect TLS sessions.
+    C. Basic
+        why: Basic is a limited-throughput SKU for small businesses with threat intelligence in alert mode only.
+    D. Azure Firewall Manager
+        why: Firewall Manager is a central management service for policies, not a firewall SKU.
+TAKEAWAY: Azure Firewall Premium = TLS inspection, IDPS, URL filtering, web categories. Standard = L3–L7 filtering plus threat intel. Basic = SMB.
+
+[s008] type=ms domain=2 obj=2.3.1 (Describe Microsoft Entra Conditional Access)
+Q: You review the Conditional Access policy summary shown in the exhibit for the Woodgrove tenant. Which three statements about the policy are true? Each correct answer presents a complete solution.
+EXHIBIT:
+    Policy name:   CA02 - Protect Finance apps
+    State:         On
+    Users:         Include group 'Finance Staff'; exclude 'Break-glass admins'
+    Target:        Cloud apps: Dynamics 365, SharePoint Online
+    Conditions:    Locations: Any location, excluding 'HQ-Trusted'
+                   Device platforms: Any
+    Grant:         Require multifactor authentication
+                   Require device to be marked as compliant
+                   (Require one of the selected controls)
+(choose 3)
+  * A. A Finance Staff member connecting from the HQ-Trusted named location is not subject to the policy
+        why: Excluding a location from the condition means sign-ins from it skip the policy entirely.
+  * B. A Finance Staff member connecting from home on a compliant device can access Dynamics 365 without MFA
+        why: The grant is 'require one of the selected controls', so a compliant device alone satisfies it.
+  * C. Members of the Break-glass admins group are never evaluated by this policy
+        why: Excluded users are removed from the policy's scope regardless of other conditions.
+    D. The policy blocks all access from outside HQ-Trusted
+        why: The policy grants access with controls; it contains no Block decision.
+    E. The policy applies to every application in the tenant
+        why: Only Dynamics 365 and SharePoint Online are targeted.
+    F. The policy requires Microsoft Entra ID P2 because it uses device compliance
+        why: Device compliance is a P1 grant control; P2 is needed only for risk-based conditions.
+TAKEAWAY: Read a Conditional Access policy as if-then: scope (users, apps, conditions) then grant controls, noting whether ALL or ONE of the controls is required.
+
+[s009] type=mc domain=4 obj=4.2.3 (Describe the uses and benefits of compliance score)
+Q: In Microsoft Purview Compliance Manager, Litware compares two improvement actions. Action A enforces a centrally managed password policy that users cannot bypass. Action B asks users to lock their screens when away from their desks. Both are preventative. Which statement about their contribution to the compliance score is correct?
+  * A. Action A is worth 27 points and Action B is worth 9 points
+        why: A preventative mandatory action scores 27; a preventative discretionary action, which relies on user behavior, scores 9.
+    B. Both actions are worth 27 points because both are preventative
+        why: Point values combine the preventative/detective/corrective type with whether the action is mandatory or discretionary.
+    C. Action A is worth 9 points and Action B is worth 27 points
+        why: This reverses the weighting; the mandatory, non-bypassable control carries the higher value.
+    D. Both actions are worth 1 point because they are managed by the customer
+        why: One point is the value of detective or corrective discretionary actions, not preventative ones, and ownership does not set the value.
+TAKEAWAY: Compliance score weights: preventative mandatory 27, preventative discretionary 9, detective/corrective mandatory 3, detective/corrective discretionary 1.
+
+[s010] type=ms domain=3 obj=3.2.2 (Describe Cloud Security Posture Management (CSPM))
+Q: Tailspin Toys enables Microsoft Defender for Cloud on an Azure subscription but has not purchased any Defender plans. Which two capabilities are available at no additional cost? Each correct answer presents a complete solution.
+(choose 2)
+  * A. Secure score based on Microsoft cloud security benchmark recommendations
+        why: Secure score and MCSB recommendations are part of Foundational CSPM, which is free.
+  * B. Asset inventory of the subscription's resources
+        why: Inventory is included in the free foundational tier.
+    C. Attack path analysis across the cloud security graph
+        why: Attack path analysis requires the paid Defender CSPM plan.
+    D. Agentless vulnerability scanning of virtual machines
+        why: Agentless scanning needs Defender CSPM or Defender for Servers Plan 2.
+    E. Malware scanning of uploaded blobs in storage accounts
+        why: Malware scanning is a Defender for Storage workload protection feature.
+TAKEAWAY: Foundational CSPM (free): inventory, secure score, MCSB recommendations. Defender CSPM (paid): attack paths, cloud security explorer, agentless scanning, data-aware posture.
+
+[s011] type=mc domain=1 obj=1.1.3 (Describe the Zero Trust model)
+Q: Select the answer that correctly completes the sentence. The Zero Trust guiding principle that leads an organization to segment its network, encrypt data end to end and monitor for lateral movement, because an attacker may already be inside, is ______.
+  * A. assume breach
+        why: Assume breach designs controls to limit the blast radius and detect intruders who have already gotten past the perimeter.
+    B. verify explicitly
+        why: Verify explicitly concerns authenticating and authorizing every request on all available signals.
+    C. use least privilege access
+        why: Least privilege limits what each identity can do, with just-in-time and just-enough access.
+    D. defense in depth
+        why: Defense in depth is a layered-control strategy, not one of the three Zero Trust principles.
+TAKEAWAY: Zero Trust principles: verify explicitly, use least privilege access, assume breach. Segmentation and monitoring map to assume breach.
+
+[s012] type=mc domain=2 obj=2.2.1 (Describe the authentication methods)
+Q: Northwind hires a new employee who will use a FIDO2 security key as their only sign-in method. On the first day the employee has no password and has not yet registered the key. Which Microsoft Entra feature allows the employee to sign in once and register the security key?
+  * A. Temporary Access Pass
+        why: A TAP is a time-limited, admin-issued passcode that satisfies strong authentication so the user can enroll passwordless methods.
+    B. Self-service password reset
+        why: SSPR resets an existing password; the employee has none and needs a passwordless bootstrap.
+    C. Smart lockout
+        why: Smart lockout defends against password guessing; it does not help a user register methods.
+    D. Security defaults
+        why: Security defaults enforce MFA registration tenant-wide but do not provide a credential for a user with no methods.
+TAKEAWAY: Temporary Access Pass bootstraps passwordless onboarding and recovers users who lost their device. Lifecycle workflows can issue one automatically.
+
+[s013] type=mc domain=3 obj=3.1.6 (Describe Azure Bastion)
+Q: Woodgrove administrators need RDP access to Azure virtual machines in a virtual network. A security requirement states that the VMs must not have public IP addresses and that ports 3389 and 22 must not be reachable from the internet. Which Azure service should Woodgrove deploy?
+  * A. Azure Bastion
+        why: Bastion brokers RDP and SSH sessions over TLS on port 443 using the VMs' private IP addresses, so the VMs expose nothing to the internet.
+    B. Azure VPN Gateway with a public IP on each VM
+        why: Adding public IPs to the VMs directly contradicts the requirement.
+    C. Azure Application Gateway
+        why: Application Gateway load-balances HTTP traffic; it does not provide RDP or SSH sessions.
+    D. Azure DDoS Network Protection
+        why: DDoS Protection mitigates floods against public endpoints; it does not provide remote administration.
+TAKEAWAY: Azure Bastion: managed jump host in the AzureBastionSubnet, RDP/SSH over 443 from the portal or native client, no public IP on VMs.
+
+[s014] type=mc domain=4 obj=4.3.6 (Describe retention policies, retention labels, and retention label policies)
+Q: A document in a Litware SharePoint site is subject to the two retention settings shown in the exhibit. Based on the principles of retention, what happens to the document?
+EXHIBIT:
+    Setting                         Type              Action                      Period
+    All-Sites-Baseline              Retention policy  Retain, then delete         7 years
+    Contracts (applied by user)     Retention label   Delete only                 3 years
+  * A. It is retained for 7 years and then deleted
+        why: Retention wins over deletion, so the label's 3-year delete cannot remove the item while the policy retains it; the item is kept the full 7 years and then deleted.
+    B. It is deleted after 3 years because the label is explicit
+        why: Explicit-over-implicit only decides among competing settings of the same kind; retention always beats deletion first.
+    C. It is retained for 10 years, the sum of both periods
+        why: Retention periods are compared, not added; the longest retention wins.
+    D. It is deleted after 3 years and the policy no longer applies
+        why: The retention policy continues to apply to the site and keeps the item in place.
+TAKEAWAY: Principles of retention: 1) retention wins over deletion, 2) longest retention wins, 3) explicit wins over implicit, 4) shortest deletion wins. Stop at the first rule that decides.
+
+[s015] type=mc domain=3 obj=3.4.2 (Describe Microsoft Defender for Office 365)
+Q: Fabrikam receives phishing emails that pass initial scanning because the links point to harmless pages at delivery time and are redirected to credential-harvesting sites hours later. Which Microsoft Defender for Office 365 feature protects users when they click the links?
+  * A. Safe Links
+        why: Safe Links rewrites URLs and checks the destination at click time, so a link weaponized after delivery is still blocked.
+    B. Safe Attachments
+        why: Safe Attachments detonates file attachments in a sandbox before delivery; it does not evaluate URLs.
+    C. Attack simulation training
+        why: Attack simulation training educates users with simulated phishing; it does not block real malicious links.
+    D. Zero-hour auto purge
+        why: ZAP removes messages already delivered when they are later found malicious, but it does not inspect links at click time.
+TAKEAWAY: Safe Links = click-time URL verification. Safe Attachments = sandbox detonation before delivery. Both are Defender for Office 365 Plan 1 features.
+
+[s016] type=mc domain=2 obj=2.3.1 (Describe Microsoft Entra Conditional Access)
+Q: Tailspin Toys requires multifactor authentication for all users except when they sign in from the corporate office network, whose public IP range is 198.51.100.0/24. You need to configure Microsoft Entra ID to support the requirement. What should you do first?
+  * A. Create a named location for 198.51.100.0/24 and mark it as trusted
+        why: A trusted named location can then be excluded from the Conditional Access MFA policy so office sign-ins skip the prompt.
+    B. Enable security defaults for the tenant
+        why: Security defaults enforce MFA for everyone with no location exceptions.
+    C. Add 198.51.100.0/24 to the custom banned password list
+        why: The banned password list blocks weak passwords; it has nothing to do with network locations.
+    D. Create a user risk policy in Microsoft Entra ID Protection
+        why: User risk policies respond to compromised accounts, not to network location.
+TAKEAWAY: Named locations (IP ranges or countries) are Conditional Access conditions; marking one trusted also improves ID Protection risk scoring.
+
+[s017] type=mc domain=3 obj=3.1.7 (Describe Azure Key Vault)
+Q: Northwind developers currently embed a database password in application source code. The security team wants the password stored in a managed Azure service, retrieved at runtime, with every retrieval logged. Which Azure service should Northwind use?
+  * A. Azure Key Vault
+        why: Key Vault stores secrets such as passwords and connection strings, controls access with Entra ID and RBAC, and logs every operation.
+    B. Azure Bastion
+        why: Bastion provides remote sessions to VMs; it does not store secrets.
+    C. Microsoft Entra ID Protection
+        why: ID Protection detects risky sign-ins; it is not a secret store.
+    D. Azure Firewall
+        why: Azure Firewall filters network traffic; it does not manage application secrets.
+TAKEAWAY: Key Vault holds keys, secrets and certificates. Pair it with a managed identity so applications need no stored credentials at all.
+
+[s018] type=mc domain=4 obj=4.3.1 (Describe the data classification capabilities)
+Q: Woodgrove Bank wants Microsoft Purview to automatically identify employment contracts stored across SharePoint, regardless of the template or wording used, so a sensitivity label can be applied. The documents contain no fixed identifier such as an account number. Which classification capability should Woodgrove use?
+  * A. A trainable classifier
+        why: Trainable classifiers use machine learning on sample documents to recognize a category of content that has no predictable pattern.
+    B. A built-in sensitive information type
+        why: Sensitive information types match patterns such as card or ID numbers; contracts have no such pattern.
+    C. Exact data match
+        why: EDM matches specific values from a reference table, which contracts do not contain.
+    D. A retention label
+        why: A retention label governs how long content is kept; it does not identify content categories by itself.
+TAKEAWAY: SIT = pattern (regex, keywords, checksum). Trainable classifier = ML category (contracts, résumés, source code). EDM = lookup of exact values.
+
+[s019] type=mc domain=2 obj=2.3.2 (Describe Microsoft Entra roles and role-based access control (RBAC))
+Q: Litware wants its help desk to reset passwords for non-administrator users in Microsoft Entra ID. The help desk must not be able to manage Azure virtual machines or modify administrative accounts. Which role should Litware assign?
+  * A. The Helpdesk Administrator Microsoft Entra role
+        why: Helpdesk Administrator is a narrow Entra role that resets passwords for non-admins and follows least privilege.
+    B. The Global Administrator Microsoft Entra role
+        why: Global Administrator grants far more than needed and violates least privilege.
+    C. The Contributor Azure RBAC role on the subscription
+        why: Azure RBAC roles manage Azure resources such as VMs; they do not control Entra user passwords.
+    D. The Owner Azure RBAC role on the resource group
+        why: Owner is an Azure resource role and would grant VM management, which must be prevented.
+TAKEAWAY: Entra roles govern directory objects and Microsoft 365; Azure RBAC governs Azure resources. Pick the least-privileged role that covers the task.
+
+[s020] type=mc domain=3 obj=3.2.3 (Describe how security policies, standards, and recommendations improve the cloud security posture)
+Q: In Microsoft Defender for Cloud, the Enable MFA security control at Tailspin Toys shows 10 maximum points. The control has three recommendations; two are fully remediated and one still reports unhealthy resources. Select the answer that correctly completes the sentence. The control currently contributes ______ to secure score.
+  * A. a partial score based on the proportion of healthy resources
+        why: A control's current score equals its max points multiplied by the share of resources that are healthy, so remaining unhealthy resources reduce it.
+    B. the full 10 points because most recommendations are complete
+        why: Full points require every recommendation in the control to be remediated for all resources.
+    C. zero points until the preview recommendations are also addressed
+        why: Preview recommendations are excluded from secure score entirely.
+    D. 10 points plus a bonus for each remediated recommendation
+        why: Secure score never exceeds a control's maximum; there is no bonus.
+TAKEAWAY: Secure score: per control, max points × healthy/total resources; all recommendations in a control must be fixed to earn its full points. Recalculates about every 8 hours.
+
+[s021] type=mc domain=1 obj=1.1.4 (Describe encryption and hashing)
+Q: A Fabrikam developer stores user passwords by running each one through SHA-256 and keeping only the output. A reviewer notes that two users with the same password have identical stored values and that precomputed tables could reveal common passwords. Which change addresses the reviewer's concern?
+  * A. Add a unique random salt to each password before hashing
+        why: Salting makes identical passwords produce different hashes and renders precomputed rainbow tables useless.
+    B. Encrypt the passwords with a symmetric key instead of hashing them
+        why: Reversible encryption is weaker for password storage because anyone with the key can recover every password.
+    C. Hash the passwords twice with the same algorithm
+        why: Double hashing is still deterministic; identical passwords remain identical and tables can be precomputed.
+    D. Store the passwords with asymmetric encryption using the public key
+        why: Passwords should not be recoverable at all; hashing with a salt, not encryption, is the correct design.
+TAKEAWAY: Hashing is one-way and deterministic; a per-user salt defeats rainbow tables. Encryption is reversible and is for confidentiality, not password storage.
+
+[s022] type=mc domain=4 obj=4.3.3 (Describe sensitivity labels and sensitivity label policies)
+Q: Northwind must ensure that a spreadsheet labeled Highly Confidential can be opened only by members of the Finance group, even after the file is emailed to an external address. Which sensitivity label setting enforces the requirement?
+  * A. Encryption with permissions assigned to the Finance group
+        why: Label encryption binds usage rights to the file so only the specified users can open it, wherever it travels.
+    B. A watermark reading Highly Confidential
+        why: Content marking is visual only and does not prevent anyone from opening the file.
+    C. A default label in the label policy
+        why: A default label applies classification automatically but does not restrict who can open the content.
+    D. Mandatory labeling in the label policy
+        why: Mandatory labeling forces users to choose a label; it does not control access.
+TAKEAWAY: Sensitivity labels can encrypt (access control that travels with the file), mark (headers, footers, watermarks) and protect containers. Only encryption restricts who can open content.
+
+[s023] type=mc domain=3 obj=3.3.1 (Define the concepts of security information and event management (SIEM) and security orchestration automated response (SOAR))
+Q: Select the answer that correctly completes the sentence. A security solution that automatically opens a ticket, enriches an incident with threat intelligence and disables a compromised user account without analyst intervention is performing ______.
+  * A. security orchestration, automation and response (SOAR)
+        why: SOAR automates and coordinates response actions across tools once a threat is detected.
+    B. security information and event management (SIEM)
+        why: SIEM collects, correlates and analyzes log data to detect threats; acting on them is the SOAR function.
+    C. cloud security posture management (CSPM)
+        why: CSPM assesses configuration against standards; it does not respond to incidents.
+    D. endpoint detection and response (EDR)
+        why: EDR records and analyzes endpoint behavior; the described cross-tool automation is SOAR.
+TAKEAWAY: SIEM = collect, correlate, detect, investigate. SOAR = automate and orchestrate response. Microsoft Sentinel does both.
+
+[s024] type=mc domain=2 obj=2.2.2 (Describe multifactor authentication (MFA))
+Q: Litware uses Microsoft Entra ID Free. The company wants to require multifactor authentication for all users and block legacy authentication protocols with the least administrative effort and no additional licenses. What should Litware enable?
+  * A. Security defaults
+        why: Security defaults are free, tenant-wide settings that require MFA registration for all users and block legacy authentication.
+    B. A Conditional Access policy
+        why: Conditional Access provides granular control but requires Microsoft Entra ID P1.
+    C. Microsoft Entra ID Protection sign-in risk policy
+        why: Risk-based policies require Entra ID P2.
+    D. Privileged Identity Management
+        why: PIM manages just-in-time role activation, not tenant-wide MFA, and requires P2.
+TAKEAWAY: Security defaults: free, all-or-nothing MFA plus legacy auth block. Conditional Access: granular, needs P1. Risk-based: needs P2.
+
+[s025] type=mc domain=3 obj=3.4.5 (Describe Microsoft Defender for Identity)
+Q: Woodgrove Bank runs on-premises Active Directory Domain Services. The security team wants to detect pass-the-ticket attacks and view lateral movement paths toward domain administrator accounts by analyzing domain controller traffic. Which Microsoft service should Woodgrove deploy?
+  * A. Microsoft Defender for Identity
+        why: Defender for Identity installs sensors on domain controllers to detect on-premises identity attacks and map lateral movement paths.
+    B. Microsoft Entra ID Protection
+        why: ID Protection scores cloud sign-ins and accounts in Entra ID; it does not analyze Kerberos traffic on domain controllers.
+    C. Microsoft Defender for Cloud Apps
+        why: Defender for Cloud Apps is a CASB for SaaS applications.
+    D. Microsoft Defender Vulnerability Management
+        why: Vulnerability Management finds software weaknesses on devices; it does not detect identity attacks.
+TAKEAWAY: Defender for Identity = on-premises AD attacks via DC sensors. Entra ID Protection = cloud sign-in and user risk. Hybrid orgs run both.
+
+[s026] type=ms domain=4 obj=4.4.2 (Describe eDiscovery solutions in Microsoft Purview)
+Q: Fabrikam's legal team is comparing Microsoft Purview eDiscovery (Standard) and eDiscovery (Premium). Which two capabilities are available only in eDiscovery (Premium)? Each correct answer presents a complete solution.
+(choose 2)
+  * A. Review sets with near-duplicate detection and email threading
+        why: Review sets and their analytics are Premium-only features.
+  * B. Identifying custodians and sending legal hold notifications
+        why: Custodian management and hold notifications are part of the Premium workflow.
+    C. Placing a hold on a custodian's mailbox and OneDrive
+        why: Holds on content locations are available in Standard.
+    D. Exporting search results to a local computer
+        why: Export is a Standard capability.
+    E. Creating a case to organize searches
+        why: Case management is included in Standard.
+TAKEAWAY: Standard: cases, holds, search, export. Premium adds custodians, review sets, analytics, predictive coding, OCR, advanced indexing.
+
+[s027] type=mc domain=2 obj=2.2.1 (Describe the authentication methods)
+Q: Tailspin Toys wants administrators to use an authentication method that Microsoft classifies as phishing-resistant and that works on shared workstations the administrators move between. Which method should Tailspin Toys choose?
+  * A. FIDO2 security keys
+        why: FIDO2 keys use origin-bound public-key cryptography, are phishing-resistant, and travel with the user between devices.
+    B. SMS verification codes
+        why: SMS is rated medium security and is vulnerable to SIM swapping and interception.
+    C. Microsoft Authenticator push notifications
+        why: Push approval is strong but not classified as phishing-resistant.
+    D. Windows Hello for Business
+        why: Hello is phishing-resistant but its credential is bound to one device, which does not suit roaming between shared workstations.
+TAKEAWAY: Phishing-resistant: FIDO2/passkeys, Windows Hello for Business, certificate-based auth. FIDO2 keys are portable; Hello is device-bound.
+
+[s028] type=mc domain=3 obj=3.1.3 (Describe Azure Web Application Firewall (WAF))
+Q: Northwind publishes a web application globally through Azure Front Door. The company wants to block SQL injection and cross-site scripting attempts at the edge using Microsoft-managed rules, while logging matches before enforcing blocks during an initial tuning period. Which Microsoft service should Northwind use?
+  * A. Azure Web Application Firewall on Azure Front Door in Detection mode, then Prevention mode
+        why: WAF applies managed rule sets for OWASP-style attacks; Detection mode logs without blocking and Prevention mode blocks.
+    B. Azure Firewall Standard with network rules
+        why: Azure Firewall network rules filter by IP, port and protocol and cannot inspect HTTP request bodies for injection.
+    C. A network security group on the backend subnet
+        why: NSGs are layer 3/4 packet filters with no awareness of HTTP payloads.
+    D. Azure DDoS Network Protection
+        why: DDoS Protection mitigates volumetric floods, not application-layer attacks.
+TAKEAWAY: WAF on Front Door or Application Gateway: managed OWASP/DRS rules, Detection (log) vs Prevention (block) modes, custom rules run first.
+
+[s029] type=ms domain=1 obj=1.2.3 (Define authorization)
+Q: A Litware user signs in to Microsoft 365 successfully but receives an access denied message when opening a SharePoint document library. Which two statements are true? Each correct answer presents a complete solution.
+(choose 2)
+  * A. Authentication succeeded for the user
+        why: A successful sign-in means the identity was verified.
+  * B. Authorization failed for the document library
+        why: Access denied after sign-in is an authorization decision about permissions on the resource.
+    C. The user's multifactor authentication must have failed
+        why: MFA is part of authentication, which completed successfully.
+    D. The user's identity could not be verified
+        why: Identity verification is authentication, and it succeeded.
+    E. The identity provider rejected the user's credentials
+        why: Rejected credentials would have prevented sign-in altogether.
+TAKEAWAY: Authentication proves who you are; authorization decides what you may access. A successful sign-in followed by a denial is an authorization outcome.
+
+[s030] type=mc domain=2 obj=2.4.1 (Describe Microsoft Entra ID Governance)
+Q: Woodgrove Bank wants project contractors to request a bundle consisting of a security group, a SaaS application and a SharePoint site. The request must be approved by the project manager and the access must expire automatically after 60 days. Which Microsoft Entra feature should Woodgrove use?
+  * A. Entitlement management access packages
+        why: An access package bundles resources with a policy that defines requesters, approvers and expiration.
+    B. Privileged Identity Management
+        why: PIM manages time-bound activation of privileged roles, not bundles of application and site access.
+    C. Dynamic group membership rules
+        why: Dynamic groups add users by attribute without approval or expiry and cover only group membership.
+    D. Conditional Access terms of use
+        why: Terms of use require acceptance of a statement; they do not grant or expire resource access.
+TAKEAWAY: Entitlement management: access packages in catalogs, policies for who can request, approval stages, expiration and connected organizations.
+
+[s031] type=mc domain=4 obj=4.3.4 (Describe data loss prevention (DLP))
+Q: Fabrikam needs to prevent users from copying files that contain credit card numbers to USB removable drives on their Windows laptops, while still allowing them to email the files internally. Which Microsoft Purview capability should Fabrikam configure?
+  * A. A data loss prevention policy with the Devices location
+        why: Endpoint DLP enforces policies on onboarded devices and can block copying sensitive files to removable media.
+    B. A retention label applied to the files
+        why: Retention labels control how long content is kept; they do not restrict device activities.
+    C. An insider risk management policy
+        why: Insider risk management detects and investigates risky activity; it does not block the USB copy itself.
+    D. A Conditional Access policy requiring a compliant device
+        why: Conditional Access controls sign-in to apps, not file operations on the local device.
+TAKEAWAY: Endpoint DLP extends DLP policies to Windows and macOS devices: audit, warn or block USB copy, print, upload and clipboard activities.
+
+[s032] type=mc domain=3 obj=3.2.3 (Describe how security policies, standards, and recommendations improve the cloud security posture)
+Q: Tailspin Toys must report on how well its Azure subscriptions align with PCI DSS requirements and download a summary for auditors. Which Microsoft Defender for Cloud feature should the company use?
+  * A. The regulatory compliance dashboard
+        why: The dashboard shows passed and failed controls per assigned standard such as PCI DSS and exports compliance reports.
+    B. Secure score
+        why: Secure score summarizes posture against the Microsoft cloud security benchmark, not a specific regulation.
+    C. Microsoft Purview Compliance Manager
+        why: Compliance Manager assesses Microsoft 365 and related services, not Azure resource configuration.
+    D. The cloud security explorer
+        why: Cloud security explorer runs graph queries to find risks; it does not report regulatory compliance.
+TAKEAWAY: Defender for Cloud regulatory compliance dashboard: MCSB by default; add PCI DSS, NIST, ISO 27001, CIS with Defender CSPM or a workload plan.
+
+[s033] type=ms domain=2 obj=2.4.3 (Describe the capabilities of Microsoft Entra Privileged Identity Management)
+Q: Which three statements about Microsoft Entra Privileged Identity Management are true? Each correct answer presents a complete solution.
+(choose 3)
+  * A. An eligible assignment requires the user to activate the role before its permissions apply
+        why: Eligible assignments are the basis of just-in-time access.
+  * B. Role activation can require multifactor authentication, justification and approval
+        why: These are per-role activation settings in PIM.
+  * C. PIM can manage Azure resource roles and group membership, not only Microsoft Entra roles
+        why: PIM supports Entra roles, Azure RBAC roles and PIM for Groups.
+    D. PIM is included with Microsoft Entra ID P1
+        why: PIM requires Microsoft Entra ID P2 or ID Governance.
+    E. An active assignment can never have an end date
+        why: Both eligible and active assignments can be permanent or time-bound.
+    F. PIM replaces the need for access reviews of privileged roles
+        why: PIM can schedule access reviews of role members; it does not remove the need for them.
+TAKEAWAY: PIM: just-in-time, time-bound, approval, MFA, justification, notifications, audit history, access reviews; Entra roles, Azure roles, groups; P2 license.
+
+[s034] type=mc domain=3 obj=3.4.4 (Describe Microsoft Defender for Cloud Apps)
+Q: Northwind suspects employees are using unapproved cloud storage services. The security team wants to analyze firewall logs to discover which cloud apps are in use, see a risk score for each, and mark unapproved apps as unsanctioned. Which Microsoft service provides this capability?
+  * A. Microsoft Defender for Cloud Apps Cloud Discovery
+        why: Cloud Discovery ingests traffic logs, matches them to the cloud app catalog with risk scores, and lets admins sanction or unsanction apps.
+    B. Microsoft Defender for Cloud
+        why: Defender for Cloud secures Azure, AWS and GCP workloads; it does not discover SaaS usage from firewall logs.
+    C. Microsoft Defender for Endpoint
+        why: Defender for Endpoint can supply device network data and enforce blocks, but discovery and risk scoring are Defender for Cloud Apps functions.
+    D. Microsoft Entra ID Protection
+        why: ID Protection detects risky sign-ins and users; it does not catalog cloud apps.
+TAKEAWAY: Defender for Cloud Apps: CASB with Cloud Discovery (shadow IT), app catalog risk scores, information protection, threat protection and SSPM.
+
+[s035] type=mc domain=4 obj=4.4.1 (Describe insider risk management)
+Q: Litware wants to be alerted when employees who have submitted a resignation begin downloading unusually large volumes of files from SharePoint before their departure date. The solution must keep user identities pseudonymized during initial triage. Which Microsoft Purview solution should Litware use?
+  * A. Insider risk management with the data theft by departing users policy template
+        why: This template uses an HR connector trigger and download indicators, and insider risk management pseudonymizes users by default.
+    B. Data loss prevention
+        why: DLP acts on sensitive content in individual actions; it does not score behavior around a resignation event.
+    C. eDiscovery (Premium)
+        why: eDiscovery collects and reviews content for legal matters; it does not detect risky behavior.
+    D. Audit (Premium)
+        why: Audit records events but does not correlate them into risk scores or alerts.
+TAKEAWAY: Insider risk management: templates (departing users, data leaks, security violations), triggering events, indicators, pseudonymization, cases.
+
+[s036] type=mc domain=2 obj=2.4.2 (Describe access reviews)
+Q: Woodgrove Bank has a security group that grants access to a financial reporting application. Every quarter, the group's owner must confirm that each member still needs access, and anyone the owner does not approve must be removed automatically. Which Microsoft Entra feature should Woodgrove configure?
+  * A. A recurring access review with auto-apply results
+        why: Access reviews let the group owner recertify members on a schedule and apply the results automatically.
+    B. A Conditional Access policy
+        why: Conditional Access controls sign-in conditions; it does not recertify membership.
+    C. A lifecycle workflow
+        why: Lifecycle workflows automate joiner, mover and leaver tasks on attribute-based triggers, not periodic recertification.
+    D. Microsoft Entra ID Protection
+        why: ID Protection manages identity risk, not membership attestation.
+TAKEAWAY: Access reviews: groups, apps, Entra roles, Azure roles, access packages; reviewers can be owners, managers, selected users or self; auto-apply removes denied users.
+
+[s037] type=mc domain=3 obj=3.1.5 (Describe network security groups (NSGs))
+Q: Fabrikam's web tier and database tier VMs share a subnet. The network team wants an NSG rule that allows SQL traffic from the web servers to the database servers without listing IP addresses, and that automatically covers new web servers added later. What should the team use in the rule?
+  * A. Application security groups as the source and destination
+        why: ASGs group NICs by role so rules reference WebServers and DbServers; new VMs added to the ASG inherit the rule.
+    B. Service tags for the VirtualNetwork
+        why: The VirtualNetwork tag covers the entire VNet and cannot distinguish web servers from database servers.
+    C. Separate NSGs with duplicate rules on each NIC
+        why: This requires maintaining IP-specific rules and does not auto-cover new servers.
+    D. Azure Firewall DNAT rules
+        why: DNAT rules publish inbound internet traffic to private IPs; they are unrelated to intra-subnet filtering.
+TAKEAWAY: Application security groups let NSG rules describe tiers by role instead of IP lists, reducing maintenance as VMs are added.
+
+[s038] type=mc domain=1 obj=1.1.2 (Describe defense-in-depth)
+Q: Northwind applies a network security group to restrict traffic between subnets in an Azure virtual network. In the defense-in-depth model described by Microsoft, which layer does this control belong to?
+  * A. Network
+        why: The network layer limits communication between resources using segmentation and NSG filtering.
+    B. Perimeter
+        why: The perimeter layer defends the network boundary with DDoS protection and perimeter firewalls.
+    C. Compute
+        why: The compute layer secures VMs and containers through patching, closed ports and monitoring.
+    D. Identity and access
+        why: The identity and access layer covers MFA, RBAC and Conditional Access.
+TAKEAWAY: Defense in depth layers: physical, identity and access, perimeter, network, compute, application, data. NSGs are network; DDoS Protection is perimeter.
+
+[s039] type=ms domain=3 obj=3.4.1 (Describe Microsoft Defender XDR services)
+Q: Tailspin Toys is mapping requirements to Microsoft Defender XDR services. Which three statements are correct? Each correct answer presents a complete solution.
+(choose 3)
+  * A. Microsoft Defender for Office 365 protects email and Teams collaboration content
+        why: Defender for Office 365 covers Exchange Online, Teams, SharePoint and OneDrive content.
+  * B. Microsoft Defender for Endpoint protects Windows, macOS, Linux and mobile devices
+        why: Defender for Endpoint covers those platforms plus network devices.
+  * C. Microsoft Defender XDR correlates alerts from multiple services into a single incident
+        why: The unified incident queue shows the full attack scope across workloads.
+    D. Microsoft Defender for Identity protects SaaS applications from shadow IT
+        why: Shadow IT discovery is Defender for Cloud Apps; Defender for Identity covers on-premises AD.
+    E. Microsoft Defender Vulnerability Management detonates email attachments in a sandbox
+        why: Sandbox detonation is Safe Attachments in Defender for Office 365.
+    F. Microsoft Defender for Cloud Apps installs sensors on domain controllers
+        why: Domain controller sensors belong to Defender for Identity.
+TAKEAWAY: Defender XDR services: Endpoint (devices), Office 365 (email and collaboration), Identity (on-premises AD), Cloud Apps (SaaS), Vulnerability Management (exposure); all unified in the Defender portal.
+
+[s040] type=mc domain=4 obj=4.1.2 (Describe the privacy principles of Microsoft)
+Q: A Litware executive asks whether Microsoft can hand over the company's Microsoft 365 data to a government agency on request. Which Microsoft privacy commitment answers the concern?
+  * A. Microsoft defends customer data and does not give governments direct or unfettered access to it
+        why: Microsoft states it challenges improper requests, redirects requesters to the customer where possible, and provides no back-door access.
+    B. Microsoft encrypts data at rest and in transit
+        why: Encryption is a separate security commitment; it does not describe how legal requests are handled.
+    C. Microsoft lets customers choose the region where data is stored
+        why: Data location is a residency commitment, not the answer to government access.
+    D. Microsoft uses customer content to improve advertising relevance
+        why: Microsoft states that enterprise customer data is not used for advertising.
+TAKEAWAY: Microsoft privacy commitments: you control your data, you know where it is located, it is secured at rest and in transit, and Microsoft defends it from improper requests.
+
+[s041] type=mc domain=2 obj=2.4.3 (Describe the capabilities of Microsoft Entra Privileged Identity Management)
+Q: Woodgrove Bank wants its database administrators to hold the Contributor role on an Azure subscription only when they are performing maintenance, for no more than four hours at a time, and only after approval. Which Microsoft Entra feature should Woodgrove use?
+  * A. Privileged Identity Management with eligible assignments for the Azure role
+        why: PIM makes users eligible for Azure resource roles and enforces activation duration, MFA and approval.
+    B. Access reviews of the Contributor role
+        why: Access reviews recertify who holds a role; they do not provide time-limited activation.
+    C. A Conditional Access policy requiring MFA for Azure management
+        why: This adds MFA to Azure portal sign-ins but leaves the role permanently assigned.
+    D. Microsoft Entra ID Protection user risk policy
+        why: User risk policies respond to compromised accounts, not to role activation.
+TAKEAWAY: PIM covers Azure RBAC roles as well as Entra roles: eligible assignment, max activation duration, approval, MFA, justification, audit.
+
+[s042] type=mc domain=3 obj=3.2.4 (Describe enhanced security features provided by cloud workload protection)
+Q: Fabrikam wants management ports on its Azure virtual machines to remain closed by default and to open only for an approved requester's source IP for a limited time. The company is choosing a Microsoft Defender for Cloud plan. Which plan provides the required feature?
+  * A. Microsoft Defender for Servers Plan 2
+        why: Just-in-time VM access is included in Defender for Servers Plan 2.
+    B. Microsoft Defender for Servers Plan 1
+        why: Plan 1 provides Defender for Endpoint integration for EDR but not just-in-time VM access.
+    C. Foundational cloud security posture management
+        why: The free tier offers recommendations and secure score, not JIT access enforcement.
+    D. Microsoft Defender for Key Vault
+        why: Defender for Key Vault alerts on unusual vault access; it is unrelated to VM ports.
+TAKEAWAY: Defender for Servers Plan 2 adds JIT VM access, file integrity monitoring, agentless scanning, premium vulnerability management and a free data ingestion allowance over Plan 1.
+
+[s043] type=mc domain=4 obj=4.2.2 (Describe Compliance Manager)
+Q: Tailspin Toys must track its own progress toward ISO 27001 compliance for Microsoft 365, assign remediation tasks to employees, store evidence and view a score. Which Microsoft tool should the company use?
+  * A. Microsoft Purview Compliance Manager
+        why: Compliance Manager creates assessments from regulatory templates, assigns improvement actions, stores evidence and calculates a compliance score.
+    B. The Service Trust Portal
+        why: The Service Trust Portal documents Microsoft's own compliance; it does not track a customer's tasks.
+    C. The Microsoft Defender for Cloud regulatory compliance dashboard
+        why: That dashboard covers Azure, AWS and GCP resource configuration, not Microsoft 365 compliance tasks.
+    D. Microsoft Purview Audit
+        why: Audit records activity; it does not manage compliance assessments.
+TAKEAWAY: Compliance Manager: 360+ templates become assessments of Microsoft-managed, customer-managed and shared controls; improvement actions drive the compliance score.
+
+[s044] type=mc domain=2 obj=2.2.3 (Describe password protection and management capabilities)
+Q: Northwind discovers that many users set passwords containing the company name or its product names. The company wants Microsoft Entra ID to reject such passwords, including variants that substitute digits for letters, during password changes. What should Northwind configure?
+  * A. A custom banned password list in Microsoft Entra Password Protection
+        why: The custom list adds organization-specific base terms; normalization and fuzzy matching catch variants automatically.
+    B. Smart lockout thresholds
+        why: Smart lockout limits failed sign-in attempts; it does not evaluate password content.
+    C. Self-service password reset with two methods
+        why: SSPR governs how users reset passwords, not which passwords are acceptable.
+    D. A Conditional Access policy requiring password change
+        why: Forcing a change does not control the content of the new password.
+TAKEAWAY: Password Protection: global banned list (always on) plus custom list of up to 1,000 base terms; substitutions and near matches are detected automatically.
+
+[s045] type=mc domain=3 obj=3.3.2 (Describe threat detection and mitigation capabilities in Microsoft Sentinel)
+Q: Woodgrove Bank uses Microsoft Sentinel. When an analytics rule creates a high-severity incident involving a user account, the SOC wants the user account to be disabled in Microsoft Entra ID and a ticket opened in the company's service desk automatically. What should the SOC create?
+  * A. A playbook based on Azure Logic Apps, triggered by an automation rule
+        why: Playbooks reach external systems such as Entra ID and ticketing tools; an automation rule runs the playbook when the incident is created.
+    B. A workbook
+        why: Workbooks are interactive dashboards for visualization, not response automation.
+    C. A hunting query
+        why: Hunting queries search data proactively; they do not take actions.
+    D. A data connector
+        why: Data connectors ingest logs; they are the collect capability, not respond.
+TAKEAWAY: Sentinel respond: automation rules for incident triage and routing; playbooks (Logic Apps) for actions in external systems such as disabling a user or opening a ticket.
+
+[s046] type=mc domain=1 obj=1.1.5 (Describe Governance, Risk, and Compliance (GRC) concepts)
+Q: Select the answer that correctly completes the sentence. The principle that data stored in a datacenter located in a particular country is subject to that country's laws and regulations, regardless of where the data owner is headquartered, is called ______.
+  * A. data sovereignty
+        why: Data sovereignty ties data to the legal jurisdiction where it is physically collected, held or processed.
+    B. data residency
+        why: Data residency refers to rules about where data may be stored and transferred, rather than which laws govern it.
+    C. data privacy
+        why: Data privacy concerns the appropriate handling of personal information.
+    D. data governance
+        why: Governance is the organization's own system of rules and accountability for managing data.
+TAKEAWAY: Residency = where data may be stored. Sovereignty = whose laws apply where it sits. Privacy = handling of personal data.
+
+[s047] type=ms domain=4 obj=4.4.3 (Describe audit solutions in Microsoft Purview)
+Q: Which two statements about Microsoft Purview Audit are true? Each correct answer presents a complete solution.
+(choose 2)
+  * A. Audit (Standard) retains audit records for 180 days by default
+        why: The Standard default retention is 180 days for records generated since October 2023.
+  * B. Audit (Premium) can retain audit records for up to 10 years with an add-on license
+        why: Premium offers one-year default retention and a 10-year retention add-on.
+    C. Auditing must be manually enabled before any records are collected
+        why: Auditing is enabled by default in Microsoft 365.
+    D. Audit records can be searched only through PowerShell
+        why: The Purview portal search, PowerShell, Graph API and the Management Activity API all work.
+    E. Audit (Premium) is included in every Microsoft 365 subscription
+        why: Premium requires E5, A5 or G5 or an add-on license.
+TAKEAWAY: Audit Standard: 180 days, on by default, portal and API search. Premium: 1 year default, retention policies, 10-year add-on, intelligent insights, more API bandwidth.
+
+[s048] type=mc domain=2 obj=2.4.4 (Describe Microsoft Entra ID Protection)
+Q: Microsoft Entra ID Protection reports that a Fabrikam user's credentials appeared in a published breach list, raising the user's risk level to high. Fabrikam wants the user to remediate the risk automatically without help desk involvement. Which control should the company's risk-based Conditional Access policy require?
+  * A. A secure password change
+        why: A user risk policy requiring password change with MFA remediates leaked credentials and resets the user's risk.
+    B. Multifactor authentication only
+        why: MFA alone remediates sign-in risk; it does not change the compromised password behind user risk.
+    C. A compliant device
+        why: Device compliance does not address a leaked password.
+    D. Acceptance of terms of use
+        why: Terms of use document consent; they do not remediate account compromise.
+TAKEAWAY: User risk (for example leaked credentials) → require password change. Sign-in risk (atypical travel, anonymous IP) → require MFA. Needs Entra ID P2.
+
+[s049] type=mc domain=3 obj=3.4.2 (Describe Microsoft Defender for Office 365)
+Q: Litware wants to measure how many employees would click a realistic phishing email and automatically assign training to those who do, without exposing anyone to real malware. Which Microsoft Defender for Office 365 capability should Litware use, and which plan is required?
+  * A. Attack simulation training, available in Plan 2
+        why: Attack simulation training runs benign simulated phishing campaigns and assigns training; it is a Plan 2 feature.
+    B. Safe Links, available in Plan 1
+        why: Safe Links blocks malicious URLs at click time; it does not run simulations or training.
+    C. Anti-phishing policies, available in Exchange Online Protection
+        why: Anti-phishing policies filter real messages; they do not simulate attacks.
+    D. Threat Explorer, available in Plan 1
+        why: Threat Explorer is a Plan 2 investigation tool, not a simulation feature.
+TAKEAWAY: Defender for Office 365 Plan 2 adds attack simulation training, Threat Explorer, automated investigation and response, and campaign views over Plan 1.
+
+[s050] type=mc domain=3 obj=3.4.7 (Describe Microsoft Threat Intelligence)
+Q: A news report describes a new ransomware campaign. Woodgrove Bank's SOC wants a Microsoft-authored report on the campaign that shows whether any Woodgrove devices are exposed, which incidents in the tenant relate to it, and which mitigations to apply. Where in the Microsoft Defender portal should the SOC look?
+  * A. Threat analytics
+        why: Threat analytics reports combine Microsoft researchers' analysis with tenant-specific exposure, related incidents and recommended actions.
+    B. Advanced hunting
+        why: Advanced hunting lets analysts write KQL queries over raw data but does not provide authored campaign reports.
+    C. The action center
+        why: The action center tracks pending and completed remediation actions.
+    D. Secure score
+        why: Secure score measures configuration posture; it does not describe specific threat campaigns.
+TAKEAWAY: Threat analytics: Microsoft Threat Intelligence reports with analyst write-up, related incidents, impacted assets, exposure and recommended actions overlaid on your tenant.

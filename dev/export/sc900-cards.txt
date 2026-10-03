@@ -1,0 +1,815 @@
+# SC-900 flashcards
+# Export for second-model review: FRONT / BACK / explanation. Flag any back or explanation that is factually wrong for the current product, citing Microsoft Learn.
+
+[1] cat=concepts obj=1.1.1 (Describe the shared responsibility model)
+FRONT: Shared responsibility — what the customer ALWAYS owns
+BACK: #Data, endpoints, accounts and access management | Stays with you in SaaS, PaaS, IaaS and on-premises alike
+WHY: Whatever the service model, four things never move to the provider: the information you store, the devices that connect, the user and admin accounts, and the decisions about who may access what. SC-900 stems that say 'regardless of the cloud model' are pointing at this group. Everything else (host, network, OS, runtime, application) slides toward Microsoft as you move from IaaS to PaaS to SaaS.
+HOOK: Your data, your devices, your identities: never the cloud provider's problem.
+
+[2] cat=concepts obj=1.1.1 (Describe the shared responsibility model)
+FRONT: Shared responsibility — IaaS vs PaaS vs SaaS split
+BACK: #IaaS: you run the OS and up | PaaS: provider owns OS and runtime; you own app and data | SaaS: provider runs the application too
+WHY: The dividing line moves one layer at a time. With a virtual machine (IaaS) the physical datacenter, network and hosts belong to Microsoft but patching the guest operating system is your job. With a managed platform (PaaS) Microsoft also takes the OS and runtime; you still write and secure the application code. With SaaS such as Microsoft 365 the application is Microsoft's too, leaving you data, identities, devices and configuration choices. The exam loves 'who patches the operating system in a PaaS database' style questions.
+HOOK: Count layers: each step toward SaaS hands one more layer to Microsoft.
+
+[3] cat=concepts obj=1.1.2 (Describe defense-in-depth)
+FRONT: Defense in depth — the layers from outside in
+BACK: #Physical, identity and access, perimeter, network, compute, application, data | Data sits at the center; each layer slows an attacker
+WHY: Defense in depth assumes any single control can fail, so controls are stacked so an attacker must beat several in sequence. Microsoft's ordering runs from physical security at the edge through identity and access, perimeter (DDoS protection, firewalls), network (segmentation, NSGs), compute (patched VMs, closed ports), application (secure code) and finally data (encryption, classification). Expect a question that names a control and asks which layer it protects: an NSG is network, Azure DDoS Protection is perimeter, MFA is identity and access.
+HOOK: Onion, not wall: peel seven layers to reach the data.
+
+[4] cat=concepts obj=1.1.2 (Describe defense-in-depth)
+FRONT: CIA triad — the three goals every layer protects
+BACK: #Confidentiality, integrity, availability | Only authorized readers; unaltered data; reachable when needed
+WHY: Defense in depth exists to preserve three properties. Confidentiality means only authorized people see the data (encryption, access control). Integrity means data is accurate and only changed through approved processes (hashing, signatures, change control). Availability means authorized users can reach systems when needed (redundancy, DDoS protection, backups). The exam maps scenarios to a letter: a leak is C, tampering is I, an outage or ransomware lockout is A.
+
+[5] cat=concepts obj=1.1.3 (Describe the Zero Trust model)
+FRONT: Zero Trust — the three guiding principles
+BACK: #Verify explicitly, use least privilege access, assume breach | Authenticate on every signal; grant minimum access; design as if already compromised
+WHY: Zero Trust replaces 'trusted inside, untrusted outside' with three rules. Verify explicitly: every request is authenticated and authorized using all available signals such as identity, device health, location and risk. Assume breach: segment, encrypt end to end, monitor and automate response because an attacker may already be inside. A stem describing MFA on every request plus device compliance checks is 'verify explicitly'; limiting blast radius via segmentation is 'assume breach'.
+HOOK: Never trust, always verify: three principles, not a product.
+
+[6] cat=concepts obj=1.1.3 (Describe the Zero Trust model)
+FRONT: Zero Trust — the foundational pillars
+BACK: #Identities, devices, applications, data, infrastructure, networks | Plus visibility, automation and orchestration tying them together
+WHY: Microsoft's Zero Trust guidance applies the three principles across pillars: identities verified with strong authentication, devices checked for health and compliance, applications discovered and controlled (including shadow IT), data classified and encrypted, infrastructure continuously assessed, and networks segmented. Microsoft Learn now lists visibility, automation and orchestration as a seventh integrating layer delivered by SIEM and SOAR tooling.
+
+[7] cat=concepts obj=1.1.4 (Describe encryption and hashing)
+FRONT: Symmetric vs asymmetric encryption
+BACK: #Symmetric: one shared key both ways | Asymmetric: public key encrypts, private key decrypts (and signs)
+WHY: Symmetric encryption uses the same secret for encrypting and decrypting, so it is fast and suits bulk data, but the key must be distributed securely. Asymmetric encryption uses a mathematically linked pair: anyone can encrypt with the public key, only the private-key holder can decrypt, and signing with the private key proves authenticity. Real systems combine them: TLS uses asymmetric keys to agree on a symmetric session key. SC-900 asks which type 'uses a public and private key' or 'is used for digital signatures'.
+
+[8] cat=concepts obj=1.1.4 (Describe encryption and hashing)
+FRONT: Encryption at rest vs in transit vs in use
+BACK: #At rest: stored data on disk or in a database | In transit: data moving over a network (TLS, VPN) | In use: data in memory, protected by confidential computing
+WHY: Encryption is described by the state of the data it protects. At rest covers storage: disks, databases, blobs, so a stolen drive is unreadable. In transit covers movement across networks, typically with TLS for HTTPS or IPsec for VPN, defeating eavesdropping. In use is the newest category: data being processed in memory, protected by confidential computing enclaves so even the host OS or hypervisor cannot read it. A stem about 'protecting data traveling between the browser and the web app' is in transit.
+
+[9] cat=concepts obj=1.1.4 (Describe encryption and hashing)
+FRONT: Hashing and salting — why they are not encryption
+BACK: #Hash: one-way, fixed-length fingerprint, no key | Salt: random value added per password so identical passwords hash differently
+WHY: A hash function turns any input into a fixed-length digest that cannot be reversed, which is why systems store password hashes rather than passwords and why a hash can prove a file has not changed. Because the same input always yields the same digest, attackers precompute tables of common passwords; adding a unique random salt before hashing makes those tables useless. Exam signal: 'cannot be decrypted', 'verifies integrity' or 'fixed length' means hashing, and 'random data added to a password' means salting.
+HOOK: Encryption is a locked box; a hash is a fingerprint you cannot un-take.
+
+[10] cat=concepts obj=1.1.5 (Describe Governance, Risk, and Compliance (GRC) concepts)
+FRONT: Governance, risk and compliance — the three defined
+BACK: #Governance: rules and processes that direct the organization | Risk: identify, assess, respond to and monitor threats | Compliance: meeting the laws, standards and policies that apply
+WHY: GRC is the management side of security. Governance sets policy, ownership and accountability, for example rules about classifying and retaining data or approving privileged access. Risk management is a loop of identifying threats, assessing impact and likelihood, responding (accept, mitigate, transfer, avoid) and monitoring. Compliance is adherence to the laws and standards that apply to your industry, region and data. Compliance Manager and Purview are the Microsoft tools that operationalize this.
+HOOK: Governance decides, risk weighs, compliance proves.
+
+[11] cat=concepts obj=1.1.5 (Describe Governance, Risk, and Compliance (GRC) concepts)
+FRONT: Data residency vs data sovereignty vs data privacy
+BACK: #Residency: rules on where data may be stored and transferred | Sovereignty: data is subject to the laws of where it physically sits | Privacy: appropriate handling of personal data
+WHY: Three terms the exam likes to swap. Data residency is about geography: regulations that fix the physical locations where data can be stored and when it can cross borders. Data sovereignty is about jurisdiction: data collected or held in a country is governed by that country's laws, whatever the owner's nationality. A stem about choosing an Azure region to satisfy a national law is residency; one about GDPR rights of individuals is privacy.
+
+[12] cat=concepts obj=1.2.1 (Define identity as the primary security perimeter)
+FRONT: Identity as the primary security perimeter
+BACK: #The network edge no longer bounds the enterprise | Every access decision starts with who or what is asking
+WHY: With SaaS apps, mobile devices and remote work, resources live outside any firewall, so a corporate network boundary cannot be the control point. Instead each access request is evaluated on the identity presenting it: a person, a service, or a device. This is why Microsoft treats Entra ID as the control plane and why Zero Trust begins with verifying identity. On SC-900, 'identity is the new security perimeter' is a phrase to recognize and to connect with Conditional Access and MFA.
+
+[13] cat=concepts obj=1.2.1 (Define identity as the primary security perimeter)
+FRONT: Four pillars of an identity infrastructure
+BACK: #Administration, authentication, authorization, auditing | Create and govern identities; prove them; grant rights; record what happened
+WHY: Microsoft Learn frames identity management as four pillars. Administration is the lifecycle of identities and their governance. Authentication is proving the identity is who it claims to be. Authorization decides what an authenticated identity may do. Auditing tracks who did what, when and how, so that access can be reviewed and anomalies spotted. An exam stem that mentions 'tracking and reviewing access activity' is auditing; one about creating and removing accounts is administration.
+
+[14] cat=concepts obj=1.2.2 (Define authentication)
+FRONT: Authentication — defined
+BACK: #Proving an identity is who it claims to be | Password, MFA, certificate, biometric; often shortened to AuthN
+WHY: Authentication is the act of confirming an identity before any access decision is made. The user, device or workload presents credentials: something known (password), something held (phone, FIDO2 key, certificate) or something inherent (fingerprint, face). Only once the claim is verified does the system move on to decide what that identity may do. SC-900 contrasts it with authorization and expects you to know that MFA strengthens authentication, not authorization.
+HOOK: AuthN answers 'who are you?' before anyone asks 'what may you do?'
+
+[15] cat=concepts obj=1.2.2 (Define authentication)
+FRONT: Multifactor authentication — the factor categories
+BACK: #Something you know, something you have, something you are | Two or more different categories, not two of the same
+WHY: MFA requires evidence from at least two distinct categories: knowledge such as a password or PIN, possession such as a phone running an authenticator app or a hardware key, and inherence such as a fingerprint or face. Two passwords are still one factor. The practical point on SC-900 is that a stolen password alone is not enough when a second category is enforced, which is why Microsoft treats MFA as the single most effective control against account compromise.
+
+[16] cat=concepts obj=1.2.3 (Define authorization)
+FRONT: Authorization — defined
+BACK: #Deciding what an authenticated identity can do | Roles, permissions and policies; often shortened to AuthZ
+WHY: Authorization comes after authentication and determines the level of access: which resources, which operations, under what conditions. In Microsoft's world this is expressed through role assignments (Entra roles, Azure RBAC), app permissions, sharing settings and policies. The stem signal is 'determine the level of access' or 'grant permission to'. If a question says a user signed in successfully but cannot open a file, the failure is authorization, not authentication.
+
+[17] cat=concepts obj=1.2.3 (Define authorization)
+FRONT: Authentication vs authorization — the one-line contrast
+BACK: #AuthN proves identity; AuthZ grants permissions | Sign-in succeeds, then the role decides what you can touch
+WHY: The pair is tested as a sentence-completion item. Authentication (AuthN) is the process of verifying that a user, device or service is who it claims to be. Authorization (AuthZ) is the process of granting that verified identity the appropriate level of access to resources. Both are needed and they happen in that order. Microsoft Entra ID performs both: it authenticates sign-ins and issues tokens, and it enforces authorization through roles, Conditional Access and application permissions.
+HOOK: N before Z: you cannot be authorized until you are authenticated.
+
+[18] cat=concepts obj=1.2.4 (Describe identity providers)
+FRONT: Identity provider (IdP) — the role
+BACK: #Creates, maintains and manages identities and authenticates them | Issues security tokens that applications trust
+WHY: An identity provider holds the identity data, performs the authentication and then hands the application a signed token describing the user and their claims, so the app never sees the password. Microsoft Entra ID is the identity provider for Microsoft cloud services and for any registered application. Because one IdP can vouch to many apps, it enables single sign-on. Exam signal: 'modern authentication', 'tokens' and 'central identity service' all describe the IdP role.
+
+[19] cat=concepts obj=1.2.4 (Describe identity providers)
+FRONT: Single sign-on (SSO) — what the IdP enables
+BACK: #Authenticate once, access many apps without re-signing in | The IdP's token is accepted by every connected application
+WHY: Because applications trust the identity provider's tokens rather than keeping their own password databases, a user who has authenticated to the IdP can be silently signed in to other connected applications. This improves user experience and security at the same time: fewer passwords to manage, one place to enforce MFA and Conditional Access, and one place to cut off access when someone leaves. SC-900 pairs SSO with the identity provider concept and with federation across organizations.
+
+[20] cat=concepts obj=1.2.5 (Describe the concept of directory services and Active Directory)
+FRONT: Directory service and Active Directory Domain Services
+BACK: #A directory stores identity data for network objects | AD DS: on-premises directory on domain controllers, Kerberos/NTLM, Group Policy
+WHY: A directory service is a hierarchical store of information about users, groups, computers and policies that answers 'who is this' and 'what may they access'. Active Directory Domain Services is Microsoft's on-premises implementation: domain controllers hold the database, authenticate with Kerberos and NTLM, and push configuration through Group Policy and organizational units. Its limitations in the exam framing are that it has no native support for cloud and SaaS apps, mobile platforms, or modern protocols such as OAuth 2.0 and OpenID Connect.
+
+[21] cat=concepts obj=1.2.5 (Describe the concept of directory services and Active Directory)
+FRONT: AD DS vs Microsoft Entra ID — the contrast
+BACK: #AD DS: on-premises, Kerberos/NTLM, Group Policy, VPN for remote | Entra ID: cloud IDaaS, OAuth 2.0/OIDC/SAML, SaaS and any device
+WHY: The exam positions Entra ID as the evolution of directory services for the internet era rather than a cloud copy of AD DS. AD DS manages domain-joined Windows machines inside a network boundary using Kerberos, NTLM and Group Policy. Entra ID is identity as a service: it authenticates to cloud and SaaS applications with modern protocols, supports any platform, and needs no VPN. Hybrid identity connects the two so one set of credentials works for both. A stem about 'Kerberos' or 'Group Policy' means AD DS; 'OAuth' or 'SaaS apps' means Entra ID.
+
+[22] cat=concepts obj=1.2.6 (Describe the concept of federation)
+FRONT: Federation — defined
+BACK: #A trust relationship between an identity provider and a service provider | Users of one domain access another's resources with their home credentials
+WHY: Federation lets an organization accept identities authenticated elsewhere. The service provider is configured to trust tokens issued by a partner identity provider, so a user signs in at home and presents the resulting token to the other side without ever creating a second password. This is the mechanism behind cross-organization collaboration and behind connecting on-premises AD FS to Entra ID. Exam signal: 'users from a partner organization sign in with their own credentials' or 'trust relationship between two IdPs'.
+
+[23] cat=concepts obj=1.2.6 (Describe the concept of federation)
+FRONT: Federation trust — direction
+BACK: #Trust is not automatically mutual | A accepting B's tokens does not mean B accepts A's
+WHY: A federated trust is established from the relying party toward the identity provider it chooses to believe. If Woodgrove's app trusts Fabrikam's identity provider, Fabrikam users can reach Woodgrove resources, but nothing yet lets Woodgrove users into Fabrikam. Bidirectional access requires configuring the trust in both directions. The exam tests this with a true/false style statement about whether federation is 'always bidirectional'; it is not.
+HOOK: Trust points one way until you draw the second arrow.
+
+[24] cat=entra obj=2.1.1 (Describe Microsoft Entra ID)
+FRONT: Microsoft Entra ID — what it is
+BACK: #Microsoft's cloud-based identity and access management service | Authenticates users, devices and workloads; enforces Conditional Access; issues tokens
+WHY: Microsoft Entra ID (formerly Azure Active Directory) is the identity provider for Microsoft 365, Azure, Dynamics and any application you register with it. Every Microsoft 365 or Azure subscription already has a tenant. It handles authentication with modern protocols, authorization through roles and app permissions, policy enforcement through Conditional Access, and risk detection through ID Protection. On SC-900 it is the answer whenever a stem asks which service 'manages identities and access for cloud resources'.
+
+[25] cat=entra obj=2.1.1 (Describe Microsoft Entra ID)
+FRONT: Entra ID editions
+BACK: #Free, P1, P2, plus ID Governance and other Entra products | P1 adds Conditional Access; P2 adds ID Protection and PIM
+WHY: Licensing questions on SC-900 stay at the edition level. Free comes with any Microsoft cloud subscription and covers core directory, SSO and basic security defaults. P1 unlocks Conditional Access, hybrid features such as password writeback, and dynamic groups. P2 adds Identity Protection risk policies and Privileged Identity Management. Stem signal: 'which minimum edition is required for risk-based Conditional Access' is P2.
+HOOK: P1 = Conditional Access, P2 = risk and PIM, Governance = lifecycle.
+
+[26] cat=entra obj=2.1.2 (Describe types of identities, including workload identities)
+FRONT: Entra identity types — the four kinds
+BACK: #Users, groups, devices, workload identities | Human and non-human identities all get an object in the directory
+WHY: Everything that needs to authenticate or be granted access has an identity object in Entra ID. Users are people, internal or external. Groups bundle users for assignment; security groups control access while Microsoft 365 groups also provide collaboration resources. Devices are registered or joined endpoints that can be targeted by Conditional Access. Workload identities are applications, service principals and managed identities, the software equivalents of a user. The exam asks you to classify a scenario into one of these buckets.
+
+[27] cat=entra obj=2.1.2 (Describe types of identities, including workload identities)
+FRONT: Service principal vs application object
+BACK: #Application object: the global template, in the home tenant | Service principal: the local instance in each tenant that uses the app
+WHY: When an app is registered, Entra ID creates an application object in the home tenant describing how tokens are issued and what the app needs. Every tenant where the app is actually used gets a service principal, the identity the app signs in as and the object you assign roles and permissions to. One application object can therefore have many service principals across tenants. Exam signal: 'the identity an application uses to access resources in your tenant' is the service principal.
+
+[28] cat=entra obj=2.1.2 (Describe types of identities, including workload identities)
+FRONT: Managed identity — system-assigned vs user-assigned
+BACK: #A service principal whose credentials Azure manages for you | System-assigned: tied to one resource's lifecycle | User-assigned: standalone, shared by several resources
+WHY: Managed identities remove secrets from code: an Azure resource such as a VM, function or Logic App gets an identity in Entra ID and Azure rotates its credentials automatically. A system-assigned identity is created with the resource and deleted with it. A user-assigned identity is its own Azure resource that can be attached to multiple workloads and outlives any one of them. Stem signal: 'an Azure VM must read secrets from Key Vault without storing credentials' points to a managed identity.
+HOOK: System-assigned dies with the resource; user-assigned lives on its own.
+
+[29] cat=entra obj=2.1.2 (Describe types of identities, including workload identities)
+FRONT: External identities — B2B collaboration guest
+BACK: #Partner users invited into your tenant as guest objects | They sign in with their own home credentials
+WHY: Microsoft Entra B2B collaboration lets you invite people from other organizations; a guest user object is created in your workforce tenant and can be added to groups and assigned access like an employee, but authentication still happens at their home identity provider or via a one-time passcode. B2B direct connect is different: it creates a two-way trust for Teams shared channels without adding guest objects. External ID for customers is the separate CIAM product for consumer-facing apps. SC-900 mainly tests the guest-user model.
+
+[30] cat=entra obj=2.1.2 (Describe types of identities, including workload identities)
+FRONT: Device identities — registered, joined, hybrid joined
+BACK: #Registered: personal/BYOD devices, cloud SSO only | Joined: organization-owned Windows, Entra account sign-in | Hybrid joined: on-premises domain joined AND registered with Entra
+WHY: A device identity lets Conditional Access require a compliant or managed device. Entra registered suits bring-your-own devices and phones that need access to work resources. Entra joined is for organization-owned Windows devices that sign in with an Entra account and get SSO to cloud and on-premises resources. Entra hybrid joined covers machines already joined to on-premises AD DS that are also registered in the cloud, typically as a transition state. Exam signal: 'personal device' is registered; 'already domain-joined' is hybrid joined.
+
+[31] cat=entra obj=2.1.3 (Describe hybrid identity)
+FRONT: Hybrid identity — the concept
+BACK: #One identity usable on-premises and in the cloud | AD DS objects synchronized to Entra ID with Entra Connect or Cloud Sync
+WHY: Most organizations still run AD DS, so hybrid identity synchronizes users, groups and password hashes into Entra ID. Users then sign in to Microsoft 365 with the same credentials they use at the office. Two tools do the synchronization: Microsoft Entra Connect Sync, the full on-premises sync engine, and Microsoft Entra Cloud Sync, a lightweight agent orchestrated from the cloud. The sign-in method chosen (PHS, PTA or federation) decides where the password is checked.
+
+[32] cat=entra obj=2.1.3 (Describe hybrid identity)
+FRONT: Entra Connect sign-in methods — PHS vs PTA vs federation
+BACK: #PHS: hash of the hash synced; cloud validates | PTA: agent validates against on-premises AD in real time | Federation: AD FS or third-party IdP issues the token
+WHY: Password hash synchronization copies a hashed form of each user's password hash to Entra ID, so authentication works in the cloud even if the datacenter is down; Microsoft recommends it as the simplest option. Pass-through authentication keeps passwords on-premises: a lightweight agent validates each sign-in against AD DS live, so on-premises policies apply immediately. Stem signal: 'passwords must never leave the on-premises network' excludes PHS.
+HOOK: PHS: cloud checks; PTA: agent checks; federation: someone else checks.
+
+[33] cat=entra obj=2.1.3 (Describe hybrid identity)
+FRONT: Microsoft Entra Cloud Sync — how it differs from Connect Sync
+BACK: #Lightweight provisioning agent, configuration lives in the cloud | Handles multiple disconnected AD forests; outbound-only connections
+WHY: Cloud Sync moves the sync logic into Microsoft Online Services and leaves only a small provisioning agent on-premises that needs outbound connectivity and updates itself. It can synchronize several disconnected forests to one tenant, which the classic Connect Sync server struggles with, and Microsoft positions it as the future direction. Connect Sync remains the choice when you need features Cloud Sync lacks, such as device object sync or pass-through authentication.
+
+[34] cat=entra obj=2.2.1 (Describe the authentication methods)
+FRONT: Passwordless methods in Entra ID
+BACK: #Windows Hello for Business, FIDO2 security keys/passkeys, Authenticator app sign-in | Certificate-based authentication also counts as phishing-resistant
+WHY: Passwordless sign-in replaces the password with a possession factor unlocked by a biometric or PIN. Windows Hello for Business ties the credential to the device TPM. FIDO2 security keys and passkeys (including passkeys stored in Microsoft Authenticator) use public-key cryptography bound to the site, which is why Microsoft classes them as phishing-resistant. Certificate-based authentication with smart cards is phishing-resistant too. Exam signal: 'highest security' or 'phishing-resistant' points to FIDO2, Hello or CBA.
+
+[35] cat=entra obj=2.2.1 (Describe the authentication methods)
+FRONT: Microsoft Authenticator app — what it provides
+BACK: #Push notification approval, time-based codes, passwordless phone sign-in | Can also hold a passkey for phishing-resistant sign-in
+WHY: The Authenticator app is the most common MFA method in Entra ID. As a second factor it can send a push notification the user approves (with number matching) or generate a six-digit time-based code that works offline. Configured for phone sign-in it becomes a primary passwordless method. Newer versions can store a passkey, elevating it to phishing-resistant. For SSPR it supplies either a notification or a code. When a stem asks for an MFA method that 'works without cellular signal', the app's code is the answer rather than SMS.
+
+[36] cat=entra obj=2.2.1 (Describe the authentication methods)
+FRONT: OATH tokens, SMS and voice — the weaker methods
+BACK: #OATH software/hardware tokens: time-based codes | SMS and voice call: codes or call-back via the phone network, MFA and SSPR only
+WHY: OATH TOTP tokens generate a rotating code from a shared seed; software tokens run in an authenticator app, hardware tokens are key-fob devices (Microsoft Learn still lists hardware OATH tokens as preview). SMS and voice call deliver a code or a call the user answers; they are easy to deploy but exposed to SIM swapping and interception, so Microsoft rates them medium security and recommends moving away from them. SMS can also be a primary sign-in method for frontline workers. Exam signal: 'least secure' among MFA options is SMS or voice.
+
+[37] cat=entra obj=2.2.1 (Describe the authentication methods)
+FRONT: Temporary Access Pass (TAP)
+BACK: #Time-limited, admin-issued passcode used once or for a window | Bootstraps passwordless registration or recovers a lost device
+WHY: A Temporary Access Pass is a code an administrator creates for a specific user with a lifetime and optional single-use setting. The user signs in with it to register strong methods such as a FIDO2 key or the Authenticator app, which solves the chicken-and-egg problem of passwordless onboarding. It also serves as recovery when someone loses their phone. Lifecycle workflows can issue one automatically on a new hire's first day. Stem signal: 'new employee must set up passwordless on day one' or 'temporarily' plus 'strong authentication' means TAP.
+HOOK: TAP is the one-time key that lets you enroll the real keys.
+
+[38] cat=entra obj=2.2.1 (Describe the authentication methods)
+FRONT: Windows Hello for Business vs FIDO2 security key
+BACK: #Hello: credential bound to one device, unlocked by PIN or biometric | FIDO2 key: portable hardware credential usable on any supported device
+WHY: Both are phishing-resistant passwordless methods built on asymmetric keys. Windows Hello for Business creates the key pair inside a specific PC's hardware and gates it behind a PIN, face or fingerprint; it is tied to that device. A FIDO2 security key is a USB, NFC or Bluetooth device the user carries from machine to machine, which suits shared workstations and kiosks. The exam contrasts them on portability: 'users move between shared devices' favors FIDO2, 'sign in to their own laptop with a fingerprint' is Hello.
+
+[39] cat=entra obj=2.2.2 (Describe multifactor authentication (MFA))
+FRONT: Multifactor authentication in Entra ID — ways to require it
+BACK: #Security defaults (tenant-wide, free), Conditional Access (granular, P1) | Legacy per-user MFA is the older model Microsoft is retiring
+WHY: Entra MFA prompts for a second verification after the password. The quickest way to turn it on for everyone is security defaults, a free preconfigured setting that also blocks legacy authentication. Conditional Access policies give granular control: require MFA only for admins, only outside trusted locations, only for risky sign-ins. On SC-900 'enable MFA for all users with no additional licensing' is security defaults; 'require MFA only when the sign-in comes from an unfamiliar location' is Conditional Access.
+
+[40] cat=entra obj=2.2.2 (Describe multifactor authentication (MFA))
+FRONT: Why MFA matters — the exam framing
+BACK: #A compromised password alone no longer grants access | Second factor comes from a different category than the first
+WHY: Microsoft's guidance repeatedly states that enabling MFA is the single most effective step against identity attacks because the vast majority of account compromises use only a stolen or guessed password. The second factor must come from another category (possession or inherence), so a phished password is useless without the user's phone or key. SC-900 may phrase this as a true/false statement: MFA is 'something you know plus something you have or are', and it is enforced during authentication rather than authorization.
+
+[41] cat=entra obj=2.2.3 (Describe password protection and management capabilities)
+FRONT: Self-service password reset (SSPR)
+BACK: #Users reset, change or unlock their own account without help desk | Admin sets 1 or 2 required methods; writeback syncs the change to AD DS
+WHY: SSPR lets a user who forgot a password or locked an account recover it by proving identity with registered methods: Authenticator notification or code, email, SMS, voice or OATH token. Administrators choose whether one or two methods are required; admin accounts with Entra roles always need two. For hybrid users, password writeback pushes the new password back to on-premises AD DS, which requires Entra ID P1. Exam signal: 'reduce help-desk calls for forgotten passwords' is SSPR; 'the reset must update the on-premises password' needs writeback.
+
+[42] cat=entra obj=2.2.3 (Describe password protection and management capabilities)
+FRONT: Entra Password Protection — banned password lists
+BACK: #Global banned list from Microsoft telemetry, always on | Custom banned list of up to 1,000 org-specific terms; extends to on-premises AD DS
+WHY: Password Protection blocks weak passwords at change or reset time. The global banned password list is built by Microsoft from observed attacks and cannot be disabled or viewed. The custom list adds up to 1,000 organization-specific base terms such as brand names, locations or product names; the matching algorithm handles substitutions like 0 for o and fuzzy variants automatically. Stem signal: 'prevent users from choosing passwords that contain the company name' is the custom banned list.
+HOOK: Ban the root word; the algorithm catches C0ntos0!.
+
+[43] cat=entra obj=2.2.3 (Describe password protection and management capabilities)
+FRONT: Smart lockout
+BACK: #Locks out attackers guessing passwords while sparing real users | Default: 10 failed attempts, 60-second lockout that grows; separate counters for familiar locations
+WHY: Smart lockout is on by default for every Entra tenant. After ten failed attempts (three in US Government clouds) it locks the account for sixty seconds, lengthening with repeated lockouts, and it tracks familiar and unfamiliar locations separately so an attacker's guesses from an unknown network do not block the real user at the office. Customizing the threshold and duration requires Entra ID P1. Exam signal: 'protect against password spray without locking out legitimate users' is smart lockout.
+
+[44] cat=entra obj=2.3.1 (Describe Microsoft Entra Conditional Access)
+FRONT: Conditional Access — the if-then engine
+BACK: #If a user wants a resource, then they must satisfy conditions | Signals in, decision out: block, or grant with requirements
+WHY: Conditional Access is Entra ID's policy engine and the main implementation of 'verify explicitly'. Each policy names assignments (who, which apps, under which conditions) and access controls (block, or grant provided MFA, compliant device, hybrid joined device, approved app, app protection policy, terms of use or password change). Policies are evaluated after first-factor authentication succeeds. It requires Entra ID P1; risk-based conditions need P2. The admin center also offers report-only mode and a What If tool to test policies before enforcing them.
+
+[45] cat=entra obj=2.3.1 (Describe Microsoft Entra Conditional Access)
+FRONT: Conditional Access signals
+BACK: #User or group, application, device platform and compliance, location, real-time risk | Client app and filter for devices also available
+WHY: Signals are the inputs a policy can test. Membership in a group or role selects who it applies to. The cloud app or user action selects what is being accessed. Conditions include device platform, device state and compliance from Intune, named locations (IP ranges or countries), client application type, and sign-in or user risk from ID Protection. The classic exam scenario: block access from outside specific countries, or require MFA when the device is not compliant. The answer is always 'create a Conditional Access policy' with the matching condition.
+
+[46] cat=entra obj=2.3.1 (Describe Microsoft Entra Conditional Access)
+FRONT: Conditional Access named locations
+BACK: #Admin-defined IP ranges (CIDR) or countries/regions | Can be marked trusted; used as a condition to include or exclude
+WHY: Named locations turn network context into a policy condition. You define them as public IPv4/IPv6 CIDR ranges or as countries resolved from IP (or GPS via the Authenticator app). Marking a range as trusted lets policies say 'skip MFA from the office' and also improves ID Protection's risk scoring, since sign-ins from trusted networks look less anomalous. Stem signal: 'require MFA except when users connect from the corporate network' means create a trusted named location and exclude it from the MFA policy.
+
+[47] cat=entra obj=2.3.1 (Describe Microsoft Entra Conditional Access)
+FRONT: Common Conditional Access policies
+BACK: #Require MFA for admins and for Azure management | Block legacy authentication; require compliant device for Microsoft 365 | Block risky sign-ins (needs P2)
+WHY: Microsoft publishes a short list of baseline policies that appear in exam scenarios: multifactor authentication for administrative roles, MFA for all users, MFA for Azure management, blocking legacy authentication protocols that cannot do MFA, requiring a compliant or hybrid-joined device for Office 365, and requiring MFA or a password change when ID Protection flags risk. Recognize that 'legacy authentication' refers to older protocols like basic auth in IMAP or SMTP, and that blocking it is a Conditional Access task, not an MFA setting.
+HOOK: If the question lists a grant control, the answer is a Conditional Access policy.
+
+[48] cat=entra obj=2.3.2 (Describe Microsoft Entra roles and role-based access control (RBAC))
+FRONT: Entra roles vs Azure RBAC roles
+BACK: #Entra roles: manage Entra and Microsoft 365 resources (users, groups, apps) | Azure RBAC: manage Azure resources (VMs, storage, networks) at subscription/RG/resource scope
+WHY: Two separate role systems coexist. Microsoft Entra roles such as Global Administrator, User Administrator or Security Administrator control the directory and Microsoft 365 services. Azure RBAC roles such as Owner, Contributor, Reader and User Access Administrator control Azure resources and are assigned at management group, subscription, resource group or resource scope, with inheritance downward. Exam signal: 'reset user passwords' is an Entra role; 'create virtual machines' is Azure RBAC.
+HOOK: People and apps: Entra roles. Infrastructure: Azure RBAC.
+
+[49] cat=entra obj=2.3.2 (Describe Microsoft Entra roles and role-based access control (RBAC))
+FRONT: Built-in vs custom Entra roles and least privilege
+BACK: #Over 100 built-in roles; custom roles pick specific permissions | Assign the least-privileged role that does the job; use PIM for elevation
+WHY: Entra ID ships with more than 100 built-in roles grouped as Entra-specific (User Administrator, Groups Administrator), service-specific (Exchange Administrator, Intune Administrator) and cross-service (Global Administrator, Security Administrator, Global Reader). SC-900 tests the least-privilege principle: a help-desk team that only resets passwords should get a narrow role, never Global Administrator, and administrative units can scope that role to a subset of users.
+
+[50] cat=entragov obj=2.4.1 (Describe Microsoft Entra ID Governance)
+FRONT: Microsoft Entra ID Governance — what it covers
+BACK: #Identity lifecycle, access lifecycle, privileged access lifecycle | Entitlement management, access reviews, lifecycle workflows, PIM
+WHY: ID Governance answers four questions: who should have access, what are they doing with it, are controls in place, and can auditors prove it. Its capabilities group into three lifecycles. Identity lifecycle uses HR-driven provisioning and lifecycle workflows for joiners, movers and leavers. Access lifecycle uses entitlement management and access reviews. Privileged access lifecycle uses PIM. It requires the Entra ID Governance or Entra Suite license (PIM alone is in P2).
+
+[51] cat=entragov obj=2.4.1 (Describe Microsoft Entra ID Governance)
+FRONT: Entitlement management — access packages
+BACK: #Bundle of groups, apps and SharePoint sites users can request | Policies set who may request, who approves, and when access expires
+WHY: Entitlement management packages the resources a role needs into one requestable unit. A policy on the package defines eligible requesters (employees by attribute or users from connected partner organizations), approval stages, assignment duration and whether a recurring review is attached. When access expires it is removed automatically, including guest accounts that no longer hold any package. Stem signal: 'project members need a group, an app and a site, with manager approval and automatic removal after 90 days' is an access package.
+HOOK: One request, many resources, one expiry date.
+
+[52] cat=entragov obj=2.4.1 (Describe Microsoft Entra ID Governance)
+FRONT: Entitlement management — catalogs and connected organizations
+BACK: #Catalog: container of resources and packages, delegable to non-admins | Connected organization: external partner whose users may request packages
+WHY: A catalog groups related resources and the access packages built from them so that a business owner, not a global admin, can manage them. Connected organizations register partner Entra tenants or domains whose users are allowed to request packages; approved guests are invited automatically and removed when their last assignment ends. The exam uses this to test governed B2B onboarding versus ad hoc guest invitations.
+
+[53] cat=entragov obj=2.4.1 (Describe Microsoft Entra ID Governance)
+FRONT: Lifecycle workflows — joiner, mover, leaver
+BACK: #Automated task sequences triggered by attribute dates | Tasks: send welcome mail, issue TAP, add to groups, disable account, remove licenses
+WHY: Lifecycle workflows run a list of tasks when a scoped user hits a time-based trigger, such as seven days before employeeHireDate or on employeeLeaveDateTime. Joiner templates typically generate a Temporary Access Pass and add group memberships; leaver templates disable the account, remove licenses and delete the user later. Scope is defined by attributes like department. Stem signal: 'automatically disable accounts on the employee's last day' is a leaver workflow.
+
+[54] cat=entragov obj=2.4.1 (Describe Microsoft Entra ID Governance)
+FRONT: Terms of use
+BACK: #Legal statement users must accept before access | Enforced through a Conditional Access grant control
+WHY: Terms of use lets you publish a PDF policy that users or guests must read and accept before Conditional Access grants access to selected apps. Acceptance is logged for audit, can be required per device, and can expire so users re-accept periodically. It is part of the governance toolset because it documents consent. Stem signal: 'ensure guests agree to the acceptable use policy before accessing Teams' pairs terms of use with a Conditional Access policy.
+
+[55] cat=entragov obj=2.4.2 (Describe access reviews)
+FRONT: Access reviews — what they are
+BACK: #Periodic recertification of who still needs access | Reviewers approve or deny; results can be applied automatically
+WHY: An access review asks a reviewer to confirm each user's continued need for a resource, closing the gap left when projects end or people change roles. Reviews can target group memberships, application assignments, Entra roles, Azure resource roles and access packages. They can run once or recur, and results can be auto-applied so denied users are removed without manual cleanup. Stem signal: 'periodically verify that guests still need access to the Finance team' is an access review.
+
+[56] cat=entragov obj=2.4.2 (Describe access reviews)
+FRONT: Access reviews — reviewers and recommendations
+BACK: #Reviewer can be the group owner, a selected person, the user's manager, or self-review | System recommendations flag users with no recent sign-in
+WHY: When creating a review you choose who decides: group or app owners, specific people, each user's manager, or the users reviewing their own access. Entra adds recommendations, for example suggesting denial for accounts that have not signed in for 30 days, so reviewers can approve in bulk with confidence. If a reviewer does nothing, you set a default outcome. The exam tests that self-review exists and that recommendations are an aid, not an automatic decision.
+
+[57] cat=entragov obj=2.4.2 (Describe access reviews)
+FRONT: Access reviews — licensing
+BACK: #Reviews of groups and apps: Entra ID P2 or Governance | Inactive-user and multi-stage reviews need Entra ID Governance
+WHY: Access reviews span P2 and the Governance product family, so licensing stems appear. Basic reviews of group membership, app access and roles are available with Entra ID P2, which also covers reviews PIM runs for privileged roles. Advanced features such as reviews filtered to inactive users, multi-stage reviews and machine-learning recommendations require Microsoft Entra ID Governance or the Entra Suite.
+
+[58] cat=entragov obj=2.4.3 (Describe the capabilities of Microsoft Entra Privileged Identity Management)
+FRONT: Privileged Identity Management — the purpose
+BACK: #Just-in-time, time-bound, approval-gated activation of privileged roles | Covers Entra roles, Azure resource roles and PIM for Groups
+WHY: PIM reduces standing privilege: instead of holding Global Administrator permanently, a user is made eligible and activates the role for a limited window when needed, optionally after MFA, justification and approval. It applies to Microsoft Entra roles, Azure RBAC roles on subscriptions and resources, and group membership via PIM for Groups. Every activation is recorded for audit and can trigger notifications. It requires Entra ID P2. Stem signal: 'reduce the time admins hold elevated permissions' is PIM.
+HOOK: Eligible by default, active only when activated.
+
+[59] cat=entragov obj=2.4.3 (Describe the capabilities of Microsoft Entra Privileged Identity Management)
+FRONT: PIM — eligible vs active assignments
+BACK: #Eligible: must activate to use the role | Active: role is usable immediately | Either can be permanent or time-bound with start and end dates
+WHY: PIM distinguishes how a role is held. An eligible assignment means the user has the right to activate the role but holds no permissions until they do; activation may require MFA, a reason, a ticket number and approver sign-off. An active assignment grants the permissions right away, which is appropriate for break-glass accounts or service needs. Both can be given expiration dates. The exam asks which assignment type enforces just-in-time access: eligible.
+
+[60] cat=entragov obj=2.4.3 (Describe the capabilities of Microsoft Entra Privileged Identity Management)
+FRONT: PIM — activation settings and audit
+BACK: #Per-role settings: max duration, require MFA, justification, approval, notifications | Audit history and PIM-driven access reviews for roles
+WHY: Each role in PIM has settings controlling activation: maximum duration in hours, whether MFA or an authentication context is required, whether justification or ticket information must be entered, who approves, and who is notified when the role is activated or assigned. PIM keeps an audit history of assignments and activations that can be exported for compliance, and it can schedule access reviews of role members. Stem signal: 'require approval and MFA before an admin role can be used' describes PIM role settings.
+
+[61] cat=entragov obj=2.4.3 (Describe the capabilities of Microsoft Entra Privileged Identity Management)
+FRONT: PIM — who can manage it
+BACK: #Entra roles: Privileged Role Administrator or Global Administrator | Azure roles: subscription Owner or User Access Administrator
+WHY: Managing PIM is itself privileged. Assignments for Microsoft Entra roles require the Privileged Role Administrator or Global Administrator role. Assignments for Azure resource roles follow Azure RBAC: an Owner or User Access Administrator at the relevant scope can configure them. The exam may ask which role is needed to make another user eligible for Global Administrator.
+
+[62] cat=entragov obj=2.4.4 (Describe Microsoft Entra ID Protection)
+FRONT: Microsoft Entra ID Protection — what it does
+BACK: #Detects, investigates and remediates identity-based risk | Risk signals feed Conditional Access policies; requires Entra ID P2
+WHY: ID Protection analyzes trillions of daily signals to flag sign-ins and accounts that look compromised: leaked credentials, anonymous IP use, atypical travel, password spray, malware-linked IPs and more. Each detection carries a risk level (low, medium, high). Admins can investigate via the risky users, risky sign-ins and risk detections reports, or let risk-based policies remediate automatically. Risk also flows into Defender XDR and Sentinel. Stem signal: 'detect a sign-in from an anonymous IP address' is ID Protection.
+
+[63] cat=entragov obj=2.4.4 (Describe Microsoft Entra ID Protection)
+FRONT: User risk vs sign-in risk
+BACK: #Sign-in risk: probability this specific authentication is not the owner | User risk: probability the identity itself is compromised (e.g. leaked credentials)
+WHY: Sign-in risk is evaluated in real time or shortly after each authentication from signals like impossible travel, unfamiliar sign-in properties or anonymous IPs. User risk aggregates detections about the account over time, most notably credentials found in a breach dump, and persists until remediated. The two drive different policies: a risky sign-in is answered by requiring MFA, a risky user by requiring a secure password change. Exam signal: 'leaked credentials' is user risk; 'atypical travel' is sign-in risk.
+HOOK: Sign-in risk: this attempt. User risk: this person.
+
+[64] cat=entragov obj=2.4.4 (Describe Microsoft Entra ID Protection)
+FRONT: Risk-based policies — the two remediations
+BACK: #Sign-in risk policy: require MFA at the chosen risk level | User risk policy: require a secure password change | Both are configured as Conditional Access policies
+WHY: Microsoft recommends building risk policies in Conditional Access rather than the legacy ID Protection policy pages. A sign-in risk policy typically blocks high risk and requires MFA for medium and high; completing MFA closes the detection. A user risk policy requires the user to change their password with MFA, which remediates the account automatically. Admins can also confirm compromise, dismiss risk or confirm safe by hand in the reports. The exam asks which control remediates a risky user: password change.
+
+[65] cat=entragov obj=2.4.4 (Describe Microsoft Entra ID Protection)
+FRONT: ID Protection reports
+BACK: #Risky users, risky sign-ins, risk detections | Each shows level, state (at risk, remediated, dismissed) and detection details
+WHY: Investigation starts from three views in the Entra admin center under Protection. Risky users lists accounts with aggregated risk and lets you reset passwords, confirm compromise or dismiss. Risky sign-ins lists individual authentications with the detections that fired. Risk detections lists every detection event with its type and timestamp. All three export to Microsoft Graph, Sentinel and Defender XDR. Full report detail requires Entra ID P2; Free and P1 tenants see limited information.
+
+[66] cat=aznet obj=3.1.1 (Describe Azure DDoS Protection)
+FRONT: Azure DDoS Protection — the tiers
+BACK: #Infrastructure protection: free, always on, for every Azure endpoint | DDoS Network Protection: per virtual network plan | DDoS IP Protection: per public IP, no plan needed
+WHY: Every Azure public endpoint gets basic infrastructure-level DDoS mitigation at no charge. Paid tiers add tuning to your traffic, telemetry, alerting and support. DDoS Network Protection is bought as a plan that covers all protected resources in the enrolled virtual networks and can span subscriptions in a tenant. DDoS IP Protection is a pay-per-public-IP model for customers with only a few addresses to protect. Exam signal: 'protect a single public IP without buying a plan' is IP Protection.
+
+[67] cat=aznet obj=3.1.1 (Describe Azure DDoS Protection)
+FRONT: Azure DDoS Protection — what it defends against and what it adds
+BACK: #Volumetric, protocol and resource-layer (L3/L4) floods | Always-on monitoring, adaptive tuning, attack analytics, DDoS Rapid Response
+WHY: DDoS Protection mitigates network and transport layer attacks that try to exhaust bandwidth or connection tables; it does not inspect HTTP, so application-layer (L7) attacks need a Web Application Firewall as well. The paid tiers learn your normal traffic profile and adapt thresholds and provide metrics and alerts in Azure Monitor; Network Protection additionally offers cost protection credits for scale-out during an attack and access to the DDoS Rapid Response team.
+HOOK: DDoS = layers 3 and 4; WAF = layer 7.
+
+[68] cat=aznet obj=3.1.1 (Describe Azure DDoS Protection)
+FRONT: DDoS Network Protection vs IP Protection — choosing
+BACK: #Network Protection: many resources, DRR support, cost protection, WAF discount | IP Protection: few public IPs, same engine, pay per IP
+WHY: Both paid tiers use the same mitigation platform. Network Protection is a plan that makes sense when you have many public IPs across virtual networks; it includes Rapid Response, cost protection and a discount on WAF. IP Protection bills per protected public IP with no plan to purchase, which suits small environments, though some value-added services are not included. On SC-900 the distinction tested is simply that one is bought per VNet plan and the other per IP.
+
+[69] cat=aznet obj=3.1.2 (Describe Azure Firewall)
+FRONT: Azure Firewall — what it is
+BACK: #Managed, stateful, cloud-native network firewall as a service | Central rule enforcement across subscriptions and VNets; built-in high availability
+WHY: Azure Firewall is a fully managed firewall deployed into a hub virtual network to inspect north-south (internet) and east-west (VNet to VNet) traffic. It is stateful, scales automatically, and integrates Microsoft threat intelligence to alert on or block traffic to known malicious IPs and domains. Policies can be managed centrally with Azure Firewall Manager. Exam signal: 'centrally control outbound traffic from multiple VNets by FQDN' is Azure Firewall rather than an NSG.
+
+[70] cat=aznet obj=3.1.2 (Describe Azure Firewall)
+FRONT: Azure Firewall rule types
+BACK: #DNAT rules: translate inbound traffic on the firewall's public IP to a private IP | Network rules: L3/L4 by IP, port, protocol (FQDN allowed) | Application rules: HTTP/HTTPS and SQL by FQDN or web category
+WHY: Three rule collections cover the use cases. DNAT rules publish an internal service by mapping the firewall's public IP and port to a private address. Network rules filter any protocol by source, destination, port and protocol, and in Standard and Premium can use FQDNs. Application rules filter outbound web and SQL traffic by fully qualified domain name, FQDN tags such as Windows Update, or web categories. Stem signal: 'allow outbound access only to *.microsoft.com' is an application rule.
+
+[71] cat=aznet obj=3.1.2 (Describe Azure Firewall)
+FRONT: Azure Firewall SKUs
+BACK: #Basic: SMB, fixed scale, threat intel alert-only | Standard: L3–L7 filtering, threat intel alert and deny, auto-scale | Premium: adds TLS inspection, IDPS signatures, URL filtering, web categories
+WHY: Basic is the low-cost SKU for small businesses with limited throughput and threat intelligence in alert mode only. Standard adds full threat-intelligence blocking, network FQDN filtering, DNS proxy and auto-scaling. Premium is for highly sensitive environments: it terminates and inspects TLS, runs a signature-based intrusion detection and prevention system, and filters by full URL. Exam signal: 'inspect encrypted traffic' or 'IDPS' means Premium.
+HOOK: Premium is the only SKU that opens the TLS envelope.
+
+[72] cat=aznet obj=3.1.3 (Describe Azure Web Application Firewall (WAF))
+FRONT: Azure Web Application Firewall — purpose and placement
+BACK: #Protects web apps from OWASP-style attacks: SQL injection, XSS, etc. | Deployed on Application Gateway (regional) or Azure Front Door (global edge)
+WHY: WAF inspects HTTP requests before they reach the application and blocks exploit patterns, which no network-layer control can see. It is a feature of Azure Application Gateway for regional deployments, of Azure Front Door for global edge protection, and of Application Gateway for Containers; Azure CDN support is in preview. A WAF policy holds the rules and is attached to the chosen service. Exam signal: 'protect against cross-site scripting' or 'OWASP Top 10' points to WAF.
+
+[73] cat=aznet obj=3.1.3 (Describe Azure Web Application Firewall (WAF))
+FRONT: WAF managed rule sets and modes
+BACK: #Managed rules: OWASP Core Rule Set / Microsoft Default Rule Set, plus Bot Manager rules | Detection mode logs only; Prevention mode blocks (HTTP 403)
+WHY: Microsoft maintains the managed rule sets so you do not write signatures: the OWASP Core Rule Set versions and the Microsoft Default Rule Set cover injection, XSS, protocol anomalies and known CVEs, and the Bot Manager set classifies good, bad and unknown bots. You add custom rules (rate limits, geo-match, IP allow lists) that run before managed rules. Start in Detection mode to tune false positives, then switch to Prevention. Stem signal: 'log but do not block' is Detection mode.
+
+[74] cat=aznet obj=3.1.3 (Describe Azure Web Application Firewall (WAF))
+FRONT: WAF vs Azure Firewall vs NSG — pick the layer
+BACK: #NSG: L3/L4 allow/deny inside a VNet | Azure Firewall: L3–L7 across VNets, FQDN and threat intel | WAF: HTTP-aware protection for web apps
+WHY: SC-900 repeatedly asks you to match a requirement to the right filter. A network security group is a basic, free packet filter attached to subnets or NICs. Azure Firewall is a managed stateful firewall for centralized policy with FQDN filtering and threat intelligence. The Web Application Firewall understands HTTP and blocks application attacks. They are complementary: a common design puts WAF on the gateway, Azure Firewall in the hub, and NSGs on every subnet.
+HOOK: Ask what the control can read: ports, domains, or HTTP.
+
+[75] cat=aznet obj=3.1.4 (Describe network segmentation with Azure virtual networks)
+FRONT: Azure virtual network — isolation and subnets
+BACK: #VNet: your private, isolated address space in Azure | Subnets divide it; resources in different VNets cannot talk unless peered or routed
+WHY: A virtual network is the building block for private connectivity in Azure. You choose its address space, divide it into subnets, and place VMs, AKS nodes or private endpoints into them. By default a VNet is isolated from every other VNet; connectivity requires peering, a VPN or a virtual WAN hub. Segmentation starts here: separate VNets for separate trust boundaries, subnets for tiers, NSGs and route tables applied per subnet. The service itself is free.
+
+[76] cat=aznet obj=3.1.4 (Describe network segmentation with Azure virtual networks)
+FRONT: Network segmentation — why it supports Zero Trust
+BACK: #Limits lateral movement after a breach | Tiers in separate subnets with NSG filtering; hub-spoke with a firewall between spokes
+WHY: Segmentation implements the 'assume breach' principle: if an attacker lands in the web tier they should not be able to reach the database tier freely. In Azure you do this with separate VNets or subnets per workload or tier, NSGs that permit only required flows, application security groups to describe tiers by role, and a hub-spoke topology where Azure Firewall mediates traffic between spokes. Stem signal: 'prevent VMs in the web subnet from reaching the data subnet except on port 1433' is subnet segmentation with NSG rules.
+
+[77] cat=aznet obj=3.1.5 (Describe network security groups (NSGs))
+FRONT: Network security group — what it does
+BACK: #Basic stateful L3/L4 filter for inbound and outbound traffic | Attach to a subnet or a NIC; rules use source, destination, port, protocol
+WHY: An NSG is a list of security rules that allow or deny traffic to resources in a virtual network. Each rule matches on source, source port, destination, destination port and protocol, and NSGs are stateful, so a permitted inbound connection's replies are allowed automatically. One NSG can be associated with many subnets and NICs; when both subnet and NIC have NSGs, inbound traffic is checked at the subnet first, then the NIC. Exam signal: 'allow RDP only from the management subnet' is an NSG inbound rule.
+
+[78] cat=aznet obj=3.1.5 (Describe network security groups (NSGs))
+FRONT: NSG rule priority
+BACK: #Custom priorities 100–4096; lower number is processed first | First matching rule wins and evaluation stops; default rules sit at 65000+
+WHY: Rules are evaluated in ascending priority order and processing halts at the first match, so a Deny at 100 overrides an Allow at 200 for the same traffic. You can only create rules between 100 and 4096; the built-in defaults use 65000 and above so they are always last. The classic exhibit question shows a rule table and asks whether port 3389 from the internet is allowed: find the lowest-numbered rule that matches and read its action.
+HOOK: Read the table top-down by priority; stop at the first hit.
+
+[79] cat=aznet obj=3.1.5 (Describe network security groups (NSGs))
+FRONT: NSG default rules
+BACK: #Inbound: AllowVNetInBound, AllowAzureLoadBalancerInBound, DenyAllInbound | Outbound: AllowVnetOutBound, AllowInternetOutBound, DenyAllOutBound | Cannot be removed, only overridden by higher-priority rules
+WHY: Every NSG is born with six rules. Inbound, traffic from the virtual network and from the Azure load balancer is permitted and everything else is denied, which is why a fresh VM is not reachable from the internet until you add a rule. Outbound, traffic to the VNet and to the internet is permitted and the rest is denied. The default rules carry priorities 65000, 65001 and 65500 and cannot be deleted; to block outbound internet you add a Deny rule with a lower number.
+
+[80] cat=aznet obj=3.1.5 (Describe network security groups (NSGs))
+FRONT: Application security groups (ASGs)
+BACK: #Logical grouping of NICs by role, such as WebServers or DbServers | Use the ASG as source or destination in NSG rules instead of IP lists
+WHY: An application security group lets you describe a tier by purpose rather than by address. You assign VM network interfaces to an ASG and then write NSG rules like 'allow 1433 from WebServers to DbServers'. New VMs added to the group inherit the policy with no rule edits, and the rule set stays readable. Stem signal: 'simplify NSG rules so they do not need updating when VMs are added' is an application security group.
+
+[81] cat=aznet obj=3.1.6 (Describe Azure Bastion)
+FRONT: Azure Bastion — what it is
+BACK: #Managed jump host: RDP/SSH to VMs over TLS on port 443 from the portal or native client | VMs need no public IP and no open RDP/SSH ports
+WHY: Azure Bastion is a PaaS service deployed into a virtual network that brokers remote sessions to VMs using their private IP addresses. The admin connects through the Azure portal (HTML5) or a native client over HTTPS, and Bastion opens the RDP or SSH session inside the VNet. Because the VMs expose nothing to the internet, port scanning and brute-force attacks against management ports are eliminated. Exam signal: 'connect to VMs with RDP without assigning public IP addresses' is Azure Bastion.
+
+[82] cat=aznet obj=3.1.6 (Describe Azure Bastion)
+FRONT: Azure Bastion — deployment and SKUs
+BACK: #Needs a dedicated subnet named AzureBastionSubnet (except Developer SKU) | Developer (free, one VM at a time), Basic, Standard (native client, file transfer), Premium (session recording, private-only)
+WHY: Bastion is provisioned per virtual network and, for the Basic, Standard and Premium SKUs, requires a subnet named exactly AzureBastionSubnet plus a public IP for the Bastion host itself. The free Developer SKU uses shared infrastructure and skips the dedicated subnet, but only one connection at a time. Standard adds native RDP/SSH clients, file transfer and shareable links; Premium adds session recording and private-only deployment. On SC-900 the subnet name and the 'no public IP on the VM' idea are the testable facts.
+
+[83] cat=aznet obj=3.1.7 (Describe Azure Key Vault)
+FRONT: Azure Key Vault — what it stores
+BACK: #Keys: cryptographic keys for encryption and signing | Secrets: passwords, connection strings, API keys | Certificates: TLS/SSL certificates with lifecycle management
+WHY: Key Vault centralizes the things application code should never contain. Keys are used by Azure services and apps for encryption, including customer-managed keys for storage and SQL. Secrets are arbitrary sensitive strings retrieved at runtime, ideally by a managed identity. Certificates can be created, imported and auto-renewed through integrated public CAs. Access is controlled with Azure RBAC and every operation can be logged. Exam signal: 'store the database connection string securely' is a Key Vault secret.
+
+[84] cat=aznet obj=3.1.7 (Describe Azure Key Vault)
+FRONT: Key Vault Standard vs Premium vs Managed HSM
+BACK: #Standard: software-protected keys | Premium: HSM-protected keys (FIPS 140-3 Level 3) | Managed HSM: single-tenant dedicated HSM pool, keys only
+WHY: Tiers differ in where keys live. The Standard tier protects keys in software modules. The Premium tier generates and keeps keys inside Microsoft-managed hardware security modules validated to FIPS 140-3 Level 3, so key material never leaves the HSM boundary. Azure Key Vault Managed HSM is a separate, single-tenant HSM cluster dedicated to one customer with its own security domain, storing cryptographic keys only. Stem signal: 'keys must be protected by a dedicated hardware security module' is Managed HSM; 'HSM-backed keys in a shared vault' is Premium.
+
+[85] cat=aznet obj=3.1.7 (Describe Azure Key Vault)
+FRONT: Key Vault — how apps get in
+BACK: #Authenticate with an Entra identity, ideally a managed identity | Authorize with Azure RBAC data-plane roles such as Key Vault Secrets User
+WHY: Key Vault relies on Entra ID for authentication and Azure RBAC (or the legacy access policy model) for authorization, so a VM or function with a managed identity can read a secret without any credential in configuration. Network access can be restricted with firewall rules and private endpoints, soft delete and purge protection guard against accidental deletion, and Defender for Key Vault alerts on unusual access patterns. The exam links Key Vault with managed identities as the recommended way to eliminate secrets in code.
+
+[86] cat=dfc obj=3.2.1 (Describe Microsoft Defender for Cloud)
+FRONT: Microsoft Defender for Cloud — what it is
+BACK: #Cloud-native application protection platform (CNAPP) | CSPM (posture) + CWP (workload threat protection) + DevSecOps, across Azure, AWS, GCP and on-premises
+WHY: Defender for Cloud combines three jobs. Cloud security posture management continuously assesses configuration against standards and produces recommendations and a secure score. Cloud workload protection detects and responds to threats on servers, containers, storage, databases, app services and more through paid Defender plans. Multicloud coverage uses connectors for AWS and GCP and Azure Arc for on-premises machines. Stem signal: 'single view of security posture across Azure and AWS' is Defender for Cloud.
+
+[87] cat=dfc obj=3.2.1 (Describe Microsoft Defender for Cloud)
+FRONT: Defender for Cloud — CSPM vs CWP in one line
+BACK: #CSPM finds misconfigurations before an attack | CWP detects and responds to attacks on running workloads
+WHY: The exam often reduces Defender for Cloud to this contrast. Posture management is preventive and largely free: inventory, secure score, recommendations and the Microsoft cloud security benchmark. Workload protection is detective and licensed per plan: security alerts, incident correlation, vulnerability assessment and workload-specific protections such as malware scanning for storage. A stem about 'recommendations to harden a VM' is CSPM; one about 'alert on a suspicious process on a VM' is CWP via Defender for Servers.
+HOOK: Posture says what could go wrong; protection says what is going wrong.
+
+[88] cat=dfc obj=3.2.1 (Describe Microsoft Defender for Cloud)
+FRONT: Defender for Cloud — the plans
+BACK: #Defender CSPM, Servers, Containers, Storage, Databases, App Service, Key Vault, Resource Manager, APIs, AI Services | Each enabled per subscription (some per resource)
+WHY: Enhanced protection is bought by workload type. Defender for Servers (Plan 1 or 2) covers VMs and Arc machines; Containers covers Kubernetes; Storage adds malware scanning and sensitive data threat detection; Databases covers SQL, open-source databases and Cosmos DB; App Service, Key Vault and Resource Manager watch those platform services; APIs and AI Services cover API Management and generative AI workloads. Defender CSPM is the paid posture plan. SC-900 expects you to know plans exist per workload, not their individual prices.
+
+[89] cat=dfc obj=3.2.1 (Describe Microsoft Defender for Cloud)
+FRONT: Defender for Servers Plan 1 vs Plan 2
+BACK: #Plan 1: Defender for Endpoint integration for EDR | Plan 2: adds agentless scanning, vulnerability management premium, file integrity monitoring, JIT VM access, regulatory compliance, free data ingestion allowance
+WHY: Both plans onboard machines to Microsoft Defender for Endpoint for endpoint detection and response. Plan 2 layers on posture and hardening features: agentless vulnerability, malware and secrets scanning, premium Defender Vulnerability Management, file integrity monitoring, OS baseline assessment, just-in-time VM access to close management ports, and a daily free data ingestion allowance for security logs. Exam signal: 'just-in-time VM access' or 'file integrity monitoring' requires Defender for Servers Plan 2.
+
+[90] cat=dfc obj=3.2.2 (Describe Cloud Security Posture Management (CSPM))
+FRONT: Cloud Security Posture Management — defined
+BACK: #Continuous assessment of cloud configuration against security standards | Outputs: inventory, recommendations, secure score, compliance status
+WHY: CSPM is the practice of discovering every cloud resource, comparing its configuration to a benchmark and prioritizing fixes. In Defender for Cloud it is the Foundational CSPM capability that is enabled on a subscription without charge, built around the Microsoft cloud security benchmark. Posture is expressed as a secure score, a list of recommendations and a regulatory compliance dashboard. Stem signal: 'identify misconfigured storage accounts across all subscriptions' is CSPM.
+
+[91] cat=dfc obj=3.2.2 (Describe Cloud Security Posture Management (CSPM))
+FRONT: Foundational CSPM (free) vs Defender CSPM (paid)
+BACK: #Free: asset inventory, MCSB recommendations, secure score, basic compliance, workflow automation | Paid: attack path analysis, cloud security explorer, agentless scanning, data-aware posture, extra regulatory standards, governance rules
+WHY: The free tier covers inventory, secure score, MCSB recommendations, SIEM export and workbooks. Defender CSPM, billed per resource, adds the cloud security graph with attack path analysis, cloud security explorer queries, agentless vulnerability and secrets scanning, data security posture management, assignment of extra regulatory standards, governance rules and custom recommendations. Exam signal: 'identify exploitable paths from an internet-exposed VM to sensitive data' is Defender CSPM attack path analysis.
+HOOK: If the feature draws a graph, it is the paid CSPM plan.
+
+[92] cat=dfc obj=3.2.2 (Describe Cloud Security Posture Management (CSPM))
+FRONT: Secure score in Defender for Cloud
+BACK: #Percentage summarizing posture across subscriptions | Each security control has max points; score = healthy share of resources; remediate every recommendation in a control to earn its points
+WHY: Secure score aggregates built-in MCSB recommendations into security controls, each worth a maximum number of points (Enable MFA is worth the most). A control's current score is its max points multiplied by the fraction of resources that are healthy, so one unhealthy resource reduces the score proportionally, and partial work in a control does not count until all of its recommendations are resolved. The overall score across subscriptions is weighted by resource count and recalculates about every eight hours. Preview recommendations do not affect it.
+
+[93] cat=dfc obj=3.2.3 (Describe how security policies, standards, and recommendations improve the cloud security posture)
+FRONT: Microsoft cloud security benchmark (MCSB)
+BACK: #Microsoft's default security standard for Azure, AWS and GCP | Controls grouped by domain; each maps to recommendations and to secure score
+WHY: MCSB is the built-in standard that Defender for Cloud assigns to every subscription and cloud connector by default. It contains best-practice controls for identity, network, data protection, logging, posture and so on, each with Azure, AWS and GCP implementation guidance. Resources are assessed against it continuously; a failing control becomes a recommendation and feeds secure score. Other standards such as NIST, PCI DSS, ISO 27001 and CIS can be added on top. Stem signal: 'the default standard in the regulatory compliance dashboard' is MCSB.
+
+[94] cat=dfc obj=3.2.3 (Describe how security policies, standards, and recommendations improve the cloud security posture)
+FRONT: Security policy, standard, recommendation — the chain
+BACK: #Policy: how resources are evaluated | Standard: a set of controls (MCSB, NIST, custom) | Recommendation: what to fix on which resource, with remediation steps
+WHY: Defender for Cloud layers these terms. Security policies define the evaluation approach for each cloud environment and which standards apply. Standards group controls: security benchmarks like MCSB, regulatory compliance standards, or custom standards built from built-in or KQL-defined recommendations. When a resource violates a control, a recommendation appears with description, affected resources, severity, risk factors and a Fix or remediation script. Resolving recommendations raises secure score and compliance percentages.
+
+[95] cat=dfc obj=3.2.3 (Describe how security policies, standards, and recommendations improve the cloud security posture)
+FRONT: Regulatory compliance dashboard
+BACK: #Shows pass/fail of controls per assigned standard (MCSB default; NIST, PCI DSS, ISO 27001, CIS, HIPAA addable) | Download audit-style reports; extra standards need Defender CSPM or a workload plan
+WHY: The dashboard lists each assigned standard with the share of compliance controls that pass, drills into failing controls to show the recommendations behind them, and exports summary reports for auditors. MCSB is assigned automatically; adding industry standards requires Defender CSPM or at least one Defender workload plan on the subscription. Exam signal: 'track compliance with PCI DSS across Azure subscriptions' is this dashboard, not Purview Compliance Manager, which covers Microsoft 365.
+
+[96] cat=dfc obj=3.2.4 (Describe enhanced security features provided by cloud workload protection)
+FRONT: Cloud workload protection — what it adds over CSPM
+BACK: #Threat detection and response for running workloads | Security alerts, incidents, vulnerability assessment, workload-specific hardening
+WHY: Cloud workload protection is the detective half of Defender for Cloud, delivered through the paid Defender plans. It generates security alerts from behavioral analytics and threat intelligence (for example a VM talking to a known command-and-control address, a storage account receiving malware, anomalous SQL queries), correlates them into incidents, and provides protections specific to each workload type. Alerts flow to Defender XDR and Sentinel. Stem signal: 'detect malware uploaded to blob storage' is Defender for Storage, a CWP plan.
+
+[97] cat=dfc obj=3.2.4 (Describe enhanced security features provided by cloud workload protection)
+FRONT: Just-in-time VM access
+BACK: #Management ports stay closed until an approved, time-limited request opens them | Part of Defender for Servers Plan 2; uses NSG or Azure Firewall rules
+WHY: JIT access reduces exposure of ports like 3389 and 22. The admin configures which ports can be requested and for how long; when a user requests access, Defender for Cloud creates a temporary NSG or firewall rule for their source IP and removes it when the window closes. All requests are logged. It complements Azure Bastion rather than replacing it. Exam signal: 'reduce the time management ports are open to the internet' is JIT VM access.
+
+[98] cat=dfc obj=3.2.4 (Describe enhanced security features provided by cloud workload protection)
+FRONT: Enhanced features of workload plans — examples
+BACK: #Servers: agentless scanning, FIM, JIT · Storage: malware scanning | Containers: runtime protection, image vulnerability assessment | Databases and Key Vault: anomalous access alerts
+WHY: Each plan brings protections that only make sense for that workload. Defender for Storage scans uploaded blobs for malware and alerts on sensitive data exfiltration. Defender for Containers assesses images in registries, hardens Kubernetes and watches runtime behavior. Defender for Key Vault and Defender for Resource Manager detect unusual access or suspicious management operations. Defender for Servers adds agentless scanning, file integrity monitoring and JIT. Expect a matching question: 'which plan scans container images' is Containers.
+
+[99] cat=dfc obj=3.3.1 (Define the concepts of security information and event management (SIEM) and security orchestration automated response (SOAR))
+FRONT: SIEM — defined
+BACK: #Security information and event management | Collects logs from everywhere, correlates them, detects threats, supports investigation
+WHY: A SIEM aggregates security data from identities, endpoints, networks, cloud services and applications into one store, normalizes it, and runs analytics to surface threats that no single source would reveal. Analysts then investigate alerts and incidents from the same console. Microsoft Sentinel is Microsoft's cloud-native SIEM, built on a Log Analytics workspace with data connectors and KQL analytics rules. Stem signal: 'collect security logs from on-premises firewalls and Microsoft 365 into a single tool for analysis' is SIEM.
+
+[100] cat=dfc obj=3.3.1 (Define the concepts of security information and event management (SIEM) and security orchestration automated response (SOAR))
+FRONT: SOAR — defined
+BACK: #Security orchestration, automation and response | Automates repetitive response steps and coordinates tools; in Sentinel: automation rules and playbooks
+WHY: SOAR takes the output of detection and acts on it: enriching incidents, opening tickets, blocking users or IPs, notifying teams, all without an analyst clicking through each step. Microsoft Sentinel is both SIEM and SOAR: automation rules handle incident triage centrally and playbooks built on Azure Logic Apps run workflows against hundreds of connectors. Exam signal: 'automatically disable a user account when an incident is created' is SOAR via a playbook.
+HOOK: SIEM sees; SOAR does.
+
+[101] cat=dfc obj=3.3.2 (Describe threat detection and mitigation capabilities in Microsoft Sentinel)
+FRONT: Microsoft Sentinel — the four capabilities
+BACK: #Collect (data connectors), detect (analytics rules), investigate (incidents, hunting, notebooks), respond (automation rules, playbooks) | Cloud-native SIEM and SOAR, now in the Defender portal
+WHY: Microsoft describes Sentinel as a loop. Collect at cloud scale with out-of-box connectors for Microsoft sources and third parties via CEF, Syslog or APIs. Detect with built-in and custom analytics rules that turn matches into alerts and incidents, mapped to MITRE ATT&CK. Investigate with incident pages, entity graphs, hunting queries and Jupyter notebooks. Respond with automation rules and Logic Apps playbooks. Sentinel is generally available in the Microsoft Defender portal and the Azure portal experience retires after March 31, 2027.
+
+[102] cat=dfc obj=3.3.2 (Describe threat detection and mitigation capabilities in Microsoft Sentinel)
+FRONT: Sentinel detection — analytics rules and incidents
+BACK: #Scheduled KQL rules, near-real-time rules, threat-intelligence matching, anomaly and Fusion ML correlation | Alerts are grouped into incidents for triage
+WHY: Detection in Sentinel comes from analytics rules. Scheduled rules run a KQL query on an interval and alert when results cross a threshold; near-real-time rules run every minute. Threat intelligence rules match indicators against logs. Anomaly rules and Fusion use machine learning to baseline behavior and correlate low-fidelity signals into multistage attack incidents. Rule templates come with content hub solutions. Related alerts are bundled into incidents that carry entities such as users, hosts and IPs for investigation.
+
+[103] cat=dfc obj=3.3.2 (Describe threat detection and mitigation capabilities in Microsoft Sentinel)
+FRONT: Sentinel mitigation — automation rules vs playbooks
+BACK: #Automation rule: lightweight incident triage (assign, tag, change severity, close, run a playbook) | Playbook: Logic Apps workflow with external actions (block IP, disable user, open ticket)
+WHY: Sentinel responds in two tiers. Automation rules are configured in Sentinel itself, trigger on incident creation or update, and perform built-in actions such as assigning an owner, adding tags, suppressing noise or calling a playbook. Playbooks are Azure Logic Apps with the Sentinel trigger, able to reach any system with a connector: Entra ID, Defender for Endpoint, ServiceNow, Teams. Together with hunting queries, workbooks and threat intelligence they cover the 'mitigation' half of the exam bullet.
+HOOK: Automation rules route; playbooks reach outside.
+
+[104] cat=xdr obj=3.4.1 (Describe Microsoft Defender XDR services)
+FRONT: Microsoft Defender XDR — what it is
+BACK: #Unified pre- and post-breach defense across endpoints, identities, email, apps and cloud | Correlates signals into incidents; automatic attack disruption; self-healing
+WHY: Defender XDR brings together Defender for Endpoint, Office 365, Identity, Cloud Apps and Vulnerability Management, plus signals from Defender for Cloud, Entra ID Protection and Purview, into one platform. Alerts from every product are correlated into a single incident that shows the full attack chain. Automatic attack disruption uses high-confidence correlations to contain compromised assets without waiting for an analyst. Exam signal: 'correlate an email alert with an endpoint alert into one incident' is Defender XDR.
+
+[105] cat=xdr obj=3.4.1 (Describe Microsoft Defender XDR services)
+FRONT: Defender XDR services — the mapping
+BACK: #Endpoint: devices · Office 365: email and collaboration · Identity: on-premises AD and Entra | Cloud Apps: SaaS · Vulnerability Management: exposure
+WHY: The exam's favorite format for this bullet is 'which service protects X'. Defender for Endpoint covers Windows, macOS, Linux, mobile and network devices. Defender for Office 365 covers Exchange Online, Teams, SharePoint and OneDrive content. Defender for Identity covers on-premises Active Directory and hybrid identity attacks. Defender for Cloud Apps covers SaaS applications and shadow IT. Defender Vulnerability Management covers weaknesses across devices. Defender for Cloud, although a separate product, feeds alerts into the same portal.
+HOOK: Name the surface, name the Defender.
+
+[106] cat=xdr obj=3.4.1 (Describe Microsoft Defender XDR services)
+FRONT: Defender XDR — incidents, hunting and disruption
+BACK: #Incidents: correlated alerts with full scope and automated remediation status | Advanced hunting: KQL over 30 days of raw signal | Attack disruption: automatic containment of compromised users and devices
+WHY: Three cross-product features define the platform. The combined incident queue groups alerts from all workloads with impacted assets and the actions taken. Advanced hunting lets analysts query raw events across endpoint, email, identity and cloud-app tables with KQL and turn queries into custom detections. Automatic attack disruption isolates devices or disables accounts when the correlation confidence is high, limiting ransomware and business email compromise. On SC-900 you only need to recognize these names and their purpose.
+
+[107] cat=xdr obj=3.4.2 (Describe Microsoft Defender for Office 365)
+FRONT: Defender for Office 365 — Safe Attachments and Safe Links
+BACK: #Safe Attachments: detonates attachments in a sandbox before delivery | Safe Links: rewrites and checks URLs at click time, including in Office apps and Teams
+WHY: Both features sit on top of the Exchange Online Protection baseline that every mailbox has. Safe Attachments opens each file in a virtual environment to watch its behavior, catching zero-day malware that signature scanning misses, and extends to SharePoint, OneDrive and Teams files. Safe Links scans the destination of every link when the user clicks, so a URL that was clean at delivery and weaponized later is still blocked. Exam signal: 'protect against malicious links that are changed after the email arrives' is Safe Links.
+HOOK: Attachments are detonated before delivery; links are checked at click.
+
+[108] cat=xdr obj=3.4.2 (Describe Microsoft Defender for Office 365)
+FRONT: Defender for Office 365 — anti-phishing and attack simulation
+BACK: #Anti-phishing: impersonation protection for users and domains, mailbox intelligence, spoof intelligence | Attack simulation training: run phishing campaigns and train users (Plan 2)
+WHY: Anti-phishing policies in Defender for Office 365 go beyond EOP spoof checks: they protect named executives and your domains from look-alike impersonation and use mailbox intelligence to learn each user's normal correspondents. Attack simulation training lets security teams send realistic but harmless phishing emails, measure who clicks, and automatically assign training. Exam signal: 'test employees with simulated phishing messages' is attack simulation training, which requires Plan 2.
+
+[109] cat=xdr obj=3.4.2 (Describe Microsoft Defender for Office 365)
+FRONT: Defender for Office 365 Plan 1 vs Plan 2
+BACK: #Plan 1: Safe Attachments, Safe Links, anti-phishing, real-time detections | Plan 2: adds Threat Explorer, attack simulation training, automated investigation and response, campaign views
+WHY: Plan 1 (included in Microsoft 365 Business Premium and E3 add-ons) focuses on prevention and basic investigation through the Real-time detections report. Plan 2 (included in E5) is for security operations: Threat Explorer replaces real-time detections, Threat Trackers and Campaigns show coordinated attacks, automated investigation and response handles compromised users and malicious messages, and attack simulation training educates users. Stem signal: 'automatically investigate and remediate phishing reported by users' is Plan 2 AIR.
+
+[110] cat=xdr obj=3.4.3 (Describe Microsoft Defender for Endpoint)
+FRONT: Defender for Endpoint — the capability stack
+BACK: #Vulnerability management, attack surface reduction, next-generation protection, EDR, automated investigation and remediation, threat experts | Windows, macOS, Linux, iOS, Android and network devices
+WHY: Microsoft lists Defender for Endpoint as a layered platform. Core vulnerability management finds weaknesses; attack surface reduction hardens devices; next-generation protection is the antivirus and anti-malware engine; endpoint detection and response records behavior and raises alerts; automated investigation and remediation triages them; Microsoft threat experts offer managed hunting. It is agent-based using sensors built into Windows. Exam signal: 'detect and respond to advanced attacks on laptops' is Defender for Endpoint.
+
+[111] cat=xdr obj=3.4.3 (Describe Microsoft Defender for Endpoint)
+FRONT: Defender for Endpoint — attack surface reduction
+BACK: #ASR rules block risky behaviors (Office spawning child processes, credential theft from LSASS) | Also: network protection, web protection, controlled folder access, exploit protection, device control
+WHY: Attack surface reduction is the preventive layer. ASR rules are policies for Microsoft Defender Antivirus that stop behaviors malware depends on; each rule can run in Block, Audit or Warn mode, and Microsoft recommends testing in Audit first. Companion features include network protection against malicious domains, web protection, controlled folder access against ransomware, exploit protection and device control for removable media. Stem signal: 'prevent Office applications from creating child processes' is an ASR rule.
+
+[112] cat=xdr obj=3.4.3 (Describe Microsoft Defender for Endpoint)
+FRONT: EDR and automated investigation and remediation (AIR)
+BACK: #EDR: continuous behavioral telemetry, alerts, device timeline, response actions (isolate, collect package) | AIR: playbook-driven investigation that proposes or applies remediation
+WHY: Endpoint detection and response is the detective core of Defender for Endpoint: sensors stream process, network, file and registry activity, analytics raise alerts, and analysts can isolate a device, run a scan, collect an investigation package or start live response. Automated investigation and remediation then examines an alert the way an analyst would, determines a verdict for each entity and either auto-remediates or queues actions for approval depending on the device group's automation level. Both are Plan 2 features.
+
+[113] cat=xdr obj=3.4.4 (Describe Microsoft Defender for Cloud Apps)
+FRONT: Defender for Cloud Apps — CASB role
+BACK: #Cloud access security broker for SaaS: discover, assess risk, govern and protect app usage | Four pillars: discovery, information protection, threat protection, posture (SSPM)
+WHY: Defender for Cloud Apps sits between users and cloud services to give visibility and control over SaaS. Cloud Discovery finds shadow IT from firewall and proxy logs; app connectors integrate sanctioned apps for data and activity visibility; information protection applies Purview labels and DLP to files in cloud apps; threat protection uses behavioral analytics for anomalous activity; SaaS security posture management surfaces misconfigurations in connected apps. Exam signal: 'identify which cloud apps employees use' is Cloud Discovery.
+
+[114] cat=xdr obj=3.4.4 (Describe Microsoft Defender for Cloud Apps)
+FRONT: Cloud Discovery and the cloud app catalog
+BACK: #Analyzes traffic logs to reveal shadow IT | Catalog rates tens of thousands of apps on 90+ risk factors; sanction or unsanction
+WHY: Cloud Discovery ingests logs from firewalls, proxies or Defender for Endpoint and matches them against the cloud app catalog, which scores each app on regulatory, legal and security factors. Admins can mark apps sanctioned or unsanctioned, and unsanctioned apps can be blocked on Defender for Endpoint devices. The output is a picture of which services are in use, by whom, and how risky they are. Stem signal: 'assess the risk of a cloud storage app staff use without approval' is the cloud app catalog.
+
+[115] cat=xdr obj=3.4.4 (Describe Microsoft Defender for Cloud Apps)
+FRONT: Conditional Access App Control
+BACK: #Real-time session control for browser access to cloud apps | Session policies: block download, apply label, block upload, monitor; routed via Entra Conditional Access
+WHY: Conditional Access App Control extends an Entra Conditional Access policy with in-session enforcement by Defender for Cloud Apps. Traffic is proxied (or handled natively in Microsoft Edge) so the policy can allow access but block downloading of sensitive files to an unmanaged device, require a label on upload, or monitor activities. Access policies can block entirely. Exam signal: 'let users view SharePoint from a personal device but prevent downloads' is a session policy via Conditional Access App Control.
+HOOK: Conditional Access opens the door; App Control watches what happens inside.
+
+[116] cat=xdr obj=3.4.5 (Describe Microsoft Defender for Identity)
+FRONT: Defender for Identity — what it monitors
+BACK: #Sensors on domain controllers, AD FS, AD CS and Entra Connect servers | Detects reconnaissance, credential compromise, lateral movement and domain dominance
+WHY: Defender for Identity is the on-premises counterpart to Entra ID Protection. A lightweight sensor on each domain controller and identity server reads authentication traffic and event logs and streams signals to the cloud, where behavioral analytics flag attack-chain activity: user enumeration, brute force, pass-the-hash and pass-the-ticket, Kerberoasting, DCSync, golden ticket. Stem signal: 'detect pass-the-ticket in Active Directory' is Defender for Identity.
+
+[117] cat=xdr obj=3.4.5 (Describe Microsoft Defender for Identity)
+FRONT: Defender for Identity vs Entra ID Protection
+BACK: #Defender for Identity: on-premises AD DS attacks, sensor-based | ID Protection: cloud sign-in and account risk in Entra ID
+WHY: Both produce identity alerts and both appear in the Defender portal, so the exam contrasts them. Defender for Identity needs a sensor on domain controllers and understands Kerberos, NTLM and LDAP behaviors inside your datacenter. Entra ID Protection needs no agent and scores cloud authentications using Microsoft's signal: leaked credentials, anonymous IPs, atypical travel. A hybrid organization typically runs both. Stem signal: 'lateral movement path to a domain admin' is Defender for Identity; 'sign-in from a Tor exit node' is ID Protection.
+
+[118] cat=xdr obj=3.4.6 (Describe Microsoft Defender Vulnerability Management)
+FRONT: Microsoft Defender Vulnerability Management — capabilities
+BACK: #Continuous asset discovery and inventory (software, certificates, firmware, browser extensions) | Risk-based prioritization with threat intelligence; remediation requests to Intune; block vulnerable apps
+WHY: Vulnerability Management uses the Defender for Endpoint sensor plus agentless methods to inventory what is installed and compare it to known CVEs and misconfigurations. It ranks findings by exploitability, whether the vulnerability is being used in active breaches, and the business value of the device, then lets you create remediation tasks in Intune, apply security baselines (CIS, STIG) and block vulnerable applications for a device group.
+
+[119] cat=xdr obj=3.4.6 (Describe Microsoft Defender Vulnerability Management)
+FRONT: Exposure score and security recommendations
+BACK: #Exposure score: how vulnerable devices are to exploitation | Recommendations list weaknesses ordered by impact; remediation tracked to completion
+WHY: The Vulnerability Management dashboard in the Defender portal (now grouped under Exposure management) shows an exposure score that drops as weaknesses are fixed, alongside Microsoft Secure Score for Devices for configuration posture. Each recommendation names the software or setting, the affected devices, the exposed CVEs and the expected score improvement, and can be turned into a remediation request or an exception. Exam signal: 'prioritize patching based on real exploitation activity' is Defender Vulnerability Management.
+
+[120] cat=xdr obj=3.4.7 (Describe Microsoft Threat Intelligence)
+FRONT: Microsoft Threat Intelligence — what it delivers
+BACK: #Microsoft Defender Threat Intelligence (MDTI): threat actor profiles, articles, indicators, infrastructure relationships | Surfaced in the Defender portal under Threat intelligence (Intel explorer, Intel profiles)
+WHY: Microsoft publishes its research as consumable intelligence. MDTI enriches IPs, domains, URLs and files with reputation, attributed reports and infrastructure chaining, and Intel explorer lets analysts search campaigns, actors, tools and vulnerabilities. Threat intelligence also drives detections across Defender and Sentinel. On SC-900 the expectation is to recognize Microsoft Threat Intelligence as the source of threat actor profiles and indicators used throughout the security products.
+
+[121] cat=xdr obj=3.4.7 (Describe Microsoft Threat Intelligence)
+FRONT: Threat analytics
+BACK: #Reports from Microsoft researchers on active threats | Sections: analyst report, related incidents, impacted assets, exposure, recommended actions
+WHY: Threat analytics in the Defender portal is intelligence applied to your environment. Each report covers a campaign, actor, technique or vulnerability and shows whether your tenant has related incidents, which devices and mailboxes are impacted, how exposed you are based on missing updates, and which mitigations to apply, with the mitigations tracked in Secure Score. Stem signal: 'see whether a newly reported ransomware campaign affects your organization' is threat analytics.
+HOOK: Threat analytics = Microsoft's research with your tenant's data overlaid.
+
+[122] cat=xdr obj=3.4.8 (Describe the Microsoft Defender portal)
+FRONT: Microsoft Defender portal — what it unifies
+BACK: #security.microsoft.com: single console for Defender XDR, Defender for Cloud alerts, Sentinel, Purview DLP and insider risk alerts | You see only what your licenses include
+WHY: The Defender portal is the operational home for Microsoft security. Its navigation groups Incidents and alerts, Hunting (advanced hunting and custom detections), Actions and submissions (action center, submissions), Threat intelligence (threat analytics, Intel explorer), Assets (devices, identities), Exposure management (secure score, vulnerability management) and Settings for permissions, notifications and alert tuning. Stem signal: 'single pane of glass for alerts from endpoints, email and identity' is the Defender portal.
+
+[123] cat=xdr obj=3.4.8 (Describe the Microsoft Defender portal)
+FRONT: Defender portal — roles and the other portals
+BACK: #Permissions via Settings > Microsoft Defender XDR > Permissions and roles, or Entra roles like Security Administrator / Security Reader | Entra admin center for identity, Purview portal for compliance, Azure portal for infrastructure
+WHY: SC-900 tests portal awareness. The Defender portal uses Entra roles such as Global Administrator, Security Administrator and Security Reader, plus its own unified RBAC for granular permissions. Identity lives in the Entra admin center, compliance in the Purview portal, infrastructure in the Azure portal. Stem signal: 'where do you investigate an incident' is the Defender portal; 'where do you create a Conditional Access policy' is the Entra admin center.
+
+[124] cat=purview obj=4.1.1 (Describe the Service Trust Portal offerings)
+FRONT: Service Trust Portal — what it offers
+BACK: #Microsoft's public site for audit reports and compliance documentation | SOC, ISO, FedRAMP, PCI DSS, GDPR materials, pen-test summaries, BCP/DR papers
+WHY: The Service Trust Portal is where Microsoft publishes the evidence that its cloud services meet standards: independent audit reports such as SOC 1/2/3 and ISO certifications, FedRAMP packages, regional attestations, penetration-test and security-assessment summaries, business continuity documents and privacy FAQs, organized by certification, by industry and by region. It is about Microsoft's compliance, not yours. Stem signal: 'obtain the ISO 27001 audit report for Microsoft 365' is the Service Trust Portal.
+
+[125] cat=purview obj=4.1.1 (Describe the Service Trust Portal offerings)
+FRONT: Service Trust Portal — access and My Library
+BACK: #Sign in with an Entra work account and accept the NDA for restricted documents | My Library saves documents and emails you when they change
+WHY: Much of the portal is public, but audit reports require signing in with a Microsoft Entra organizational account tied to a Microsoft 365, Dynamics 365 or Azure subscription and accepting the non-disclosure agreement for compliance materials. My Library lets you pin documents of interest and subscribe to notifications when they are updated, and the portal tracks your download history. The exam asks what My Library does and that the STP is distinct from Compliance Manager, which lives in Purview.
+
+[126] cat=purview obj=4.1.2 (Describe the privacy principles of Microsoft)
+FRONT: Microsoft privacy principles — the commitments
+BACK: #You control your data; you know where it is located | Data is secured at rest and in transit; Microsoft defends your data (no unfettered government access)
+WHY: Microsoft Learn currently frames privacy around four commitments: you control your data; know where your data is located; your data is secured at rest and in transit; Microsoft defends your data. Older prep material lists six principles: control, transparency, security, strong legal protections, no content-based targeting, benefits to you.
+HOOK: Your data, your location, encrypted, defended.
+
+[127] cat=purview obj=4.1.2 (Describe the privacy principles of Microsoft)
+FRONT: Privacy principles — what Microsoft says it does NOT do
+BACK: #Does not give governments direct or unfettered access to customer data | Uses enterprise data only to provide the service, not for advertising
+WHY: The defense commitment is the testable half. Microsoft states it does not provide any government with direct access to customer data, challenges requests it considers improper, and redirects requesters to the customer where possible. Commercial customer data is processed to deliver and support the service under contractual limits rather than mined for advertising. Exam true/false stems paraphrase these: a statement that Microsoft shares enterprise content with advertisers is false.
+
+[128] cat=purview obj=4.2.1 (Describe the Microsoft Purview portal)
+FRONT: Microsoft Purview portal — what it is
+BACK: #purview.microsoft.com: unified home for data security, data governance, and risk and compliance | Replaces the older compliance portal and classic governance portal
+WHY: The Purview portal consolidates the solutions that used to be split across the Microsoft Purview compliance portal and the governance portal. Its home page shows solution cards (Data Loss Prevention, Information Protection, Insider Risk Management, Compliance Manager, eDiscovery, Audit, Data Lifecycle Management, Unified Catalog and more) based on your permissions and licenses, with global search, centralized settings and a single roles-and-permissions area. Stem signal: 'where do you configure a retention policy' is the Purview portal.
+
+[129] cat=purview obj=4.2.1 (Describe the Microsoft Purview portal)
+FRONT: Purview portal — the three solution areas
+BACK: #Data security: labels, DLP, insider risk | Data governance: Unified Catalog, data map, data quality | Risk and compliance: Compliance Manager, eDiscovery, Audit, records
+WHY: The portal's navigation groups solutions by purpose. Data security covers Information Protection sensitivity labels, Data Loss Prevention and Insider Risk Management. Data governance covers the Unified Catalog that discovers and classifies assets across Azure, Fabric and other sources. Risk and compliance covers Compliance Manager, eDiscovery, Audit, Data Lifecycle Management and Records Management. SC-900 focuses on the security and compliance solutions; knowing the groupings helps eliminate wrong answers.
+
+[130] cat=purview obj=4.2.2 (Describe Compliance Manager)
+FRONT: Compliance Manager — what it does
+BACK: #Measures and manages your compliance with regulations and standards | Assessments built from templates; improvement actions you or Microsoft complete
+WHY: Compliance Manager, inside the Purview portal, turns a regulation into a checklist. You create an assessment from one of 360-plus templates (GDPR, ISO 27001, NIST, HIPAA and regional standards); it lists the controls, maps them to improvement actions, tracks implementation and testing status, stores evidence, and reports a score. It is about your organization's posture, unlike the Service Trust Portal, which documents Microsoft's. Stem signal: 'track progress toward GDPR compliance for Microsoft 365' is Compliance Manager.
+
+[131] cat=purview obj=4.2.2 (Describe Compliance Manager)
+FRONT: Compliance Manager — assessments, templates, controls
+BACK: #Template: control set for a regulation; Assessment: a template applied to your services | Controls are Microsoft-managed, customer-managed, or shared
+WHY: An assessment groups the controls of one standard against a scope of Microsoft services. Each control is implemented by Microsoft (with its audit result pre-populated), by you (your improvement actions), or by both. Improvement actions are the units of work: assignable to owners, with implementation guidance, test status and evidence upload. The Microsoft 365 Data Protection Baseline assessment is created by default. Exam signal: 'who is responsible for a control' maps to Microsoft-managed, your-managed or shared.
+
+[132] cat=purview obj=4.2.3 (Describe the uses and benefits of compliance score)
+FRONT: Compliance score — what it is
+BACK: #Points earned by completing improvement actions, as a percentage of total available | Starts from the Data Protection Baseline; not a legal guarantee of compliance
+WHY: The compliance score is Compliance Manager's headline number. Each improvement action carries points reflecting its risk impact, and completing or testing an action adds them to your score. The score helps prioritize work and demonstrate progress to leadership, but Microsoft is explicit that it is not a certification or a legal determination of compliance. Stem signal: 'measure compliance posture over time with a single metric' is compliance score; 'cloud resource posture' would be secure score instead.
+
+[133] cat=purview obj=4.2.3 (Describe the uses and benefits of compliance score)
+FRONT: Compliance score — how points are weighted
+BACK: #Mandatory vs discretionary × preventative, detective, corrective | Preventative mandatory 27, preventative discretionary 9, detective/corrective mandatory 3, discretionary 1
+WHY: Points depend on two attributes. Mandatory actions cannot be bypassed by users (a centrally enforced password policy); discretionary actions rely on behavior (locking a screen). Preventative actions stop a risk, detective actions notice it, corrective actions limit damage afterward. Preventative mandatory actions score 27, preventative discretionary 9, detective or corrective mandatory 3, and detective or corrective discretionary 1. The exam may ask which type is worth the most.
+HOOK: Prevent beats detect; mandatory beats discretionary; 27 at the top.
+
+[134] cat=purview obj=4.3.1 (Describe the data classification capabilities)
+FRONT: Sensitive information types (SITs)
+BACK: #Pattern-based classifiers: regex plus keywords, checksums and confidence levels | Built-in (credit card, SSN, passport) or custom; used by labels, DLP, retention, insider risk
+WHY: A sensitive information type defines how to recognize a kind of data: a primary pattern such as a 16-digit number, supporting evidence such as the words 'card' or an expiry date nearby, a validation function such as a Luhn checksum, and a confidence level. Microsoft ships hundreds of built-in SITs for financial, medical and national identity data, and you can create custom ones. Exact data match SITs look up actual values from a protected table, and document fingerprinting recognizes forms. Stem signal: 'detect credit card numbers in email' is a SIT.
+
+[135] cat=purview obj=4.3.1 (Describe the data classification capabilities)
+FRONT: Trainable classifiers vs sensitive info types
+BACK: #SIT: matches patterns; Trainable classifier: ML model recognizes content categories (contracts, resumes, source code) | Pre-trained classifiers ready to use; custom ones trained on your samples
+WHY: Some content has no regex: a résumé, a legal agreement, harassment language. Trainable classifiers use machine learning to identify such categories. Microsoft provides pre-trained classifiers and you can train custom ones by feeding positive and negative samples, then use them in sensitivity auto-labeling, retention labels, DLP and communication compliance. Exam signal: 'identify contracts regardless of format' is a trainable classifier; 'identify passport numbers' is a sensitive information type.
+
+[136] cat=purview obj=4.3.2 (Describe the benefits of Content explorer and Activity explorer)
+FRONT: Content explorer
+BACK: #Snapshot of items that contain SITs or carry sensitivity/retention labels, with counts and locations | Roles: Content Explorer List Viewer and Content Explorer Content Viewer; now also surfaced as Data explorer
+WHY: Content explorer answers 'what sensitive data do we have and where'. It lists Exchange, SharePoint and OneDrive items by sensitive information type, trainable classifier, sensitivity label or retention label, drills into locations and, with the Content Viewer role, previews the item. Counts refresh within days rather than instantly. The Purview portal labels the legacy view Content explorer (classic) alongside the newer Data explorer. Stem signal: 'see which SharePoint sites contain documents labeled Highly Confidential' is Content explorer.
+
+[137] cat=purview obj=4.3.2 (Describe the benefits of Content explorer and Activity explorer)
+FRONT: Activity explorer
+BACK: #Historical view of actions on labeled and sensitive content: label applied/changed/removed, DLP matches, endpoint file activity | Up to 30 days, sourced from the unified audit log
+WHY: Activity explorer is the companion timeline. It shows events such as a label being downgraded with the user's justification, a DLP rule matching or being overridden, or a file being copied to USB, printed or uploaded to the cloud from a monitored device, filterable by user, location, label and activity. It covers the last 30 days with roughly an hour of latency. Exam signal: 'review which users removed a sensitivity label last week' is Activity explorer; a current inventory is Content explorer.
+HOOK: Content explorer: where it is. Activity explorer: what happened to it.
+
+[138] cat=purview obj=4.3.3 (Describe sensitivity labels and sensitivity label policies)
+FRONT: Sensitivity labels — what they do
+BACK: #Persistent clear-text metadata that classifies content and containers | Can encrypt, add headers/footers/watermarks, and restrict Teams/groups/sites
+WHY: A sensitivity label travels with a file or email wherever it goes. Depending on configuration it can apply encryption with specific user rights and expiry, stamp visual markings, or, when scoped to groups and sites, control privacy, external sharing and unmanaged-device access for a Team or SharePoint site. Labels also extend to Power BI, Purview Data Map assets and meetings. Only one sensitivity label applies to an item at a time. Stem signal: 'ensure only Finance can open the document even after it is emailed outside' is a label with encryption.
+
+[139] cat=purview obj=4.3.3 (Describe sensitivity labels and sensitivity label policies)
+FRONT: Sensitivity label policies and auto-labeling
+BACK: #Label policy publishes labels to users and groups; sets default label, mandatory labeling, downgrade justification | Auto-labeling: client-side in Office apps or service-side policies for SharePoint, OneDrive, Exchange
+WHY: Creating a label does nothing until a label policy publishes it to users, where you can require a label on every document, set a default, demand justification when a user picks a less restrictive label, and point to help. Automatic labeling applies labels based on detected SITs or classifiers either in Office apps as the user works (with recommendation or automatic application) or via auto-labeling policies that scan data at rest in SharePoint, OneDrive and Exchange. Exam signal: 'users must justify lowering the classification' is a label policy setting.
+
+[140] cat=purview obj=4.3.4 (Describe data loss prevention (DLP))
+FRONT: Data loss prevention — policy structure
+BACK: #What to protect (SITs, labels), where (locations), conditions, and actions | Actions: policy tip, block with or without override, notify, quarantine, restrict
+WHY: A DLP policy watches for sensitive content in motion and at rest and reacts. You choose locations such as Exchange email, SharePoint, OneDrive, Teams chat, devices, on-premises file shares, Fabric and Power BI, and cloud apps via Defender for Cloud Apps. Rules set conditions (for example ten or more credit card numbers shared externally) and actions ranging from a policy tip in the app to blocking the share, with optional user override and justification. Stem signal: 'prevent users emailing SSNs outside the company' is DLP.
+
+[141] cat=purview obj=4.3.4 (Describe data loss prevention (DLP))
+FRONT: Endpoint DLP
+BACK: #Extends DLP to Windows and macOS devices onboarded to Defender for Endpoint | Monitors or blocks copy to USB, print, upload to cloud, copy to clipboard, unallowed apps
+WHY: Endpoint DLP uses the same policy engine but enforces on the device, so sensitive files cannot leave through local channels. Activities it can audit, warn on or block include copying to removable media or a network share, printing, pasting to a browser upload, and opening with an unallowed app or cloud service domain. Devices must be onboarded, which Defender for Endpoint already does. Activity shows in Activity explorer. Exam signal: 'stop users copying confidential files to USB drives' is Endpoint DLP.
+HOOK: Same DLP policy, enforced at the USB port.
+
+[142] cat=purview obj=4.3.5 (Describe records management)
+FRONT: Records management — records vs regulatory records
+BACK: #Record: content locked; cannot be edited or deleted; label change admin-only; properties editable | Regulatory record: nothing can be changed, label cannot be removed by anyone, retention only extended
+WHY: Marking an item as a record through a retention label applies restrictions appropriate for legal or regulatory evidence. A standard record blocks content edits and deletion while allowing metadata edits and controlled unlocking. A regulatory record is stricter: no edits, no deletion, no moving, the label can never be removed even by a global admin, and the retention period can be lengthened but not shortened. Stem signal: 'ensure even administrators cannot remove the label' is a regulatory record.
+
+[143] cat=purview obj=4.3.5 (Describe records management)
+FRONT: Records management — file plan and disposition
+BACK: #File plan: manage retention labels at scale with descriptors; import/export | Disposition review: a person approves deletion when retention ends; proof of disposition retained
+WHY: Records management adds lifecycle controls on top of retention. The file plan is a spreadsheet-like view of all retention labels with business descriptors (department, authority, citation) that can be bulk imported. Labels can start retention from an event such as an employee leaving. When a label's period expires, a disposition review routes the item to reviewers who approve deletion, relabeling or extension, and Purview keeps proof of disposition. Exam signal: 'require manual approval before documents are permanently deleted' is a disposition review.
+
+[144] cat=purview obj=4.3.6 (Describe retention policies, retention labels, and retention label policies)
+FRONT: Retention policies vs retention labels
+BACK: #Policy: applies to whole locations (all mailboxes, a site); settings stay with the location | Label: applies per item, travels with it, can be published or auto-applied, enables records and disposition
+WHY: Both can retain, delete, or retain then delete, but they operate at different levels. A retention policy is assigned to Exchange, SharePoint, OneDrive, Teams or Viva Engage locations and silently governs everything there, with adaptive or static scopes. A retention label is applied to a document or email, manually by users, as a default for a library, or automatically by a retention label policy with conditions; only labels support event-based retention, disposition review and marking items as records.
+HOOK: Policy = the room; label = the sticker on the item.
+
+[145] cat=purview obj=4.3.6 (Describe retention policies, retention labels, and retention label policies)
+FRONT: Principles of retention — resolving conflicts
+BACK: #1 Retention wins over deletion · 2 Longest retention period wins | 3 Explicit (label) wins over implicit (policy) | 4 Shortest deletion period wins
+WHY: When several retention settings apply to one item, Purview applies four rules in order. First, if anything says retain, the item is kept, even if another setting says delete. Second, among retention settings, the longest period applies. Third, an explicit retention label outranks an implicit retention policy. Fourth, when only deletion settings remain, the shortest deletion period applies. The exam gives two conflicting settings and asks what happens: start with rule one and stop at the first rule that decides.
+
+[146] cat=risk obj=4.4.1 (Describe insider risk management)
+FRONT: Insider risk management — what it is
+BACK: #Detects and investigates risky user activity, malicious or accidental, while preserving privacy | Policies built from templates; alerts, triage, cases, actions
+WHY: Insider Risk Management correlates signals from Microsoft 365, Defender for Endpoint, HR connectors and more to spot patterns such as a departing employee downloading large volumes of files. The workflow runs from policies to alerts, triage, investigation in cases, and actions such as a reminder notice, escalation to eDiscovery, or export to a SIEM. Stem signal: 'identify data theft by departing employees' is insider risk management.
+
+[147] cat=risk obj=4.4.1 (Describe insider risk management)
+FRONT: Insider risk policies — templates
+BACK: #Data theft by departing users; data leaks (general, priority users, risky users) | Security policy violations; patient data misuse; risky AI and browser usage
+WHY: A policy starts from a template that defines the risk scenario and which indicators are relevant. The departing-user template pairs with the HR connector so resignation dates trigger monitoring. Data leak templates watch for downloads, sharing and exfiltration, optionally focused on priority users like executives or on users already flagged risky. Security violation templates use Defender for Endpoint signals such as disabling security tools. Exam signal: a stem naming a specific scenario expects you to pick the matching template.
+
+[148] cat=risk obj=4.4.1 (Describe insider risk management)
+FRONT: Insider risk — triggering events and indicators
+BACK: #Triggering event: brings a user into scope (resignation date, DLP match, label downgrade) | Indicators: the activities scored afterward (downloads, USB copies, sharing, printing)
+WHY: Policies do not score everyone all the time. A triggering event, such as an HR termination record, a high-severity DLP alert or a sensitivity label downgrade, places the user into the policy's detection window. From then on, selected indicators from Office, devices, Teams, SharePoint and third-party connectors contribute to a risk score, and thresholds generate alerts with severity levels. Investigators can adjust thresholds to tune noise. Stem signal: 'which setting determines when a user begins to be monitored' is the triggering event.
+
+[149] cat=risk obj=4.4.1 (Describe insider risk management)
+FRONT: Insider risk — privacy and adaptive protection
+BACK: #Pseudonymized display names by default; audit of investigator actions | Adaptive protection: risk level dynamically tightens DLP and Conditional Access controls
+WHY: Microsoft positions insider risk management as privacy-first: names are hidden, access is role-based, and every analyst action is audited. Adaptive protection connects insider risk levels to other Purview and Entra controls, so a user who becomes elevated risk is automatically subject to stricter DLP rules or Conditional Access policies without manual reconfiguration, and relaxes when the risk subsides. Exam signal: 'automatically apply stricter DLP to users showing risky behavior' is adaptive protection.
+
+[150] cat=risk obj=4.4.2 (Describe eDiscovery solutions in Microsoft Purview)
+FRONT: Microsoft Purview eDiscovery — purpose and workflow
+BACK: #Identify, preserve, collect, review and export electronically stored information for legal matters | Cases contain searches, holds, review sets and exports
+WHY: eDiscovery covers Exchange, SharePoint, OneDrive, Teams, Microsoft 365 Groups and Viva Engage. In the unified experience in the Purview portal a case is the container: you add data sources, place holds to stop deletion, run KQL searches with conditions, review statistics and samples, optionally add results to a review set, and export. Content search has been folded into eDiscovery as a system case. Stem signal: 'preserve a user's mailbox and OneDrive for litigation' is an eDiscovery hold.
+
+[151] cat=risk obj=4.4.2 (Describe eDiscovery solutions in Microsoft Purview)
+FRONT: eDiscovery Standard vs Premium
+BACK: #Standard (E3): cases, holds, searches, export, search-and-purge | Premium (E5): adds review sets, custodians and data sources, analytics (threading, near-duplicates, themes), predictive coding, OCR, advanced indexing
+WHY: Standard covers cases, holds, keyword search and export. Premium builds an end-to-end workflow on top: identify custodians and their data sources, send legal-hold notifications, collect into review sets stored in Azure, apply analytics to cut duplicate and threaded content, tag items, use machine-learning predictive coding to rank relevance, decrypt labeled content and produce process reports. Exam signal: 'reduce review volume with near-duplicate detection' or 'custodian notifications' means Premium.
+HOOK: Standard holds and exports; Premium reviews and analyzes.
+
+[152] cat=risk obj=4.4.2 (Describe eDiscovery solutions in Microsoft Purview)
+FRONT: Hold vs review set
+BACK: #Hold: preserves content in place so it cannot be deleted while the case is open | Review set: a static copy of collected items in secure storage for filtering, tagging and analysis (Premium)
+WHY: Two concepts the exam swaps. A hold is applied to locations such as mailboxes or sites; users can keep working but anything they delete is retained in a hidden location until the hold is released. A review set is created only in eDiscovery Premium: search results are copied into Azure Storage where reviewers run queries, view documents, tag relevance and privilege, and run analytics, without touching the live data. A stem about 'prevent deletion' is a hold; 'tag documents as privileged' is a review set.
+
+[153] cat=risk obj=4.4.3 (Describe audit solutions in Microsoft Purview)
+FRONT: Microsoft Purview Audit — what it records
+BACK: #Unified audit log of user and admin activity across Microsoft 365 and Entra | Search in the Purview portal, Search-UnifiedAuditLog, Graph API, Management Activity API
+WHY: Audit captures thousands of event types: file accessed or shared in SharePoint, mailbox sign-in, user created in Entra, role assigned, label changed, eDiscovery search run. Auditing is enabled by default. Investigators search by date, user, activity and workload in the Purview portal and export to CSV, or query programmatically. Audit records feed Activity explorer, insider risk and Sentinel. Stem signal: 'determine who deleted a file from a SharePoint site last month' is Audit search.
+
+[154] cat=risk obj=4.4.3 (Describe audit solutions in Microsoft Purview)
+FRONT: Audit (Standard) vs Audit (Premium)
+BACK: #Standard: 180-day retention, search, export, APIs, included in most subscriptions | Premium: 1-year default retention, custom retention policies, 10-year add-on, intelligent insights, higher API bandwidth
+WHY: Standard keeps records 180 days. Audit (Premium), available with E5/G5/A5, retains Entra, Exchange, SharePoint and OneDrive records for one year by default, lets you create audit log retention policies by workload, activity or user, and supports a ten-year retention add-on license. It adds intelligent insight events such as MailItemsAccessed with sensitivity label context and Teams message events, plus roughly double the API bandwidth for export. Exam signal: 'retain audit logs for ten years' is Premium with the add-on.
+HOOK: 180 days standard; a year premium; ten years with the add-on.
+
+[155] cat=risk obj=4.4.3 (Describe audit solutions in Microsoft Purview)
+FRONT: Audit vs eDiscovery vs Activity explorer — which tool
+BACK: #Audit: activity records for investigation and compliance | eDiscovery: content for legal matters | Activity explorer: label and DLP activity view built on audit data
+WHY: Three Purview tools look at history and the exam asks which fits. Audit returns event records: who accessed, changed or configured something. eDiscovery returns the content itself for preservation and legal review. Activity explorer is a focused window on audit data limited to label, DLP and endpoint activities for the last 30 days. A stem about 'find and export all emails mentioning a project' is eDiscovery; 'find who changed the Conditional Access policy' is Audit; 'see label downgrades this week' is Activity explorer.

@@ -1,0 +1,96 @@
+{
+  "exam": "AZ-900",
+  "title": "Microsoft Azure Fundamentals",
+  "skillsAsOf": "2026-07-20",
+  "source": "https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/az-900",
+  "fetched": "2026-10-02",
+  "format": {"durationMin": 45, "seatMin": 65, "passScore": 700, "scaleMax": 1000, "learnPane": false, "itemTypes": ["mc", "ms"]},
+  "domains": [
+    {"d": 1, "name": "Describe cloud concepts", "weight": [25, 30], "groups": [
+      {"g": "1.1", "name": "Describe cloud computing", "bullets": {
+        "1.1.1": "Define cloud computing",
+        "1.1.2": "Describe the shared responsibility model",
+        "1.1.3": "Define cloud models, including public, private, and hybrid",
+        "1.1.4": "Identify appropriate use cases for each cloud model",
+        "1.1.5": "Describe the consumption-based model",
+        "1.1.6": "Compare cloud pricing models",
+        "1.1.7": "Describe serverless"}},
+      {"g": "1.2", "name": "Describe the benefits of using cloud services", "bullets": {
+        "1.2.1": "Describe the benefits of high availability and scalability in the cloud",
+        "1.2.2": "Describe the benefits of reliability and predictability in the cloud",
+        "1.2.3": "Describe the benefits of security and governance in the cloud",
+        "1.2.4": "Describe the benefits of manageability in the cloud"}},
+      {"g": "1.3", "name": "Describe cloud service types", "bullets": {
+        "1.3.1": "Describe infrastructure as a service (IaaS)",
+        "1.3.2": "Describe platform as a service (PaaS)",
+        "1.3.3": "Describe software as a service (SaaS)",
+        "1.3.4": "Identify appropriate use cases for each cloud service type (IaaS, PaaS, and SaaS)"}}
+    ]},
+    {"d": 2, "name": "Describe Azure architecture and services", "weight": [35, 40], "groups": [
+      {"g": "2.1", "name": "Describe the core architectural components of Azure", "bullets": {
+        "2.1.1": "Describe Azure regions, region pairs, and sovereign regions",
+        "2.1.2": "Describe availability zones",
+        "2.1.3": "Describe Azure datacenters",
+        "2.1.4": "Describe Azure resources and resource groups",
+        "2.1.5": "Describe subscriptions",
+        "2.1.6": "Describe management groups",
+        "2.1.7": "Describe the hierarchy of resource groups, subscriptions, and management groups"}},
+      {"g": "2.2", "name": "Describe Azure compute and networking services", "bullets": {
+        "2.2.1": "Compare compute types, including containers, virtual machines, and functions",
+        "2.2.2": "Describe virtual machine options, including Azure virtual machines, Azure Virtual Machine Scale Sets, availability sets, and Azure Virtual Desktop",
+        "2.2.3": "Describe the resources required for virtual machines",
+        "2.2.4": "Describe application hosting options, including web apps, containers, and virtual machines",
+        "2.2.5": "Describe virtual networking, including the purpose of Azure virtual networks, subnets, peering, Azure DNS, Azure VPN Gateway, and ExpressRoute",
+        "2.2.6": "Define public and private endpoints"}},
+      {"g": "2.3", "name": "Describe Azure storage services", "bullets": {
+        "2.3.1": "Compare Azure Storage services",
+        "2.3.2": "Describe storage tiers",
+        "2.3.3": "Describe redundancy options",
+        "2.3.4": "Describe storage account options and storage types",
+        "2.3.5": "Identify options for moving files, including AzCopy, Azure Storage Explorer, and Azure File Sync",
+        "2.3.6": "Describe migration options, including Azure Migrate and Azure Data Box"}},
+      {"g": "2.4", "name": "Describe Azure identity, access, and security", "bullets": {
+        "2.4.1": "Describe directory services in Azure, including Microsoft Entra ID and Microsoft Entra Domain Services",
+        "2.4.2": "Describe authentication methods in Azure, including single sign-on (SSO), multifactor authentication (MFA), and passwordless",
+        "2.4.3": "Describe external identities in Azure",
+        "2.4.4": "Describe Microsoft Entra Conditional Access",
+        "2.4.5": "Describe Azure role-based access control (RBAC)",
+        "2.4.6": "Describe the concept of Zero Trust",
+        "2.4.7": "Describe the purpose of the defense-in-depth model",
+        "2.4.8": "Describe the purpose of Microsoft Defender for Cloud"}}
+    ]},
+    {"d": 3, "name": "Describe Azure management and governance", "weight": [30, 35], "groups": [
+      {"g": "3.1", "name": "Describe cost management in Azure", "bullets": {
+        "3.1.1": "Describe factors that can affect costs in Azure",
+        "3.1.2": "Explore the pricing calculator",
+        "3.1.3": "Describe cost management capabilities in Azure",
+        "3.1.4": "Describe the purpose of tags"}},
+      {"g": "3.2", "name": "Describe features and tools in Azure for governance and compliance", "bullets": {
+        "3.2.1": "Describe the purpose of Microsoft Purview in Azure",
+        "3.2.2": "Describe the purpose of Azure Policy",
+        "3.2.3": "Describe the purpose of resource locks"}},
+      {"g": "3.3", "name": "Describe features and tools for managing and deploying Azure resources", "bullets": {
+        "3.3.1": "Describe the Azure portal",
+        "3.3.2": "Describe Azure Cloud Shell, Azure CLI, and Azure PowerShell",
+        "3.3.3": "Describe the purpose of Azure Arc",
+        "3.3.4": "Describe infrastructure as code (IaC)",
+        "3.3.5": "Describe Azure Resource Manager (ARM) and ARM templates"}},
+      {"g": "3.4", "name": "Describe monitoring tools in Azure", "bullets": {
+        "3.4.1": "Describe the purpose of Azure Advisor",
+        "3.4.2": "Describe Azure Service Health",
+        "3.4.3": "Describe Azure Monitor, including Log Analytics, Azure Monitor alerts, and Azure Monitor Application Insights"}}
+    ]}
+  ],
+  "categories": {
+    "cloud":   {"d": 1, "name": "Cloud concepts, models, benefits, service types", "groups": ["1.1", "1.2", "1.3"]},
+    "arch":    {"d": 2, "name": "Core architecture: regions, zones, resources, subscriptions, management groups", "groups": ["2.1"]},
+    "compute": {"d": 2, "name": "Compute & networking", "groups": ["2.2"]},
+    "storage": {"d": 2, "name": "Storage & migration", "groups": ["2.3"]},
+    "idsec":   {"d": 2, "name": "Identity, access & security", "groups": ["2.4"]},
+    "cost":    {"d": 3, "name": "Cost management", "groups": ["3.1"]},
+    "govern":  {"d": 3, "name": "Governance, deployment tools, IaC", "groups": ["3.2", "3.3"]},
+    "monitor": {"d": 3, "name": "Monitoring: Advisor, Service Health, Monitor", "groups": ["3.4"]}
+  },
+  "cardTargets": {"cloud": 36, "arch": 18, "compute": 22, "storage": 18, "idsec": 20, "cost": 12, "govern": 14, "monitor": 10},
+  "questionQuota": {"1": 14, "2": 19, "3": 17}
+}
